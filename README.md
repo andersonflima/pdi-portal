@@ -68,7 +68,7 @@ Servicos:
 O servico da API executa automaticamente:
 
 ```bash
-pnpm db:push && pnpm db:seed && node dist/server.js
+npm run db:push && npm run db:seed && node dist/server.js
 ```
 
 Isso sincroniza o schema, popula os dados iniciais e inicia o servidor.

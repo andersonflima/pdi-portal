@@ -1,14 +1,13 @@
 FROM node:22-alpine AS build
 WORKDIR /app
-RUN corepack enable
-COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml tsconfig.base.json ./
+COPY package.json tsconfig.base.json ./
 COPY apps/web/package.json apps/web/package.json
 COPY packages/contracts/package.json packages/contracts/package.json
-RUN pnpm install --frozen-lockfile=false
+RUN npm install
 COPY packages/contracts packages/contracts
 COPY apps/web apps/web
-RUN pnpm --filter @pdi/contracts build
-RUN pnpm --filter @pdi/web build
+RUN npm run build --workspace @pdi/contracts
+RUN npm run build --workspace @pdi/web
 
 FROM nginx:1.27-alpine AS runtime
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf

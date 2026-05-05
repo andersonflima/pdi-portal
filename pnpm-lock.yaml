@@ -27,7 +27,7 @@ importers:
         specifier: ^11.2.0
         version: 11.2.0
       '@pdi/contracts':
-        specifier: workspace:*
+        specifier: file:../../packages/contracts
         version: link:../../packages/contracts
       '@prisma/client':
         specifier: ^6.7.0
@@ -64,7 +64,7 @@ importers:
   apps/web:
     dependencies:
       '@pdi/contracts':
-        specifier: workspace:*
+        specifier: file:../../packages/contracts
         version: link:../../packages/contracts
       '@tanstack/react-query':
         specifier: ^5.75.5
