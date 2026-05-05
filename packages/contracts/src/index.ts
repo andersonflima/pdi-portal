@@ -9,6 +9,13 @@ export const loginSchema = z.object({
 });
 export type LoginInput = z.infer<typeof loginSchema>;
 
+export const bootstrapAdminSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(2),
+  password: z.string().min(8)
+});
+export type BootstrapAdminInput = z.infer<typeof bootstrapAdminSchema>;
+
 export const userSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -16,6 +23,11 @@ export const userSchema = z.object({
   role: userRoleSchema
 });
 export type User = z.infer<typeof userSchema>;
+
+export const bootstrapStatusSchema = z.object({
+  canCreateAdmin: z.boolean()
+});
+export type BootstrapStatus = z.infer<typeof bootstrapStatusSchema>;
 
 export const pdiStatusSchema = z.enum(['DRAFT', 'ACTIVE', 'DONE']);
 export type PdiStatus = z.infer<typeof pdiStatusSchema>;
