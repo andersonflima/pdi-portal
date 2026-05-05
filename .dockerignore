@@ -1,0 +1,13 @@
+node_modules
+dist
+build
+.git
+.turbo
+coverage
+*.log
+*.tsbuildinfo
+.DS_Store
+apps/*/node_modules
+packages/*/node_modules
+apps/*/dist
+packages/*/dist

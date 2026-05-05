@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pdi-api-secret
+  namespace: pdi
+type: Opaque
+stringData:
+  DATABASE_URL: postgresql://pdi:pdi@postgres:5432/pdi
+  JWT_SECRET: change-this-secret-before-production
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pdi-api
+  namespace: pdi
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: pdi-api
+  template:
+    metadata:
+      labels:
+        app: pdi-api
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/andersonflima/pdi-portal-api:latest
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  key: DATABASE_URL
+                  name: pdi-api-secret
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  key: JWT_SECRET
+                  name: pdi-api-secret
+            - name: PORT
+              value: "3333"
+            - name: WEB_ORIGIN
+              value: http://pdi-web.pdi.svc.cluster.local:8080
+          ports:
+            - containerPort: 3333
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 3333
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3333
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pdi-api
+  namespace: pdi
+spec:
+  ports:
+    - port: 3333
+      targetPort: 3333
+  selector:
+    app: pdi-api
