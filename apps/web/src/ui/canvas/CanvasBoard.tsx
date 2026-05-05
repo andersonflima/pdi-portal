@@ -1077,8 +1077,10 @@ export const CanvasBoard = ({
                   <div className="admin-user-list">
                     {users.map((item) => (
                       <div key={item.id}>
-                        <strong>{item.name}</strong>
-                        <span>{item.email}</span>
+                        <div>
+                          <strong>{item.name}</strong>
+                          <span>{item.email}</span>
+                        </div>
                         <small>{item.role}</small>
                       </div>
                     ))}

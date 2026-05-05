@@ -409,13 +409,20 @@ button {
 .admin-user-list div {
   align-items: center;
   display: grid;
-  gap: 2px;
-  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 14px;
+  grid-template-columns: minmax(0, 1fr) max-content;
   padding: 10px 12px;
 }
 
 .admin-user-list div + div {
   border-top: 1px solid #edf1f6;
+}
+
+.admin-user-list div > div {
+  align-items: start;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
 }
 
 .admin-user-list strong,
@@ -430,8 +437,10 @@ button {
   border-radius: 999px;
   font-size: 11px;
   font-weight: 820;
-  grid-row: 1 / span 2;
+  justify-self: end;
+  min-width: 72px;
   padding: 4px 8px;
+  text-align: center;
 }
 
 .admin-pdi-list {
