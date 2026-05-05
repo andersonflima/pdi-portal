@@ -1,4 +1,12 @@
-import type { Board, LoginInput, PdiPlan, SaveBoardInput, User } from '@pdi/contracts';
+import type {
+  Board,
+  BootstrapAdminInput,
+  BootstrapStatus,
+  LoginInput,
+  PdiPlan,
+  SaveBoardInput,
+  User
+} from '@pdi/contracts';
 
 const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3333/api';
 const tokenKey = 'pdi.auth.token';
@@ -35,6 +43,12 @@ const request = async <T>(path: string, init: RequestInit = {}): Promise<T> => {
 };
 
 export const api = {
+  bootstrapStatus: () => request<BootstrapStatus>('/auth/bootstrap-status'),
+  createBootstrapAdmin: (input: BootstrapAdminInput) =>
+    request<{ token: string; user: User }>('/auth/bootstrap-admin', {
+      body: JSON.stringify(input),
+      method: 'POST'
+    }),
   login: (input: LoginInput) =>
     request<{ token: string; user: User }>('/auth/login', {
       body: JSON.stringify(input),

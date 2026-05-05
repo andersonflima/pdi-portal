@@ -82,6 +82,17 @@ O seed cria dois usuarios:
 | Admin | `admin@pdi.local` | `admin123` |
 | Colaborador | `member@pdi.local` | `member123` |
 
+## Primeiro Acesso
+
+Em um banco sem administrador cadastrado, a tela de login muda automaticamente para o cadastro do primeiro admin.
+
+A API expoe duas rotas publicas para esse bootstrap:
+
+- `GET /api/auth/bootstrap-status`
+- `POST /api/auth/bootstrap-admin`
+
+Depois que um usuario `ADMIN` existe, o bootstrap fica bloqueado e novos usuarios devem ser criados por um administrador autenticado.
+
 ## Board Padrao
 
 Ao subir o ambiente, o seed cria o PDI `Software Developer Skills Roadmap` para o usuario colaborador.
