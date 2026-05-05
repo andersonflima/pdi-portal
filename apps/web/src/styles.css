@@ -375,6 +375,11 @@ button {
   overflow-y: auto;
 }
 
+.admin-pdi-menu-panel {
+  max-height: none;
+  overflow: visible;
+}
+
 .admin-menu-panel section,
 .admin-menu-panel form {
   display: grid;
@@ -433,7 +438,8 @@ button {
   border: 1px solid #e7ebf2;
   border-radius: 8px;
   display: grid;
-  max-height: 180px;
+  max-height: min(320px, calc(100svh - 560px));
+  min-height: 108px;
   overflow-y: auto;
 }
 
