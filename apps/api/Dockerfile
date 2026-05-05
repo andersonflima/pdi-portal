@@ -1,19 +1,18 @@
 FROM node:22-alpine AS base
 WORKDIR /app
-RUN corepack enable
 
 FROM base AS deps
-COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml tsconfig.base.json ./
+COPY package.json tsconfig.base.json ./
 COPY apps/api/package.json apps/api/package.json
 COPY packages/contracts/package.json packages/contracts/package.json
-RUN pnpm install --frozen-lockfile=false
+RUN npm install
 
 FROM deps AS build
 COPY packages/contracts packages/contracts
 COPY apps/api apps/api
-RUN pnpm --filter @pdi/contracts build
-RUN pnpm --filter @pdi/api prisma:generate
-RUN pnpm --filter @pdi/api build
+RUN npm run build --workspace @pdi/contracts
+RUN npm run prisma:generate --workspace @pdi/api
+RUN npm run build --workspace @pdi/api
 
 FROM base AS runtime
 ENV NODE_ENV=production

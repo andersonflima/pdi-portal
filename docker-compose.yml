@@ -29,7 +29,7 @@ services:
       WEB_ORIGIN: http://localhost:5173
     ports:
       - "3333:3333"
-    command: sh -c "pnpm db:push && pnpm db:seed && node dist/server.js"
+    command: sh -c "npm run db:push && npm run db:seed && node dist/server.js"
 
   web:
     build:
