@@ -143,6 +143,14 @@ type RgbColor = {
 
 const canvasSurfaceColor: RgbColor = { blue: 239, green: 244, red: 246 };
 const whiteColor: RgbColor = { blue: 255, green: 255, red: 255 };
+const temporaryPasswordAlphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
+
+const generateTemporaryPassword = () => {
+  const values = new Uint32Array(12);
+  crypto.getRandomValues(values);
+
+  return Array.from(values, (value) => temporaryPasswordAlphabet[value % temporaryPasswordAlphabet.length]).join('');
+};
 
 const toContentAlignment = (verticalAlign?: CanvasTextVerticalAlign) => {
   if (verticalAlign === 'bottom') return 'end';
@@ -715,12 +723,12 @@ export const CanvasBoard = ({
   const saveBoard = useMutation({
     mutationFn: () => api.saveBoard(plan.id, fromFlowState(boardQuery.data?.title ?? plan.title, nodes, edges))
   });
-  const [newUser, setNewUser] = useState({
+  const [newUser, setNewUser] = useState(() => ({
     email: '',
     name: '',
-    password: '',
+    password: generateTemporaryPassword(),
     role: 'MEMBER' as User['role']
-  });
+  }));
   const [newPlan, setNewPlan] = useState({
     objective: '',
     ownerId: users.find((item) => item.role === 'MEMBER')?.id ?? users[0]?.id ?? '',
@@ -982,7 +990,7 @@ export const CanvasBoard = ({
   const handleCreateUser = (event: FormEvent) => {
     event.preventDefault();
     onCreateUser(newUser);
-    setNewUser({ email: '', name: '', password: '', role: 'MEMBER' });
+    setNewUser({ email: '', name: '', password: generateTemporaryPassword(), role: 'MEMBER' });
   };
 
   const handleCreatePlan = (event: FormEvent) => {
@@ -1092,14 +1100,25 @@ export const CanvasBoard = ({
                     type="email"
                     value={newUser.email}
                   />
-                  <input
-                    minLength={6}
-                    onChange={(event) => setNewUser((current) => ({ ...current, password: event.target.value }))}
-                    placeholder="Temporary password"
-                    required
-                    type="password"
-                    value={newUser.password}
-                  />
+                  <div className="temporary-password-field">
+                    <input
+                      minLength={6}
+                      onChange={(event) => setNewUser((current) => ({ ...current, password: event.target.value }))}
+                      placeholder="Temporary password"
+                      required
+                      type="text"
+                      value={newUser.password}
+                    />
+                    <button
+                      onClick={() =>
+                        setNewUser((current) => ({ ...current, password: generateTemporaryPassword() }))
+                      }
+                      title="Generate temporary password"
+                      type="button"
+                    >
+                      <Sparkles size={15} />
+                    </button>
+                  </div>
                   <select
                     onChange={(event) =>
                       setNewUser((current) => ({ ...current, role: event.target.value as User['role'] }))
