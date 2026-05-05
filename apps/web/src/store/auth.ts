@@ -5,6 +5,7 @@ import { api, setToken } from '../api/client';
 type AuthState = {
   user: User | null;
   isBootstrapping: boolean;
+  createBootstrapAdmin: (input: { email: string; name: string; password: string }) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   bootstrap: () => Promise<void>;
@@ -13,6 +14,11 @@ type AuthState = {
 export const useAuth = create<AuthState>((set) => ({
   user: null,
   isBootstrapping: true,
+  createBootstrapAdmin: async (input) => {
+    const session = await api.createBootstrapAdmin(input);
+    setToken(session.token);
+    set({ user: session.user });
+  },
   login: async (email, password) => {
     const session = await api.login({ email, password });
     setToken(session.token);
