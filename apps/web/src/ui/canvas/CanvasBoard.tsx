@@ -1124,7 +1124,7 @@ export const CanvasBoard = ({
                 <span>PDIs</span>
                 <ChevronDown size={16} />
               </summary>
-              <div className="admin-menu-panel">
+              <div className="admin-menu-panel admin-pdi-menu-panel">
                 <section>
                   <div className="admin-panel-title">
                     <strong>PDIs</strong>
