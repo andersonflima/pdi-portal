@@ -521,6 +521,25 @@ button {
   resize: vertical;
 }
 
+.temporary-password-field {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) 40px;
+}
+
+.canvas-header .temporary-password-field button {
+  background: #eef3f8;
+  border-radius: 8px;
+  color: #172033;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0;
+}
+
+.canvas-header .temporary-password-field button:hover {
+  background: #dfe7f0;
+}
+
 .admin-menu-panel form {
   border-top: 1px solid #edf1f6;
   padding-top: 14px;
