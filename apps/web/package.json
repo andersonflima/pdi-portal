@@ -12,7 +12,7 @@
     "typecheck": "tsc -b --noEmit"
   },
   "dependencies": {
-    "@pdi/contracts": "workspace:*",
+    "@pdi/contracts": "file:../../packages/contracts",
     "@tanstack/react-query": "^5.75.5",
     "@xyflow/react": "^12.6.4",
     "clsx": "^2.1.1",
