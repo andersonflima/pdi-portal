@@ -452,7 +452,7 @@ button {
   background: #eef3f8;
 }
 
-.admin-pdi-select {
+.canvas-header .admin-pdi-select {
   background: transparent;
   color: #172033;
   display: grid;
@@ -479,7 +479,7 @@ button {
   grid-column: 2;
 }
 
-.admin-pdi-remove {
+.canvas-header .admin-pdi-remove {
   align-items: center;
   background: #fee4e2;
   border: 0;
@@ -494,7 +494,7 @@ button {
   width: 30px;
 }
 
-.admin-pdi-remove:hover {
+.canvas-header .admin-pdi-remove:hover {
   background: #fecdca;
 }
 
