@@ -1,0 +1,86 @@
+.canvas-shell {
+  background: #f6f4ef;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100svh;
+  position: relative;
+}
+
+.canvas-stage {
+  background:
+    radial-gradient(circle at 1px 1px, #d8dee8 1px, transparent 0),
+    #f6f4ef;
+  background-size: 24px 24px;
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+  position: relative;
+}
+
+.canvas-zoom-controls {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(23, 32, 51, 0.12);
+  border-radius: 8px;
+  box-shadow: 0 18px 38px rgba(23, 32, 51, 0.1);
+  display: flex;
+  gap: 4px;
+  margin: 12px 16px -48px auto;
+  padding: 4px;
+  position: sticky;
+  top: 12px;
+  width: max-content;
+  z-index: 60;
+}
+
+.canvas-zoom-controls button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: #172033;
+  cursor: pointer;
+  display: inline-flex;
+  height: 32px;
+  justify-content: center;
+  width: 32px;
+}
+
+.canvas-zoom-controls button:hover {
+  background: #eef2f7;
+}
+
+.canvas-zoom-controls span {
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 800;
+  min-width: 46px;
+  text-align: center;
+}
+
+.canvas-viewport {
+  min-height: 100%;
+  min-width: 100%;
+  position: relative;
+}
+
+.canvas-plane {
+  min-height: 100%;
+  min-width: 100%;
+  position: relative;
+  transform-origin: left top;
+}
+
+app-canvas-node {
+  cursor: grab;
+}
+
+app-canvas-node:active {
+  cursor: grabbing;
+}
+
+@media (max-width: 860px) {
+  .canvas-shell {
+    height: 100svh;
+  }
+}

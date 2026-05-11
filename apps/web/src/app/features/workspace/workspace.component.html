@@ -1,0 +1,25 @@
+<main class="workspace">
+  <section class="work-surface">
+    @if (workspace.activePlan(); as activePlan) {
+      <app-canvas-board
+        [isCreatingPlan]="workspace.isCreatingPlan()"
+        [isCreatingUser]="workspace.isCreatingUser()"
+        [isDeletingPlan]="workspace.isDeletingPlan()"
+        [isUpdatingPlan]="workspace.isUpdatingPlan()"
+        [plan]="activePlan"
+        [plans]="workspace.plans()"
+        [user]="user"
+        [users]="workspace.users()"
+        [usersCount]="workspace.users().length"
+        (createPlan)="handleCreatePlan($event)"
+        (createUser)="handleCreateUser($event)"
+        (deletePlan)="handleDeletePlan($event)"
+        (logout)="handleLogout()"
+        (selectPlan)="workspace.selectPlan($event)"
+        (updatePlan)="handleUpdatePlan($event)"
+      />
+    } @else {
+      <div class="empty-state">Create a PDI plan to start.</div>
+    }
+  </section>
+</main>

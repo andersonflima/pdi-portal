@@ -1,0 +1,17 @@
+<details class="user-menu">
+  <summary aria-label="Open user menu">
+    <i-lucide name="user-circle-2" [size]="24" />
+    <span>{{ user.name }}</span>
+    <i-lucide name="chevron-down" [size]="16" />
+  </summary>
+
+  <div class="user-menu-panel">
+    <strong>{{ user.name }}</strong>
+    <span>{{ user.email }}</span>
+    <small>{{ user.role === 'ADMIN' ? usersCount + ' users managed' : 'Personal workspace' }}</small>
+    <button type="button" (click)="logout.emit()">
+      <i-lucide name="log-out" [size]="16" />
+      Sign out
+    </button>
+  </div>
+</details>

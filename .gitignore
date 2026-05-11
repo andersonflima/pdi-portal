@@ -4,6 +4,7 @@ build
 .env
 .env.local
 .turbo
+.angular
 coverage
 *.log
 *.tsbuildinfo

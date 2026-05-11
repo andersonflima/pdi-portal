@@ -1,0 +1,103 @@
+.login-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(360px, 0.8fr);
+  min-height: 100svh;
+}
+
+.login-visual {
+  align-items: end;
+  background:
+    linear-gradient(120deg, rgba(18, 28, 45, 0.88), rgba(18, 28, 45, 0.38)),
+    url("https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1800&q=80");
+  background-position: center;
+  background-size: cover;
+  color: #ffffff;
+  display: flex;
+  padding: 64px;
+}
+
+.login-visual div {
+  max-width: 680px;
+}
+
+.login-visual p {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 14px;
+}
+
+.login-visual h1 {
+  font-size: clamp(44px, 7vw, 92px);
+  line-height: 0.96;
+  margin: 0 0 24px;
+}
+
+.login-visual span {
+  color: rgba(255, 255, 255, 0.82);
+  display: block;
+  font-size: 20px;
+  max-width: 560px;
+}
+
+.login-panel {
+  align-content: center;
+  background: #ffffff;
+  display: grid;
+  gap: 18px;
+  padding: 56px;
+}
+
+.login-panel i-lucide {
+  color: #2563eb;
+}
+
+.login-panel h2 {
+  font-size: 32px;
+  margin: 0 0 10px;
+}
+
+.login-panel label {
+  color: #48556a;
+  display: grid;
+  font-size: 14px;
+  font-weight: 650;
+  gap: 8px;
+}
+
+.login-panel input {
+  border: 1px solid #d8dde7;
+  border-radius: 8px;
+  color: #172033;
+  min-height: 46px;
+  padding: 0 14px;
+}
+
+.login-panel button {
+  background: #172033;
+  border-radius: 8px;
+  color: #ffffff;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 18px;
+}
+
+.form-error {
+  color: #b42318;
+  font-size: 14px;
+  margin: 0;
+}
+
+@media (max-width: 860px) {
+  .login-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .login-visual {
+    min-height: 46svh;
+    padding: 32px;
+  }
+
+  .login-panel {
+    padding: 32px;
+  }
+}

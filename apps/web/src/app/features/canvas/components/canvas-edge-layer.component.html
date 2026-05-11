@@ -1,0 +1,29 @@
+<svg class="edge-layer" [attr.viewBox]="'0 0 ' + canvasSize.width + ' ' + canvasSize.height">
+  @for (edge of edges(); track edge.id) {
+    @if (edgePath(edge); as path) {
+      <g [class.is-selected]="selectedEdgeId() === edge.id">
+        <path
+          class="edge-hit-area"
+          [attr.d]="path"
+          (pointerdown)="handleSelect($event, edge.id)"
+        />
+        <path
+          class="edge-line"
+          [class.edge-line-dashed]="edge.style.lineStyle === 'dashed'"
+          [attr.d]="path"
+          [attr.stroke]="edge.style.color"
+        />
+        @if (edge.label) {
+          <text
+            class="edge-label"
+            [attr.x]="labelPosition(edge).x"
+            [attr.y]="labelPosition(edge).y - 10"
+            [attr.fill]="edge.style.color"
+          >
+            {{ edge.label }}
+          </text>
+        }
+      </g>
+    }
+  }
+</svg>

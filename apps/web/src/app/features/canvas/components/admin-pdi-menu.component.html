@@ -1,0 +1,105 @@
+<details class="admin-menu">
+  <summary>
+    <i-lucide name="pencil" [size]="19" />
+    <span>PDIs</span>
+    <i-lucide name="chevron-down" [size]="16" />
+  </summary>
+
+  <div class="admin-menu-panel admin-pdi-menu-panel">
+    <section>
+      <div class="admin-panel-title">
+        <strong>PDIs</strong>
+        <span>{{ plans.length }} plans</span>
+      </div>
+
+      <div class="admin-pdi-list">
+        @for (item of plans; track item.id) {
+          <div [class.is-active]="item.id === editingPlanId()">
+            <button class="admin-pdi-select" type="button" (click)="selectPlanForEdit(item.id); selectPlanForCanvas.emit(item.id)">
+              <i-lucide name="pencil" [size]="14" />
+              <span>{{ item.title }}</span>
+              <small>{{ ownerName(item.ownerId) }} - {{ item.status }}</small>
+            </button>
+            <button
+              class="admin-pdi-remove"
+              type="button"
+              title="Remove PDI"
+              [disabled]="isDeletingPlan"
+              (click)="handleDeletePlan(item.id, item.title)"
+            >
+              <i-lucide name="trash-2" [size]="14" />
+            </button>
+          </div>
+        }
+      </div>
+    </section>
+
+    <form (submit)="handleCreatePlan($event)">
+      <strong>New PDI</strong>
+      <select required [value]="newPlan().ownerId" (change)="updateNewPlan('ownerId', $any($event.target).value)">
+        <option value="">Select owner</option>
+        @for (user of users; track user.id) {
+          <option [value]="user.id">{{ user.name }}</option>
+        }
+      </select>
+      <input
+        placeholder="PDI title"
+        required
+        [value]="newPlan().title"
+        (input)="updateNewPlan('title', $any($event.target).value)"
+      />
+      <textarea
+        placeholder="Development objective"
+        required
+        [value]="newPlan().objective"
+        (input)="updateNewPlan('objective', $any($event.target).value)"
+      ></textarea>
+      <button [disabled]="isCreatingPlan" type="submit">
+        {{ isCreatingPlan ? 'Creating PDI' : 'Create linked PDI' }}
+      </button>
+    </form>
+
+    @if (editPlan(); as form) {
+      <form (submit)="handleUpdatePlan($event)">
+        <strong>Edit PDI</strong>
+        <select required [value]="form.ownerId" (change)="updateEditPlan('ownerId', $any($event.target).value)">
+          @for (user of users; track user.id) {
+            <option [value]="user.id">{{ user.name }}</option>
+          }
+        </select>
+        <select [value]="form.status" (change)="updateEditPlan('status', $any($event.target).value)">
+          <option value="DRAFT">Draft</option>
+          <option value="ACTIVE">Active</option>
+          <option value="DONE">Done</option>
+        </select>
+        <input
+          placeholder="PDI title"
+          required
+          [value]="form.title"
+          (input)="updateEditPlan('title', $any($event.target).value)"
+        />
+        <textarea
+          placeholder="Development objective"
+          required
+          [value]="form.objective"
+          (input)="updateEditPlan('objective', $any($event.target).value)"
+        ></textarea>
+        <div class="admin-form-actions">
+          <button [disabled]="isUpdatingPlan" type="submit">
+            {{ isUpdatingPlan ? 'Saving PDI' : 'Save changes' }}
+          </button>
+          <button
+            class="danger"
+            type="button"
+            title="Remove PDI"
+            [disabled]="isDeletingPlan"
+            (click)="handleDeletePlan(editingPlanId(), form.title)"
+          >
+            <i-lucide name="trash-2" [size]="16" />
+            {{ isDeletingPlan ? 'Removing' : 'Remove' }}
+          </button>
+        </div>
+      </form>
+    }
+  </div>
+</details>

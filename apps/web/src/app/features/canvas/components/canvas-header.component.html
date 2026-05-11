@@ -1,0 +1,54 @@
+<header class="canvas-header">
+  <div class="canvas-title">
+    <span>PDI Portal</span>
+    <div class="plan-picker">
+      <select aria-label="Select PDI plan" [value]="plan.id" (change)="selectPlan.emit($any($event.target).value)">
+        @for (item of plans; track item.id) {
+          <option [value]="item.id">
+            {{ item.title }}{{ ownerName(item.ownerId) ? ' - ' + ownerName(item.ownerId) : '' }}
+          </option>
+        }
+      </select>
+      <button type="button" title="Create PDI plan" [disabled]="isCreatingPlan" (click)="handleQuickCreate()">
+        <i-lucide name="plus" [size]="17" />
+      </button>
+    </div>
+    <p>
+      {{ plan.objective }}
+      @if (ownerName(plan.ownerId); as owner) {
+        Owner: {{ owner }}
+      }
+    </p>
+  </div>
+
+  <div class="canvas-header-actions">
+    <button class="save-board" type="button" (click)="saveBoard.emit()">
+      <i-lucide name="save" [size]="17" />
+      {{ isSaving ? 'Saving' : 'Save board' }}
+    </button>
+
+    @if (user.role === 'ADMIN') {
+      <app-admin-users-menu
+        [isCreatingUser]="isCreatingUser"
+        [users]="users"
+        [usersCount]="usersCount"
+        (createUser)="createUser.emit($event)"
+      />
+
+      <app-admin-pdi-menu
+        [isCreatingPlan]="isCreatingPlan"
+        [isDeletingPlan]="isDeletingPlan"
+        [isUpdatingPlan]="isUpdatingPlan"
+        [plan]="plan"
+        [plans]="plans"
+        [users]="users"
+        (createPlan)="createPlan.emit($event)"
+        (deletePlan)="deletePlan.emit($event)"
+        (selectPlanForCanvas)="selectPlan.emit($event)"
+        (updatePlan)="updatePlan.emit($event)"
+      />
+    }
+
+    <app-user-menu [user]="user" [usersCount]="usersCount" (logout)="logout.emit()" />
+  </div>
+</header>
