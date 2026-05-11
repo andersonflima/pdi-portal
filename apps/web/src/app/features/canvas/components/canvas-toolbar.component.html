@@ -1,0 +1,135 @@
+<div class="canvas-toolbar" aria-label="Canvas tools">
+  <button class="is-passive" title="Select and move nodes" type="button">
+    <i-lucide name="mouse-pointer-2" [size]="17" />
+    <span>Select</span>
+  </button>
+
+  @for (kind of nodeKindOrder; track kind) {
+    @if (kind === 'SHAPE') {
+      <details
+        class="shape-tool"
+        [open]="isShapeToolOpen()"
+        (toggle)="isShapeToolOpen.set($any($event.currentTarget).open)"
+      >
+        <summary title="Add shape">
+          <i-lucide [name]="nodeKindMeta[kind].iconName" [size]="18" />
+          <span>{{ nodeKindMeta[kind].label }}</span>
+          <small>{{ nodeKindMeta[kind].action }}</small>
+        </summary>
+        <div class="shape-tool-panel">
+          @for (variant of shapeVariantOrder; track variant) {
+            <button type="button" [title]="'Add ' + shapeVariantMeta[variant].label" (click)="handleCreateNode('SHAPE', variant)">
+              <i-lucide [name]="shapeVariantMeta[variant].iconName" [size]="17" />
+              <span>{{ shapeVariantMeta[variant].label }}</span>
+            </button>
+          }
+        </div>
+      </details>
+    } @else {
+      <button type="button" [title]="'Add ' + nodeKindMeta[kind].label" (click)="handleCreateNode(kind)">
+        <i-lucide [name]="nodeKindMeta[kind].iconName" [size]="18" />
+        <span>{{ nodeKindMeta[kind].label }}</span>
+        <small>{{ nodeKindMeta[kind].action }}</small>
+      </button>
+    }
+  }
+
+  <button
+    type="button"
+    [class.is-active]="connectorSourceId()"
+    [disabled]="!selectedNode()"
+    title="Connect selected node to the next node you click"
+    (click)="toggleConnectorMode.emit()"
+  >
+    <i-lucide name="diamond" [size]="17" />
+    <span>Connect</span>
+  </button>
+
+  @if (selectedNode(); as node) {
+    <div class="node-style-panel" aria-label="Selected item style">
+      <label title="Change selected item color">
+        <span>Stroke</span>
+        <input type="color" [value]="node.color" (input)="handleNodeColor($event)" />
+      </label>
+
+      @if (node.kind === 'FRAME') {
+        <label title="Change frame background">
+          <span>Bg</span>
+          <input type="color" [value]="node.backgroundColor ?? '#f8fafc'" (input)="handleFrameBackground($event)" />
+        </label>
+      }
+
+      <div class="text-format-group" aria-label="Text emphasis">
+        <button type="button" title="Bold" [class.is-active]="node.textStyle?.bold" (click)="toggleTextStyle('bold')">
+          <i-lucide name="bold" [size]="14" />
+        </button>
+        <button type="button" title="Italic" [class.is-active]="node.textStyle?.italic" (click)="toggleTextStyle('italic')">
+          <i-lucide name="italic" [size]="14" />
+        </button>
+        <button type="button" title="Underline" [class.is-active]="node.textStyle?.underline" (click)="toggleTextStyle('underline')">
+          <i-lucide name="underline" [size]="14" />
+        </button>
+      </div>
+
+      <div class="text-format-group" aria-label="Text alignment">
+        <button type="button" title="Align left" [class.is-active]="(node.textStyle?.align ?? 'left') === 'left'" (click)="setTextAlign('left')">
+          <i-lucide name="align-left" [size]="14" />
+        </button>
+        <button type="button" title="Align center" [class.is-active]="node.textStyle?.align === 'center'" (click)="setTextAlign('center')">
+          <i-lucide name="align-center" [size]="14" />
+        </button>
+        <button type="button" title="Align right" [class.is-active]="node.textStyle?.align === 'right'" (click)="setTextAlign('right')">
+          <i-lucide name="align-right" [size]="14" />
+        </button>
+      </div>
+
+      <div class="text-format-group" aria-label="Vertical alignment">
+        <button type="button" title="Align top" [class.is-active]="(node.textStyle?.verticalAlign ?? 'top') === 'top'" (click)="setVerticalAlign('top')">
+          <i-lucide name="align-vertical-justify-start" [size]="14" />
+        </button>
+        <button type="button" title="Align middle" [class.is-active]="node.textStyle?.verticalAlign === 'center'" (click)="setVerticalAlign('center')">
+          <i-lucide name="align-vertical-justify-center" [size]="14" />
+        </button>
+        <button type="button" title="Align bottom" [class.is-active]="node.textStyle?.verticalAlign === 'bottom'" (click)="setVerticalAlign('bottom')">
+          <i-lucide name="align-vertical-justify-end" [size]="14" />
+        </button>
+      </div>
+
+      <label class="font-size-control" title="Font size">
+        <span>Size</span>
+        <input type="number" min="8" max="96" [value]="node.textStyle?.fontSize ?? ''" (input)="setFontSize($event)" />
+      </label>
+    </div>
+  }
+
+  @if (selectedEdge(); as edge) {
+    @if (!selectedNode()) {
+      <div class="edge-style-panel" aria-label="Selected connector style">
+        <label title="Connector text">
+          <span>Text</span>
+          <input type="text" placeholder="Label" [value]="edge.label ?? ''" (input)="setEdgeText($event)" />
+        </label>
+        <label title="Connector color">
+          <span>Color</span>
+          <input type="color" [value]="edge.style.color" (input)="setEdgeColor($event)" />
+        </label>
+        <label title="Connector type">
+          <span>Type</span>
+          <select [value]="edge.style.type" (change)="setEdgeType($event)">
+            <option value="smoothstep">Smooth</option>
+            <option value="straight">Straight</option>
+            <option value="step">Step</option>
+            <option value="default">Bezier</option>
+          </select>
+        </label>
+        <label title="Connector line style">
+          <span>Line</span>
+          <select [value]="edge.style.lineStyle" (change)="setEdgeLineStyle($event)">
+            <option value="solid">Line</option>
+            <option value="dashed">Dashed</option>
+          </select>
+        </label>
+      </div>
+    }
+  }
+</div>

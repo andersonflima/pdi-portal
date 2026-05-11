@@ -1,0 +1,67 @@
+{
+  "$schema": "../../node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "newProjectRoot": "projects",
+  "projects": {
+    "web": {
+      "projectType": "application",
+      "root": "",
+      "sourceRoot": "src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "browser": "src/main.ts",
+            "index": "src/index.html",
+            "outputPath": {
+              "base": "dist",
+              "browser": ""
+            },
+            "polyfills": ["zone.js"],
+            "styles": ["src/styles.css"],
+            "tsConfig": "tsconfig.app.json"
+          },
+          "configurations": {
+            "development": {
+              "extractLicenses": false,
+              "optimization": false,
+              "sourceMap": true
+            },
+            "production": {
+              "budgets": [
+                {
+                  "maximumError": "1.2mb",
+                  "maximumWarning": "900kb",
+                  "type": "initial"
+                },
+                {
+                  "maximumError": "12kb",
+                  "maximumWarning": "8kb",
+                  "type": "anyComponentStyle"
+                }
+              ],
+              "outputHashing": "all"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular/build:dev-server",
+          "configurations": {
+            "development": {
+              "buildTarget": "web:build:development"
+            },
+            "production": {
+              "buildTarget": "web:build:production"
+            }
+          },
+          "defaultConfiguration": "development",
+          "options": {
+            "host": "0.0.0.0"
+          }
+        }
+      }
+    }
+  }
+}

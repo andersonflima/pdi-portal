@@ -1,0 +1,62 @@
+<main class="login-shell">
+  <section class="login-visual" aria-label="PDI Portal">
+    <div>
+      <p>PDI Portal</p>
+      <h1>Development plans with a living canvas.</h1>
+      <span>Goals, actions, feedback loops and team follow-up in one workspace.</span>
+    </div>
+  </section>
+
+  <form class="login-panel" (ngSubmit)="handleSubmit()">
+    <i-lucide name="lock-keyhole" aria-hidden="true" />
+    <h2>{{ canCreateAdmin() ? 'Create first admin' : 'Sign in' }}</h2>
+
+    @if (canCreateAdmin()) {
+      <label>
+        Name
+        <input
+          [ngModel]="adminName()"
+          (ngModelChange)="adminName.set($event)"
+          minLength="2"
+          name="adminName"
+          required
+          type="text"
+        />
+      </label>
+    }
+
+    <label>
+      Email
+      <input [ngModel]="email()" (ngModelChange)="email.set($event)" name="email" required type="email" />
+    </label>
+
+    <label>
+      Password
+      <input
+        [minLength]="canCreateAdmin() ? 8 : 6"
+        [ngModel]="password()"
+        (ngModelChange)="password.set($event)"
+        name="password"
+        required
+        type="password"
+      />
+    </label>
+
+    @if (error()) {
+      <p class="form-error">{{ error() }}</p>
+    }
+
+    <button [disabled]="isSubmitting()" type="submit">
+      <i-lucide [name]="canCreateAdmin() ? 'user-plus' : 'log-in'" [size]="18" />
+      {{
+        isSubmitting()
+          ? canCreateAdmin()
+            ? 'Creating admin'
+            : 'Signing in'
+          : canCreateAdmin()
+            ? 'Create admin'
+            : 'Enter platform'
+      }}
+    </button>
+  </form>
+</main>

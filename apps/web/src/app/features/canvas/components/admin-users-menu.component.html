@@ -1,0 +1,65 @@
+<details class="admin-menu">
+  <summary>
+    <i-lucide name="user-circle-2" [size]="21" />
+    <span>Users</span>
+    <i-lucide name="chevron-down" [size]="16" />
+  </summary>
+
+  <div class="admin-menu-panel">
+    <section>
+      <div class="admin-panel-title">
+        <strong>Users</strong>
+        <span>{{ usersCount }} registered</span>
+      </div>
+
+      <div class="admin-user-list">
+        @for (user of users; track user.id) {
+          <div>
+            <div>
+              <strong>{{ user.name }}</strong>
+              <span>{{ user.email }}</span>
+            </div>
+            <small>{{ user.role }}</small>
+          </div>
+        }
+      </div>
+    </section>
+
+    <form (submit)="handleSubmit($event)">
+      <strong>New user</strong>
+      <input
+        placeholder="Name"
+        required
+        [value]="newUser().name"
+        (input)="updateNewUser('name', $any($event.target).value)"
+      />
+      <input
+        placeholder="Email"
+        required
+        type="email"
+        [value]="newUser().email"
+        (input)="updateNewUser('email', $any($event.target).value)"
+      />
+      <div class="temporary-password-field">
+        <input
+          minLength="6"
+          placeholder="Temporary password"
+          required
+          type="text"
+          [value]="newUser().password"
+          (input)="updateNewUser('password', $any($event.target).value)"
+        />
+        <button title="Generate temporary password" type="button" (click)="regeneratePassword()">
+          <i-lucide name="sparkles" [size]="15" />
+        </button>
+      </div>
+      <select [value]="newUser().role" (change)="updateNewUser('role', $any($event.target).value)">
+        <option value="MEMBER">Member</option>
+        <option value="ADMIN">Admin</option>
+      </select>
+      <button [disabled]="isCreatingUser" type="submit">
+        {{ isCreatingUser ? 'Creating user' : 'Create user' }}
+      </button>
+    </form>
+  </div>
+</details>

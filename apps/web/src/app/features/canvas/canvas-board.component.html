@@ -1,0 +1,79 @@
+<div class="canvas-shell">
+  <app-canvas-header
+    [isCreatingPlan]="isCreatingPlan"
+    [isCreatingUser]="isCreatingUser"
+    [isDeletingPlan]="isDeletingPlan"
+    [isSaving]="isSaving()"
+    [isUpdatingPlan]="isUpdatingPlan"
+    [plan]="plan"
+    [plans]="plans"
+    [user]="user"
+    [users]="users"
+    [usersCount]="usersCount"
+    (createPlan)="createPlan.emit($event)"
+    (createUser)="createUser.emit($event)"
+    (deletePlan)="deletePlan.emit($event)"
+    (logout)="logout.emit()"
+    (saveBoard)="saveCurrentBoard()"
+    (selectPlan)="selectPlan.emit($event)"
+    (updatePlan)="updatePlan.emit($event)"
+  />
+
+  <app-canvas-toolbar
+    [connectorSourceId]="connectorSourceId()"
+    [selectedEdge]="selectedEdge()"
+    [selectedNode]="selectedNode()"
+    (createNode)="handleCreateNode($event)"
+    (edgeChange)="updateSelectedEdge($event)"
+    (nodeStyleChange)="updateSelectedNodeStyle($event)"
+    (textStyleChange)="updateSelectedTextStyle($event)"
+    (toggleConnectorMode)="handleToggleConnectorMode()"
+  />
+
+  <div class="canvas-stage">
+    <div class="canvas-zoom-controls" aria-label="Canvas zoom controls">
+      <button type="button" aria-label="Zoom out" title="Zoom out" (click)="zoomOut()">
+        <i-lucide name="zoom-out" [size]="16" />
+      </button>
+      <span>{{ zoomPercent() }}%</span>
+      <button type="button" aria-label="Zoom in" title="Zoom in" (click)="zoomIn()">
+        <i-lucide name="zoom-in" [size]="16" />
+      </button>
+      <button type="button" aria-label="Reset zoom" title="Reset zoom" (click)="resetZoom()">
+        <i-lucide name="rotate-ccw" [size]="16" />
+      </button>
+    </div>
+
+    <div class="canvas-viewport" [style.height.px]="canvasSize.height * zoom()" [style.width.px]="canvasSize.width * zoom()">
+      <div
+        class="canvas-plane"
+        [style.height.px]="canvasSize.height"
+        [style.transform]="'scale(' + zoom() + ')'"
+        [style.width.px]="canvasSize.width"
+        (pointerdown)="clearSelection()"
+      >
+        <app-canvas-edge-layer
+          [edges]="edges()"
+          [nodes]="nodes()"
+          [selectedEdgeId]="selectedEdgeId()"
+          (selectEdge)="handleSelectEdge($event)"
+        />
+
+        @for (node of nodes(); track node.id) {
+          <app-canvas-node
+            [node]="node"
+            [selected]="selectedNodeId() === node.id"
+            [style.height.px]="node.height"
+            [style.left.px]="node.position.x"
+            [style.top.px]="node.position.y"
+            [style.width.px]="node.width"
+            [style.z-index]="node.zIndex + (selectedNodeId() === node.id ? 20 : 0)"
+            (dataChange)="updateNodeData(node.id, $event)"
+            (pointerdown)="handleNodePointerDown($event, node)"
+            (resizeStart)="startNodeResize($event, node)"
+          />
+        }
+      </div>
+    </div>
+  </div>
+</div>

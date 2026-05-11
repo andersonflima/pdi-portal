@@ -1,0 +1,48 @@
+:host {
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 1;
+}
+
+.edge-layer {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.edge-hit-area {
+  fill: none;
+  pointer-events: stroke;
+  stroke: transparent;
+  stroke-width: 18;
+}
+
+.edge-line {
+  fill: none;
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.8));
+  pointer-events: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.edge-line-dashed {
+  stroke-dasharray: 8 6;
+}
+
+.is-selected .edge-line {
+  stroke-width: 3;
+}
+
+.edge-label {
+  dominant-baseline: central;
+  font-size: 13px;
+  font-weight: 750;
+  paint-order: stroke;
+  pointer-events: none;
+  stroke: rgba(255, 255, 255, 0.92);
+  stroke-linejoin: round;
+  stroke-width: 8;
+  text-anchor: middle;
+}

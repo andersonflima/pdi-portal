@@ -1,0 +1,73 @@
+:host {
+  display: block;
+  position: relative;
+}
+
+.user-menu {
+  position: relative;
+}
+
+.user-menu summary {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #dfe5ee;
+  border-radius: 999px;
+  color: #172033;
+  cursor: pointer;
+  display: flex;
+  gap: 8px;
+  list-style: none;
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+.user-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.user-menu summary span {
+  font-size: 14px;
+  font-weight: 720;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-menu-panel {
+  background: #ffffff;
+  border: 1px solid #dfe5ee;
+  border-radius: 8px;
+  box-shadow: 0 18px 48px rgba(23, 32, 51, 0.16);
+  display: grid;
+  gap: 5px;
+  min-width: 260px;
+  padding: 14px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  z-index: 80;
+}
+
+.user-menu-panel span,
+.user-menu-panel small {
+  color: #64748b;
+}
+
+.user-menu-panel button {
+  background: #172033;
+  border-radius: 8px;
+  color: #ffffff;
+  justify-content: center;
+  margin-top: 10px;
+  min-height: 38px;
+  padding: 0 12px;
+}
+
+@media (max-width: 860px) {
+  .user-menu-panel {
+    left: 0;
+    min-width: min(420px, calc(100vw - 56px));
+    right: auto;
+  }
+}
