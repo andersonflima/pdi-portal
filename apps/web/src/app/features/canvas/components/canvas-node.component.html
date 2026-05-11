@@ -1,0 +1,54 @@
+<article [class]="nodeClasses()" [ngStyle]="nodeStyle()" (dblclick)="isEditing.set(true)">
+  @if (selected()) {
+    <span class="pdi-node-handle pdi-node-handle-top"></span>
+    <span class="pdi-node-handle pdi-node-handle-right"></span>
+    <span class="pdi-node-handle pdi-node-handle-bottom"></span>
+    <span class="pdi-node-handle pdi-node-handle-left"></span>
+    <button class="pdi-node-resize-handle" title="Resize item" type="button" (pointerdown)="handleResizeStart($event)"></button>
+  }
+
+  @if (node().kind === 'TASK') {
+    <button
+      class="pdi-task-check"
+      type="button"
+      [attr.aria-label]="node().checked ? 'Mark task as open' : 'Mark task as done'"
+      [attr.aria-pressed]="node().checked ?? false"
+      (click)="handleTaskToggle($event)"
+      (dblclick)="stopCanvasInteraction($event)"
+      (pointerdown)="stopCanvasInteraction($event)"
+    >
+      {{ node().checked ? '✓' : '' }}
+    </button>
+  }
+
+  @if (isEditing()) {
+    <div class="pdi-node-editor" (pointerdown)="stopCanvasInteraction($event)">
+      <textarea
+        [attr.aria-label]="editLabel()"
+        [rows]="textRows()"
+        [value]="textValue()"
+        autofocus
+        (blur)="isEditing.set(false)"
+        (input)="handleTextInput($event)"
+        (keydown.escape)="isEditing.set(false)"
+      ></textarea>
+    </div>
+  } @else if (node().kind === 'TASK_LIST') {
+    <div class="pdi-task-list">
+      @for (item of node().taskItems ?? []; track item.id) {
+        <button
+          type="button"
+          [attr.aria-pressed]="item.checked"
+          (click)="handleChecklistToggle($event, item.id)"
+          (dblclick)="stopCanvasInteraction($event)"
+          (pointerdown)="stopCanvasInteraction($event)"
+        >
+          <span>{{ item.checked ? '✓' : '' }}</span>
+          <strong>{{ item.label }}</strong>
+        </button>
+      }
+    </div>
+  } @else {
+    <strong>{{ node().label }}</strong>
+  }
+</article>

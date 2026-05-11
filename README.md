@@ -9,8 +9,8 @@ O projeto entrega uma experiencia de PDI com login, administracao de usuarios, g
 ## Stack
 
 - `Node.js` com `Fastify` no backend
-- `React` com `Vite` no frontend
-- `React Flow` para o canvas visual
+- `Angular` no frontend
+- Canvas visual modular com componentes Angular
 - `Prisma` com `PostgreSQL`
 - `Zod` para contratos compartilhados
 - `Docker Compose` para ambiente local
