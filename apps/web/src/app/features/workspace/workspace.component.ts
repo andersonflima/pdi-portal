@@ -35,5 +35,9 @@ export class WorkspaceComponent implements OnChanges {
 
   readonly handleDeletePlan = (planId: string) => this.workspace.deletePlan(planId);
 
+  readonly handleExportPlan = (planId: string) => this.workspace.exportPlan(planId);
+
+  readonly handleImportPlan = (file: File) => this.workspace.importPlan(file);
+
   readonly handleLogout = () => this.auth.logout();
 }

@@ -16,6 +16,8 @@ export class CanvasHeaderComponent {
   @Input({ required: true }) isCreatingPlan = false;
   @Input({ required: true }) isCreatingUser = false;
   @Input({ required: true }) isDeletingPlan = false;
+  @Input({ required: true }) isExportingPlan = false;
+  @Input({ required: true }) isImportingPlan = false;
   @Input({ required: true }) isSaving = false;
   @Input({ required: true }) isUpdatingPlan = false;
   @Input({ required: true }) plan!: PdiPlan;
@@ -27,6 +29,8 @@ export class CanvasHeaderComponent {
   readonly createPlan = output<{ objective: string; ownerId?: string; title: string }>();
   readonly createUser = output<{ email: string; name: string; password: string; role: User['role'] }>();
   readonly deletePlan = output<string>();
+  readonly exportPlan = output<string>();
+  readonly importPlan = output<File>();
   readonly logout = output<void>();
   readonly saveBoard = output<void>();
   readonly selectPlan = output<string>();
@@ -40,5 +44,16 @@ export class CanvasHeaderComponent {
       ownerId: this.users.find((candidate) => candidate.role === 'MEMBER')?.id,
       title: 'New PDI plan'
     });
+  };
+
+  protected readonly handleImportFile = (event: Event) => {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+
+    input.value = '';
+
+    if (file) {
+      this.importPlan.emit(file);
+    }
   };
 }

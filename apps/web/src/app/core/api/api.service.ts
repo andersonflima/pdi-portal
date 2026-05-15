@@ -5,6 +5,7 @@ import type {
   BootstrapStatus,
   LoginInput,
   PdiPlan,
+  PdiPlanExport,
   SaveBoardInput,
   User
 } from '@pdi/contracts';
@@ -116,6 +117,14 @@ export class ApiService {
   readonly deletePdiPlan = (pdiPlanId: string) =>
     this.request<void>(`/pdi-plans/${pdiPlanId}`, {
       method: 'DELETE'
+    });
+
+  readonly exportPdiPlan = (pdiPlanId: string) => this.request<PdiPlanExport>(`/pdi-plans/${pdiPlanId}/export`);
+
+  readonly importPdiPlan = (input: PdiPlanExport) =>
+    this.request<PdiPlan>('/pdi-plans/import', {
+      body: JSON.stringify(input),
+      method: 'POST'
     });
 
   readonly board = (pdiPlanId: string) => this.request<Board>(`/pdi-plans/${pdiPlanId}/board`);

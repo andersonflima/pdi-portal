@@ -5,6 +5,7 @@ import websocket from '@fastify/websocket';
 import Fastify from 'fastify';
 import { env } from './env.js';
 import { registerRoutes } from './routes/index.js';
+import { registerStaticAssets } from './static-assets.js';
 
 export const buildApp = async () => {
   const app = Fastify({ logger: true });
@@ -19,6 +20,7 @@ export const buildApp = async () => {
   await app.register(registerRoutes, { prefix: '/api' });
 
   app.get('/healthz', async () => ({ status: 'ok' }));
+  await registerStaticAssets(app);
 
   return app;
 };

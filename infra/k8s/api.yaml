@@ -52,9 +52,13 @@ spec:
             - name: PORT
               value: "3333"
             - name: WEB_ORIGIN
-              value: http://pdi-web.pdi.svc.cluster.local:8080
+              value: http://pdi-api.pdi.svc.cluster.local:3333
           ports:
             - containerPort: 3333
+          command:
+            - sh
+            - -c
+            - npm run db:push && npm run db:seed && node dist/server.js
           volumeMounts:
             - mountPath: /app/apps/api/data
               name: api-data

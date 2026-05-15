@@ -19,3 +19,5 @@ export const runCommand = (command, args, options = {}) =>
       reject(new Error(`${command} ${args.join(' ')} exited with code ${code ?? 'unknown'}`));
     });
   });
+
+export const runCommandWithEnv = (command, args, env) => runCommand(command, args, { env });

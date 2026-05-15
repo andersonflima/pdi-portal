@@ -22,6 +22,18 @@
   </div>
 
   <div class="canvas-header-actions">
+    <input #importInput class="import-file-input" type="file" accept="application/json,.json" (change)="handleImportFile($event)" />
+
+    <button class="secondary-action" type="button" title="Import PDI" [disabled]="isImportingPlan" (click)="importInput.click()">
+      <i-lucide name="upload" [size]="17" />
+      {{ isImportingPlan ? 'Importing' : 'Import' }}
+    </button>
+
+    <button class="secondary-action" type="button" title="Export PDI" [disabled]="isExportingPlan" (click)="exportPlan.emit(plan.id)">
+      <i-lucide name="download" [size]="17" />
+      {{ isExportingPlan ? 'Exporting' : 'Export' }}
+    </button>
+
     <button class="save-board" type="button" (click)="saveBoard.emit()">
       <i-lucide name="save" [size]="17" />
       {{ isSaving ? 'Saving' : 'Save board' }}

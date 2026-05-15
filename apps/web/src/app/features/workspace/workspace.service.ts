@@ -1,5 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import type { PdiPlan, User } from '@pdi/contracts';
+import type { PdiPlan, PdiPlanExport, User } from '@pdi/contracts';
 import { ApiService } from '../../core/api/api.service';
 
 type PlanPatch = {
@@ -14,6 +14,25 @@ const insertCreatedPlan = (plans: PdiPlan[], createdPlan: PdiPlan) =>
 
 const removePlanById = (plans: PdiPlan[], planId: string) => plans.filter((plan) => plan.id !== planId);
 
+const toExportFileName = (plan: PdiPlan) =>
+  `${plan.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'pdi'}-${plan.id}.json`;
+
+const downloadJson = (fileName: string, payload: PdiPlanExport) => {
+  const url = URL.createObjectURL(
+    new Blob([JSON.stringify(payload, null, 2)], {
+      type: 'application/json'
+    })
+  );
+  const link = document.createElement('a');
+
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  URL.revokeObjectURL(url);
+};
+
+const readJsonFile = async <T>(file: File): Promise<T> => JSON.parse(await file.text()) as T;
+
 @Injectable()
 export class WorkspaceService {
   private readonly api = inject(ApiService);
@@ -24,6 +43,8 @@ export class WorkspaceService {
   readonly isCreatingPlan = signal(false);
   readonly isCreatingUser = signal(false);
   readonly isDeletingPlan = signal(false);
+  readonly isExportingPlan = signal(false);
+  readonly isImportingPlan = signal(false);
   readonly isUpdatingPlan = signal(false);
 
   readonly activePlan = computed(() => {
@@ -86,6 +107,36 @@ export class WorkspaceService {
       window.alert(error instanceof Error ? error.message : 'Could not remove PDI');
     } finally {
       this.isDeletingPlan.set(false);
+    }
+  };
+
+  readonly exportPlan = async (planId: string) => {
+    const plan = this.plans().find((item) => item.id === planId);
+
+    if (!plan) return;
+
+    this.isExportingPlan.set(true);
+
+    try {
+      downloadJson(toExportFileName(plan), await this.api.exportPdiPlan(planId));
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Could not export PDI');
+    } finally {
+      this.isExportingPlan.set(false);
+    }
+  };
+
+  readonly importPlan = async (file: File) => {
+    this.isImportingPlan.set(true);
+
+    try {
+      const plan = await this.api.importPdiPlan(await readJsonFile<PdiPlanExport>(file));
+      this.plans.set(insertCreatedPlan(this.plans(), plan));
+      this.activePlanId.set(plan.id);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Could not import PDI');
+    } finally {
+      this.isImportingPlan.set(false);
     }
   };
 

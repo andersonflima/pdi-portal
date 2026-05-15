@@ -79,6 +79,22 @@
   min-width: max-content;
 }
 
+.import-file-input {
+  display: none;
+}
+
+.secondary-action {
+  background: #eef3f8;
+  border-radius: 8px;
+  color: #172033;
+  flex: 0 0 auto;
+  justify-content: center;
+  min-height: 42px;
+  min-width: 104px;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+
 .save-board {
   background: #172033;
   border-radius: 8px;

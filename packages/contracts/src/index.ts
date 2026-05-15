@@ -155,3 +155,20 @@ export const saveBoardSchema = boardSchema.pick({
   edges: true
 });
 export type SaveBoardInput = z.infer<typeof saveBoardSchema>;
+
+export const pdiPlanExportSchema = z.object({
+  exportedAt: z.string(),
+  version: z.literal(1),
+  plan: z.object({
+    title: z.string().min(3),
+    objective: z.string().min(3),
+    status: pdiStatusSchema,
+    dueDate: z.string().nullable()
+  }),
+  board: z.object({
+    title: z.string().min(1),
+    nodes: z.array(canvasNodeSchema),
+    edges: z.array(canvasEdgeSchema)
+  })
+});
+export type PdiPlanExport = z.infer<typeof pdiPlanExportSchema>;

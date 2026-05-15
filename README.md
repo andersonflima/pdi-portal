@@ -13,7 +13,8 @@ O projeto entrega uma experiencia de PDI com login, administracao de usuarios, g
 - Canvas visual modular com componentes Angular
 - `Prisma` com `SQLite`
 - `Zod` para contratos compartilhados
-- `Docker Compose` para ambiente local sem banco externo
+- Build unico Node.js servindo API, frontend e banco SQLite local
+- `Docker Compose` com um unico servico, sem banco externo
 - Manifestos Kubernetes em `infra/k8s`
 
 ## Estrutura
@@ -35,6 +36,7 @@ infra/
 - Criacao, edicao e remocao de PDIs
 - Vinculo de PDI com usuario responsavel
 - Board visual por PDI
+- Importacao e exportacao de PDI em JSON
 - Colaboracao em tempo real via WebSocket
 - Elementos de canvas: texto, post-it, sticker, task, lista de tasks, goal, card, frame e shapes
 - Edicao de texto inline nos elementos
@@ -58,7 +60,8 @@ Para maquinas corporativas com acesso restrito a internet e dependencias via Art
 - banco local em `SQLite`;
 - `esbuild` fixado em `0.27.3`;
 - scripts de desenvolvimento em Node.js, sem dependencia de Bash;
-- Docker sem `npm ci`, `npm audit` ou `npm fund` no build.
+- Docker sem `npm ci`, `npm audit` ou `npm fund` no build;
+- um unico container servindo frontend, API e SQLite.
 
 Configure o registry corporativo antes de instalar as dependencias, quando necessario:
 
@@ -77,7 +80,7 @@ O comando `npm run dev` prepara o Prisma, sincroniza o SQLite, roda o seed e sob
 
 ## Ambiente Local com Docker
 
-Suba toda a stack local:
+Suba a aplicacao local em um unico container:
 
 ```bash
 docker compose up -d --build
@@ -85,8 +88,8 @@ docker compose up -d --build
 
 Servicos:
 
-- Web: `http://localhost:5173`
-- API: `http://localhost:3333`
+- Aplicacao: `http://localhost:3333`
+- API: `http://localhost:3333/api`
 - Banco SQLite persistido no volume Docker `api-data`
 
 O servico da API executa automaticamente:
@@ -174,20 +177,20 @@ npm run lint
 npm run test
 ```
 
+O `npm run build` gera o frontend Angular, compila a API e copia o resultado para `apps/api/public`, permitindo servir tudo por um unico processo Node.js.
+
 ## Kubernetes
 
 Os manifests base ficam em `infra/k8s`:
 
 - `namespace.yaml`
 - `api.yaml`
-- `web.yaml`
 
 Aplicacao:
 
 ```bash
 kubectl apply -f infra/k8s/namespace.yaml
 kubectl apply -f infra/k8s/api.yaml
-kubectl apply -f infra/k8s/web.yaml
 ```
 
 Antes de usar em producao, revise secrets, imagens, storage, ingress, TLS, politicas de rede e estrategia de backup do arquivo SQLite.

@@ -1,4 +1,4 @@
-import { pdiPlanSchema } from '@pdi/contracts';
+import { pdiPlanExportSchema, pdiPlanSchema } from '@pdi/contracts';
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { authenticate } from '../auth.js';
@@ -21,6 +21,11 @@ const updatePdiSchema = z.object({
 
 const paramsSchema = z.object({
   id: z.string()
+});
+
+const toPlanAccessFilter = (user: { id: string; role: 'ADMIN' | 'MEMBER' }, planId: string) => ({
+  id: planId,
+  ...(user.role === 'ADMIN' ? {} : { ownerId: user.id })
 });
 
 const toPdiDto = (plan: {
@@ -63,6 +68,56 @@ export const pdiRoutes: FastifyPluginAsync = async (app) => {
             title: `${input.title} board`,
             nodes: [],
             edges: []
+          }
+        }
+      }
+    });
+
+    return reply.code(201).send(toPdiDto(plan));
+  });
+
+  app.get('/pdi-plans/:id/export', { preHandler: authenticate }, async (request) => {
+    const { id } = paramsSchema.parse(request.params);
+    const plan = await prisma.pdiPlan.findFirst({
+      include: { board: true },
+      where: toPlanAccessFilter(request.user, id)
+    });
+
+    if (!plan) {
+      throw app.httpErrors.notFound('PDI plan not found');
+    }
+
+    return pdiPlanExportSchema.parse({
+      exportedAt: new Date().toISOString(),
+      version: 1,
+      plan: {
+        title: plan.title,
+        objective: plan.objective,
+        status: plan.status,
+        dueDate: plan.dueDate?.toISOString() ?? null
+      },
+      board: {
+        title: plan.board?.title ?? `${plan.title} board`,
+        nodes: plan.board?.nodes ?? [],
+        edges: plan.board?.edges ?? []
+      }
+    });
+  });
+
+  app.post('/pdi-plans/import', { preHandler: authenticate }, async (request, reply) => {
+    const input = pdiPlanExportSchema.parse(request.body);
+    const plan = await prisma.pdiPlan.create({
+      data: {
+        ownerId: request.user.id,
+        title: input.plan.title,
+        objective: input.plan.objective,
+        status: input.plan.status,
+        dueDate: input.plan.dueDate ? new Date(input.plan.dueDate) : null,
+        board: {
+          create: {
+            title: input.board.title,
+            nodes: input.board.nodes,
+            edges: input.board.edges
           }
         }
       }

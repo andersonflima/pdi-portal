@@ -4,14 +4,19 @@ WORKDIR /app
 FROM base AS deps
 COPY tsconfig.base.json ./
 COPY apps/api/package.json apps/api/package.json
+COPY apps/web/package.json apps/web/package.json
 COPY packages/contracts/package.json packages/contracts/package.json
 RUN npm install --no-audit --no-fund --prefix packages/contracts
 RUN npm install --no-audit --no-fund --prefix apps/api
+RUN npm install --no-audit --no-fund --prefix apps/web
 
 FROM deps AS build
 COPY packages/contracts packages/contracts
 COPY apps/api apps/api
+COPY apps/web apps/web
 RUN npm run build --prefix packages/contracts
+RUN npm run build --prefix apps/web
+RUN cp -R apps/web/dist apps/api/public
 RUN npm run prisma:generate --prefix apps/api
 RUN npm run build --prefix apps/api
 

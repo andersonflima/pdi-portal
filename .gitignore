@@ -10,6 +10,7 @@ coverage
 *.tsbuildinfo
 .DS_Store
 apps/api/prisma/dev.db
+apps/api/public/
 apps/api/data/
 *.db
 *.db-journal
