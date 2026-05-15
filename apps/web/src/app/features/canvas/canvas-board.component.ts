@@ -1601,7 +1601,7 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
         return angles
           .map((angle) => {
             const markerId = markerIdForColorAndAngle(color, angle);
-            return `<marker id="${markerId}" viewBox="0 0 20 14" markerWidth="20" markerHeight="14" refX="18" refY="7" orient="${angle}" markerUnits="userSpaceOnUse"><path d="M 18 7 L 0 1 L 0 13 Z" fill="${escapedColor}" /></marker>`;
+            return `<marker id="${markerId}" viewBox="0 0 20 14" markerWidth="20" markerHeight="14" refX="0" refY="7" orient="${angle}" markerUnits="userSpaceOnUse"><path d="M 18 7 L 0 1 L 0 13 Z" fill="${escapedColor}" /></marker>`;
           })
           .join('');
       })
