@@ -1,9 +1,8 @@
 import { boardSchema, saveBoardSchema } from '@pdi/contracts';
-import type { Prisma } from '@prisma/client';
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { authenticate } from '../auth.js';
-import { prisma } from '../prisma.js';
+import { findPdiPlanById, upsertBoardByPdiPlanId } from '../database.js';
 
 const paramsSchema = z.object({
   pdiPlanId: z.string()
@@ -33,8 +32,8 @@ const toBoardDto = (board: {
   id: string;
   pdiPlanId: string;
   title: string;
-  nodes: Prisma.JsonValue;
-  edges: Prisma.JsonValue;
+  nodes: unknown[];
+  edges: unknown[];
   updatedAt: Date;
 }) =>
   boardSchema.parse({
@@ -42,8 +41,8 @@ const toBoardDto = (board: {
     updatedAt: board.updatedAt.toISOString()
   });
 
-const ensurePlanAccess = async (user: { id: string; role: 'ADMIN' | 'MEMBER' }, pdiPlanId: string) => {
-  const plan = await prisma.pdiPlan.findUnique({ where: { id: pdiPlanId } });
+const ensurePlanAccess = (user: { id: string; role: 'ADMIN' | 'MEMBER' }, pdiPlanId: string) => {
+  const plan = findPdiPlanById(pdiPlanId);
 
   if (!plan) return null;
   if (user.role === 'ADMIN' || plan.ownerId === user.id) return plan;
@@ -57,7 +56,7 @@ export const boardRoutes: FastifyPluginAsync = async (app) => {
     const { pdiPlanId } = paramsSchema.parse(request.params);
     const { clientId, token } = liveQuerySchema.parse(request.query);
     const user = await app.jwt.verify<{ id: string; role: 'ADMIN' | 'MEMBER' }>(token);
-    const plan = await ensurePlanAccess(user, pdiPlanId);
+    const plan = ensurePlanAccess(user, pdiPlanId);
 
     if (!plan) {
       connection.close(1008, 'PDI plan access denied');
@@ -73,19 +72,11 @@ export const boardRoutes: FastifyPluginAsync = async (app) => {
 
       if (!parsedMessage.success) return;
 
-      const board = await prisma.board.upsert({
-        create: {
-          pdiPlanId,
-          title: parsedMessage.data.payload.title,
-          nodes: parsedMessage.data.payload.nodes,
-          edges: parsedMessage.data.payload.edges
-        },
-        update: {
-          title: parsedMessage.data.payload.title,
-          nodes: parsedMessage.data.payload.nodes,
-          edges: parsedMessage.data.payload.edges
-        },
-        where: { pdiPlanId }
+      const board = upsertBoardByPdiPlanId({
+        pdiPlanId,
+        title: parsedMessage.data.payload.title,
+        nodes: parsedMessage.data.payload.nodes,
+        edges: parsedMessage.data.payload.edges
       });
       const outbound = JSON.stringify({
         clientId,
@@ -109,21 +100,17 @@ export const boardRoutes: FastifyPluginAsync = async (app) => {
 
   app.get('/pdi-plans/:pdiPlanId/board', { preHandler: authenticate }, async (request) => {
     const { pdiPlanId } = paramsSchema.parse(request.params);
-    const plan = await ensurePlanAccess(request.user, pdiPlanId);
+    const plan = ensurePlanAccess(request.user, pdiPlanId);
 
     if (!plan) {
       throw app.httpErrors.notFound('PDI plan not found');
     }
 
-    const board = await prisma.board.upsert({
-      create: {
-        pdiPlanId,
-        title: `${plan.title} board`,
-        nodes: [],
-        edges: []
-      },
-      update: {},
-      where: { pdiPlanId }
+    const board = upsertBoardByPdiPlanId({
+      pdiPlanId,
+      title: `${plan.title} board`,
+      nodes: [],
+      edges: []
     });
 
     return toBoardDto(board);
@@ -132,25 +119,17 @@ export const boardRoutes: FastifyPluginAsync = async (app) => {
   app.put('/pdi-plans/:pdiPlanId/board', { preHandler: authenticate }, async (request) => {
     const { pdiPlanId } = paramsSchema.parse(request.params);
     const input = saveBoardSchema.parse(request.body);
-    const plan = await ensurePlanAccess(request.user, pdiPlanId);
+    const plan = ensurePlanAccess(request.user, pdiPlanId);
 
     if (!plan) {
       throw app.httpErrors.notFound('PDI plan not found');
     }
 
-    const board = await prisma.board.upsert({
-      create: {
-        pdiPlanId,
-        title: input.title,
-        nodes: input.nodes,
-        edges: input.edges
-      },
-      update: {
-        title: input.title,
-        nodes: input.nodes,
-        edges: input.edges
-      },
-      where: { pdiPlanId }
+    const board = upsertBoardByPdiPlanId({
+      pdiPlanId,
+      title: input.title,
+      nodes: input.nodes,
+      edges: input.edges
     });
 
     return toBoardDto(board);
