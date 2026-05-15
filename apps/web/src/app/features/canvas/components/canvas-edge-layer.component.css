@@ -27,8 +27,11 @@
   stroke-width: 2;
 }
 
+.edge-arrow {
+  pointer-events: none;
+}
+
 .edge-line-dashed {
-  animation: edge-dash-flow 0.95s linear infinite;
   stroke-dasharray: 8 6;
 }
 
@@ -36,8 +39,24 @@
   stroke-width: 3;
 }
 
-.is-selected .edge-line-dashed {
+.edge-line-live {
+  animation: edge-dash-flow 0.95s linear infinite;
+  fill: none;
+  opacity: 0.95;
+  pointer-events: none;
+  stroke-dasharray: 30 16;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.6;
+}
+
+.edge-line-live-dashed {
+  stroke-dasharray: 24 12;
+}
+
+.is-selected .edge-line-live {
   animation-duration: 0.65s;
+  stroke-width: 3.2;
 }
 
 .edge-label {
@@ -54,12 +73,12 @@
 
 @keyframes edge-dash-flow {
   to {
-    stroke-dashoffset: -14;
+    stroke-dashoffset: -46;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .edge-line-dashed {
+  .edge-line-live {
     animation: none;
   }
 }

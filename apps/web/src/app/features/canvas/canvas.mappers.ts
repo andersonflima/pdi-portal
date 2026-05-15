@@ -52,7 +52,7 @@ const toNodeLayer = (node: Board['nodes'][number], index: number) => {
 };
 
 const toNodeSize = (node: Board['nodes'][number]) => {
-  if (node.kind !== 'GOAL' && (node.kind !== 'SHAPE' || node.variant !== 'CIRCLE')) {
+  if (node.kind !== 'SHAPE' || node.variant !== 'CIRCLE') {
     return {
       height: node.style.height ?? nodeKindMeta[node.kind].height,
       width: node.style.width ?? nodeKindMeta[node.kind].width
@@ -173,7 +173,7 @@ export const createCanvasNode = (
   variant?: CanvasShapeVariant
 ): CanvasNodeView => {
   const meta = nodeKindMeta[kind];
-  const size = kind === 'GOAL' || (kind === 'SHAPE' && variant === 'CIRCLE') ? meta.height : undefined;
+  const size = kind === 'SHAPE' && variant === 'CIRCLE' ? meta.height : undefined;
   const zIndex =
     kind === 'FRAME'
       ? Math.max(
@@ -198,6 +198,8 @@ export const createCanvasNode = (
     label:
       kind === 'SHAPE' && variant
         ? shapeVariantMeta[variant].label
+        : kind === 'TEXT'
+          ? 'Write your text'
         : kind === 'NOTE' || kind === 'STICKER'
           ? kind === 'NOTE'
             ? 'Write your note'
@@ -206,7 +208,8 @@ export const createCanvasNode = (
     position: { x: 160 + index * 28, y: 120 + index * 28 },
     taskItems: kind === 'TASK_LIST' ? defaultTaskItems() : undefined,
     textStyle: {
-      align: kind === 'TEXT' || kind === 'GOAL' || kind === 'SHAPE' || kind === 'STICKER' ? 'center' : 'left'
+      align: kind === 'TEXT' || kind === 'SHAPE' || kind === 'STICKER' ? 'center' : 'left',
+      fontSize: kind === 'TEXT' ? 40 : undefined
     },
     variant,
     width: size ?? meta.width,

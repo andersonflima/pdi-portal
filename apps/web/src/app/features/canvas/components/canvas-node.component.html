@@ -1,4 +1,4 @@
-<article [class]="nodeClasses()" [ngStyle]="nodeStyle()" (dblclick)="isEditing.set(true)">
+<article [class]="nodeClasses()" [ngStyle]="nodeStyle()" (dblclick)="handleNodeDoubleClick($event)">
   @if (selected()) {
     <button class="pdi-node-handle pdi-node-handle-top" title="Connect from top" type="button" (pointerdown)="handleConnectorStart($event, 'top')"></button>
     <button class="pdi-node-handle pdi-node-handle-right" title="Connect from right" type="button" (pointerdown)="handleConnectorStart($event, 'right')"></button>
@@ -20,18 +20,44 @@
     </button>
   }
 
-  @if (isEditing()) {
+  @if (node().kind === 'GOAL') {
+    <div class="pdi-goal-icon" aria-label="Goal icon">
+      <i-lucide name="goal" [size]="goalIconSize()" />
+    </div>
+  }
+
+  @if (isEditing() && node().kind !== 'TASK_LIST' && node().kind !== 'TASK') {
     <div class="pdi-node-editor" (pointerdown)="stopCanvasInteraction($event)">
       <textarea
+        class="pdi-editable-control"
         [attr.aria-label]="editLabel()"
         [rows]="textRows()"
         [value]="textValue()"
         autofocus
         (blur)="isEditing.set(false)"
         (input)="handleTextInput($event)"
-        (keydown.escape)="isEditing.set(false)"
+        (keydown)="handleEditableKeydown($event)"
       ></textarea>
     </div>
+  } @else if (node().kind === 'TASK') {
+    @if (isEditing()) {
+      <div class="pdi-node-editor" (pointerdown)="stopCanvasInteraction($event)">
+        <textarea
+          class="pdi-editable-control pdi-task-input"
+          rows="1"
+          [value]="node().label"
+          autofocus
+          (blur)="handleTaskLabelBlur()"
+          (click)="$event.stopPropagation()"
+          (dblclick)="$event.stopPropagation()"
+          (input)="handleTaskLabelInput($event)"
+          (keydown)="handleEditableKeydown($event); handleTaskLabelKeydown($event)"
+          (pointerdown)="stopCanvasInteraction($event)"
+        ></textarea>
+      </div>
+    } @else {
+      <strong>{{ node().label }}</strong>
+    }
   } @else if (node().kind === 'TASK_LIST') {
     <div class="pdi-task-list">
       @for (item of node().taskItems ?? []; track item.id) {
@@ -42,7 +68,22 @@
           (dblclick)="handleChecklistEditStart($event, item.id)"
         >
           <span>{{ item.checked ? '✓' : '' }}</span>
-          <strong>{{ item.label }}</strong>
+          @if (editingChecklistItemId() === item.id) {
+            <textarea
+              class="pdi-editable-control pdi-task-list-input"
+              rows="1"
+              [value]="item.label"
+              autofocus
+              (blur)="handleChecklistLabelBlur()"
+              (click)="$event.stopPropagation()"
+              (dblclick)="$event.stopPropagation()"
+              (input)="handleChecklistLabelInput($event, item.id)"
+              (keydown)="handleEditableKeydown($event); handleChecklistLabelKeydown($event)"
+              (pointerdown)="stopCanvasInteraction($event)"
+            ></textarea>
+          } @else {
+            <strong>{{ item.label }}</strong>
+          }
         </button>
       }
     </div>

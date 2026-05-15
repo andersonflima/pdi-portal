@@ -28,6 +28,7 @@
   <app-canvas-toolbar
     [connectorSourceId]="connectorSourceId()"
     [selectedEdge]="selectedEdge()"
+    [selectedEdgeDirection]="selectedEdgeDirection()"
     [selectedNode]="selectedNode()"
     (createNode)="handleCreateNode($event)"
     (edgeChange)="updateSelectedEdge($event)"
@@ -94,6 +95,21 @@
             (resizeStart)="startNodeResize($event, node)"
           />
         }
+
+        <svg class="edge-label-overlay" [attr.viewBox]="'0 0 ' + canvasSize.width + ' ' + canvasSize.height">
+          @for (edge of edges(); track edge.id) {
+            @if (edge.label && shouldRenderEdgeLabel(edge)) {
+              <text
+                class="edge-label-overlay-text"
+                [attr.x]="edgeLabelPosition(edge).x"
+                [attr.y]="edgeLabelPosition(edge).y - 10"
+                [attr.fill]="edge.style.color"
+              >
+                {{ edge.label }}
+              </text>
+            }
+          }
+        </svg>
 
         @if (marqueeBoxStyle(); as marqueeBoxStyle) {
           <div class="selection-marquee" [style.height]="marqueeBoxStyle.height" [style.left]="marqueeBoxStyle.left" [style.top]="marqueeBoxStyle.top" [style.width]="marqueeBoxStyle.width"></div>

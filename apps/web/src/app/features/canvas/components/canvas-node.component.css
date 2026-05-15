@@ -55,11 +55,28 @@
   width: 100%;
 }
 
+.pdi-goal-icon {
+  align-items: center;
+  color: var(--node-color);
+  display: inline-flex;
+  justify-content: center;
+  left: 12px;
+  min-height: 0;
+  min-width: 0;
+  pointer-events: none;
+  position: absolute;
+  top: 10px;
+  width: auto;
+  z-index: 2;
+}
+
 .pdi-node-editor textarea {
   background: transparent;
   border: 0;
+  caret-color: var(--node-text-color, #172033);
   box-shadow: none;
   color: inherit;
+  cursor: text;
   font: inherit;
   font-size: var(--node-font-size, clamp(12px, 8cqw, 22px));
   font-style: var(--node-font-style, normal);
@@ -75,6 +92,7 @@
   resize: none;
   text-align: inherit;
   text-decoration: var(--node-text-decoration, none);
+  -webkit-text-fill-color: var(--node-text-color, #172033);
   width: 100%;
   word-break: break-word;
 }
@@ -236,7 +254,32 @@
 }
 
 .pdi-shape-cloud {
-  border-radius: 46% 54% 50% 50% / 58% 46% 54% 42%;
+  --cloud-fill: color-mix(in srgb, var(--node-color) 12%, #ffffff);
+  background: transparent;
+  border: 0;
+  filter: drop-shadow(0 8px 18px color-mix(in srgb, var(--node-color) 20%, transparent));
+  overflow: visible;
+  padding: 20px 26px;
+}
+
+.pdi-shape-cloud::before {
+  background:
+    radial-gradient(circle at 12% 62%, var(--cloud-fill) 0 16%, transparent 17%),
+    radial-gradient(circle at 30% 44%, var(--cloud-fill) 0 24%, transparent 25%),
+    radial-gradient(circle at 50% 30%, var(--cloud-fill) 0 28%, transparent 29%),
+    radial-gradient(circle at 70% 42%, var(--cloud-fill) 0 24%, transparent 25%),
+    radial-gradient(circle at 88% 60%, var(--cloud-fill) 0 16%, transparent 17%),
+    radial-gradient(ellipse at 50% 70%, var(--cloud-fill) 0 41%, transparent 42%);
+  content: "";
+  inset: 2px;
+  pointer-events: none;
+  position: absolute;
+}
+
+.pdi-shape-cloud > strong,
+.pdi-shape-cloud .pdi-node-editor {
+  position: relative;
+  z-index: 1;
 }
 
 .pdi-node-text {
@@ -253,8 +296,8 @@
 
 .pdi-node-task > strong,
 .pdi-node-task .pdi-node-editor {
-  padding-left: 34px;
-  padding-right: 34px;
+  padding-left: 48px;
+  padding-right: 16px;
 }
 
 .pdi-task-check {
@@ -336,10 +379,58 @@
   text-align: var(--node-text-align, left);
 }
 
+.pdi-task-list-input {
+  background: transparent;
+  border: 0;
+  caret-color: var(--node-text-color, #172033);
+  color: var(--node-text-color, #172033);
+  cursor: text;
+  font-size: var(--node-font-size, clamp(11px, 6cqw, 18px));
+  font-style: var(--node-font-style, normal);
+  font-weight: var(--node-font-weight, 650);
+  line-height: 1.2;
+  min-width: 0;
+  outline: 0;
+  overflow: hidden;
+  padding: 0;
+  resize: none;
+  text-align: var(--node-text-align, left);
+  text-decoration: var(--node-text-decoration, none);
+  -webkit-text-fill-color: var(--node-text-color, #172033);
+  width: 100%;
+}
+
+.pdi-task-input {
+  background: transparent;
+  border: 0;
+  caret-color: var(--node-text-color, #172033);
+  color: var(--node-text-color, #172033);
+  cursor: text;
+  font-size: var(--node-font-size, clamp(12px, 8cqw, 22px));
+  font-style: var(--node-font-style, normal);
+  font-weight: var(--node-font-weight, 680);
+  line-height: 1.22;
+  min-width: 0;
+  outline: 0;
+  overflow: hidden;
+  padding: 0;
+  resize: none;
+  text-align: var(--node-text-align, left);
+  text-decoration: var(--node-text-decoration, none);
+  -webkit-text-fill-color: var(--node-text-color, #172033);
+  width: 100%;
+}
+
 .pdi-node-goal {
   background: color-mix(in srgb, var(--node-color) 8%, #ffffff);
-  border-radius: 999px;
+  border-radius: 10px;
   padding: 14px;
+}
+
+.pdi-node-goal > strong,
+.pdi-node-goal .pdi-node-editor {
+  padding-left: 36px;
+  padding-top: 4px;
 }
 
 .pdi-node-frame {

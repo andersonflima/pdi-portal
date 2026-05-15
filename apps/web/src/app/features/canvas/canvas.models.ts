@@ -61,6 +61,8 @@ export type CanvasEdgeView = {
   targetHandle?: string;
 };
 
+export type CanvasEdgeDirection = 'left-to-right' | 'right-to-left' | 'both';
+
 export type CanvasNodeMeta = {
   action: string;
   color: string;
@@ -79,6 +81,7 @@ export type CanvasNodeStylePatch = Partial<Pick<CanvasNodeView, 'backgroundColor
 
 export type CanvasEdgePatch = {
   color?: string;
+  direction?: CanvasEdgeDirection;
   label?: string;
   lineStyle?: CanvasEdgeLineStyle;
   type?: CanvasEdgeType;
