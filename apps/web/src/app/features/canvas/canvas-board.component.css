@@ -22,6 +22,11 @@
   user-select: none;
 }
 
+.canvas-stage.is-selecting {
+  cursor: crosshair;
+  user-select: none;
+}
+
 .canvas-zoom-controls {
   align-items: center;
   background: rgba(255, 255, 255, 0.92);
