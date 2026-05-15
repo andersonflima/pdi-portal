@@ -229,22 +229,10 @@ export class CanvasNodeComponent {
     const selectionEnd = control.selectionEnd ?? selectionStart;
 
     event.preventDefault();
-
-    if (event.shiftKey) {
-      const nextValue = `${value.slice(0, selectionEnd)}\n${value.slice(selectionEnd)}`;
-      const nextCursor = selectionEnd + 1;
-
-      control.value = nextValue;
-      control.setSelectionRange(nextCursor, nextCursor);
-      control.dispatchEvent(new Event('input', { bubbles: true }));
-      return;
-    }
-
-    const currentLineStart = value.lastIndexOf('\n', Math.max(0, selectionStart - 1)) + 1;
-    const nextValue = `${value.slice(0, currentLineStart)}\n${value.slice(currentLineStart)}`;
-
+    const nextValue = `${value.slice(0, selectionStart)}\n${value.slice(selectionEnd)}`;
+    const nextCursor = selectionStart + 1;
     control.value = nextValue;
-    control.setSelectionRange(currentLineStart, currentLineStart);
+    control.setSelectionRange(nextCursor, nextCursor);
     control.dispatchEvent(new Event('input', { bubbles: true }));
   };
 

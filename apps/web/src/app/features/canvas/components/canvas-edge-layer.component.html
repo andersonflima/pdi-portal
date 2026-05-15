@@ -1,30 +1,32 @@
 <svg class="edge-layer" [attr.viewBox]="'0 0 ' + canvasSize.width + ' ' + canvasSize.height">
+  <defs>
+    <marker id="edge-arrow-head" viewBox="0 0 20 14" markerWidth="20" markerHeight="14" refX="0" refY="7" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+      <path d="M 0 7 L 18 1 L 18 13 Z" fill="context-stroke" />
+    </marker>
+  </defs>
+
   @for (edge of edges(); track edge.id) {
-    @if (shouldRenderEdge(edge) && edgeGeometry(edge); as geometry) {
+    @if (shouldRenderEdge(edge) && edgePath(edge); as path) {
       <g [class.is-selected]="selectedEdgeId() === edge.id">
         <path
           class="edge-hit-area"
-          [attr.d]="geometry.path"
+          [attr.d]="path"
           (pointerdown)="handleSelect($event, edge.id)"
         />
         <path
           class="edge-line"
           [class.edge-line-dashed]="edge.style.lineStyle === 'dashed'"
-          [attr.d]="geometry.path"
+          [attr.d]="path"
           [attr.stroke]="edge.style.color"
+          [attr.marker-end]="'url(#edge-arrow-head)'"
+          [attr.marker-start]="isBidirectional(edge) ? 'url(#edge-arrow-head)' : null"
         />
         <path
           class="edge-line-live"
           [class.edge-line-live-dashed]="edge.style.lineStyle === 'dashed'"
-          [attr.d]="geometry.path"
+          [attr.d]="path"
           [attr.stroke]="edge.style.color"
         />
-
-        <polygon class="edge-arrow" [attr.points]="geometry.forwardArrow" [attr.fill]="edge.style.color" />
-
-        @if (geometry.backwardArrow) {
-          <polygon class="edge-arrow" [attr.points]="geometry.backwardArrow" [attr.fill]="edge.style.color" />
-          }
       </g>
     }
   }
