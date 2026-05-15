@@ -28,11 +28,16 @@
 }
 
 .edge-line-dashed {
+  animation: edge-dash-flow 0.95s linear infinite;
   stroke-dasharray: 8 6;
 }
 
 .is-selected .edge-line {
   stroke-width: 3;
+}
+
+.is-selected .edge-line-dashed {
+  animation-duration: 0.65s;
 }
 
 .edge-label {
@@ -45,4 +50,16 @@
   stroke-linejoin: round;
   stroke-width: 8;
   text-anchor: middle;
+}
+
+@keyframes edge-dash-flow {
+  to {
+    stroke-dashoffset: -14;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .edge-line-dashed {
+    animation: none;
+  }
 }
