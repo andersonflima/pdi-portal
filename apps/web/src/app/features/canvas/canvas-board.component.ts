@@ -950,6 +950,8 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
   };
 
   private readonly startMarqueeSelection = (event: PointerEvent) => {
+    event.preventDefault();
+
     const origin = this.toCanvasPoint(event.clientX, event.clientY);
 
     if (!origin) {
@@ -970,6 +972,8 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
     });
 
     const handleMove = (moveEvent: PointerEvent) => {
+      moveEvent.preventDefault();
+
       const currentPoint = this.toCanvasPoint(moveEvent.clientX, moveEvent.clientY);
 
       if (!currentPoint) return;
