@@ -34,7 +34,7 @@
     (toggleConnectorMode)="handleToggleConnectorMode()"
   />
 
-  <div #canvasStage class="canvas-stage" [class.is-panning]="isPanning()" (wheel)="handleStageWheel($event)">
+  <div #canvasStage class="canvas-stage" [class.is-panning]="isPanning()" (scroll)="handleStageScroll()" (wheel)="handleStageWheel($event)">
     <div class="canvas-zoom-controls" aria-label="Canvas zoom controls">
       <button type="button" aria-label="Zoom out" title="Zoom out" (click)="zoomOut()">
         <i-lucide name="zoom-out" [size]="16" />
@@ -73,7 +73,7 @@
         @for (node of renderedNodes(); track node.id) {
           <app-canvas-node
             [node]="node"
-            [selected]="selectedNodeId() === node.id"
+            [selected]="isNodeSelected(node.id)"
             [style.height.px]="node.height"
             [style.left.px]="node.position.x"
             [style.top.px]="node.position.y"
@@ -85,7 +85,42 @@
             (resizeStart)="startNodeResize($event, node)"
           />
         }
+
+        @if (marqueeBoxStyle(); as marqueeBoxStyle) {
+          <div class="selection-marquee" [style.height]="marqueeBoxStyle.height" [style.left]="marqueeBoxStyle.left" [style.top]="marqueeBoxStyle.top" [style.width]="marqueeBoxStyle.width"></div>
+        }
       </div>
     </div>
+
+    <aside class="canvas-minimap" aria-label="Canvas map">
+      <button
+        type="button"
+        class="canvas-minimap-surface"
+        [style.height.px]="minimapSize.height"
+        [style.width.px]="minimapSize.width"
+        (pointerdown)="handleMinimapPointerDown($event)"
+      >
+        @for (node of minimapNodes(); track node.id) {
+          <span
+            class="canvas-minimap-node"
+            [class.is-selected]="node.isSelected"
+            [style.height.px]="node.height"
+            [style.left.px]="node.x"
+            [style.top.px]="node.y"
+            [style.width.px]="node.width"
+          ></span>
+        }
+
+        @if (minimapViewport(); as minimapViewport) {
+          <span
+            class="canvas-minimap-viewport"
+            [style.height.px]="minimapViewport.height"
+            [style.left.px]="minimapViewport.x"
+            [style.top.px]="minimapViewport.y"
+            [style.width.px]="minimapViewport.width"
+          ></span>
+        }
+      </button>
+    </aside>
   </div>
 </div>

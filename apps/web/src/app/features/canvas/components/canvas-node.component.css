@@ -20,6 +20,10 @@
   width: 100%;
 }
 
+.pdi-node.is-selected {
+  overflow: visible;
+}
+
 .pdi-node strong {
   color: var(--node-text-color, #172033);
   font-size: var(--node-font-size, clamp(12px, 8cqw, 22px));
