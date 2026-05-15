@@ -2,6 +2,9 @@ import type { Board, CanvasNodeKind, CanvasShapeVariant, SaveBoardInput } from '
 import { nodeKindMeta, shapeVariantMeta, temporaryPasswordAlphabet } from './canvas.constants';
 import type { CanvasEdgeView, CanvasNodeView, CanvasTaskItem, XYPosition } from './canvas.models';
 
+const frameLayerMax = 999;
+const objectLayerBase = 1000;
+
 export const generateTemporaryPassword = () => {
   const values = new Uint32Array(12);
   crypto.getRandomValues(values);
@@ -26,12 +29,27 @@ export const toTaskItemsFromText = (text: string, currentItems: CanvasTaskItem[]
       label
     }));
 
-const orderFrameParentsFirst = (nodes: CanvasNodeView[]) =>
+const orderNodesByLayer = (nodes: CanvasNodeView[]) =>
   [...nodes].sort((leftNode, rightNode) => {
+    if (leftNode.zIndex !== rightNode.zIndex) {
+      return leftNode.zIndex - rightNode.zIndex;
+    }
+
     if (leftNode.kind === 'FRAME' && rightNode.kind !== 'FRAME') return -1;
     if (leftNode.kind !== 'FRAME' && rightNode.kind === 'FRAME') return 1;
+
     return 0;
   });
+
+const toNodeLayer = (node: Board['nodes'][number], index: number) => {
+  if (node.kind === 'FRAME') {
+    const source = Number.isInteger(node.zIndex) ? (node.zIndex as number) : index;
+    return Math.max(0, Math.min(frameLayerMax, source));
+  }
+
+  const source = Number.isInteger(node.zIndex) ? (node.zIndex as number) : objectLayerBase + index;
+  return Math.max(objectLayerBase, source);
+};
 
 const toNodeSize = (node: Board['nodes'][number]) => {
   if (node.kind !== 'GOAL' && (node.kind !== 'SHAPE' || node.variant !== 'CIRCLE')) {
@@ -77,8 +95,8 @@ const toRelativePosition = (node: CanvasNodeView, nodes: CanvasNodeView[]): XYPo
 };
 
 export const toCanvasNodes = (board: Board): CanvasNodeView[] =>
-  orderFrameParentsFirst(
-    board.nodes.map((node) => {
+  orderNodesByLayer(
+    board.nodes.map((node, index) => {
       const size = toNodeSize(node);
 
       return {
@@ -96,7 +114,7 @@ export const toCanvasNodes = (board: Board): CanvasNodeView[] =>
         textStyle: node.style.textStyle,
         variant: node.variant,
         width: size.width,
-        zIndex: node.kind === 'FRAME' ? 0 : 10
+        zIndex: toNodeLayer(node, index)
       };
     })
   );
@@ -134,6 +152,7 @@ export const toSaveBoard = (title: string, nodes: CanvasNodeView[], edges: Canva
     label: node.label,
     parentId: node.parentId,
     position: toRelativePosition(node, nodes),
+    zIndex: node.zIndex,
     style: {
       backgroundColor: node.backgroundColor,
       color: node.color,
@@ -147,9 +166,26 @@ export const toSaveBoard = (title: string, nodes: CanvasNodeView[], edges: Canva
   title
 });
 
-export const createCanvasNode = (kind: CanvasNodeKind, index: number, variant?: CanvasShapeVariant): CanvasNodeView => {
+export const createCanvasNode = (
+  kind: CanvasNodeKind,
+  nodes: CanvasNodeView[],
+  index: number,
+  variant?: CanvasShapeVariant
+): CanvasNodeView => {
   const meta = nodeKindMeta[kind];
   const size = kind === 'GOAL' || (kind === 'SHAPE' && variant === 'CIRCLE') ? meta.height : undefined;
+  const zIndex =
+    kind === 'FRAME'
+      ? Math.max(
+          0,
+          Math.min(
+            frameLayerMax,
+            nodes
+              .filter((node) => node.kind === 'FRAME')
+              .reduce((highest, node) => Math.max(highest, node.zIndex), -1) + 1
+          )
+        )
+      : nodes.filter((node) => node.kind !== 'FRAME').reduce((highest, node) => Math.max(highest, node.zIndex), objectLayerBase - 1) + 1;
 
   return {
     backgroundColor: kind === 'FRAME' ? '#f8fafc' : undefined,
@@ -174,6 +210,6 @@ export const createCanvasNode = (kind: CanvasNodeKind, index: number, variant?: 
     },
     variant,
     width: size ?? meta.width,
-    zIndex: kind === 'FRAME' ? 0 : 10
+    zIndex
   };
 };

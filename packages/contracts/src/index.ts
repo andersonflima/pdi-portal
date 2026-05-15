@@ -86,6 +86,7 @@ export const canvasNodeSchema = z.object({
   id: z.string(),
   kind: canvasNodeKindSchema,
   label: z.string(),
+  zIndex: z.number().int().optional(),
   checked: z.boolean().optional(),
   description: z.string().optional(),
   parentId: z.string().optional(),

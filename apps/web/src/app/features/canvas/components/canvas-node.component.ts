@@ -37,6 +37,8 @@ export class CanvasNodeComponent {
   readonly resizeStart = output<PointerEvent>();
 
   protected readonly isEditing = signal(false);
+  private taskToggleTimeoutId: number | null = null;
+  private readonly checklistToggleTimeoutById = new Map<string, number>();
   protected readonly nodeClasses = computed(() => toNodeClassName(this.node(), this.selected()));
   protected readonly textValue = computed(() =>
     this.node().kind === 'TASK_LIST' ? (this.node().taskItems ?? []).map((item) => item.label).join('\n') : this.node().label
@@ -87,18 +89,68 @@ export class CanvasNodeComponent {
     this.connectorStart.emit({ event, handle });
   };
 
-  protected readonly handleTaskToggle = (event: Event) => {
+  protected readonly handleTaskToggle = (event: MouseEvent) => {
     event.stopPropagation();
-    this.dataChange.emit({ checked: !this.node().checked });
+
+    if (event.detail > 1) {
+      if (this.taskToggleTimeoutId !== null) {
+        window.clearTimeout(this.taskToggleTimeoutId);
+        this.taskToggleTimeoutId = null;
+      }
+      return;
+    }
+
+    this.taskToggleTimeoutId = window.setTimeout(() => {
+      this.dataChange.emit({ checked: !this.node().checked });
+      this.taskToggleTimeoutId = null;
+    }, 200);
   };
 
-  protected readonly handleChecklistToggle = (event: Event, itemId: string) => {
+  protected readonly handleTaskEditStart = (event: Event) => {
     event.stopPropagation();
-    this.dataChange.emit({
-      taskItems: (this.node().taskItems ?? []).map((item) =>
-        item.id === itemId ? { ...item, checked: !item.checked } : item
-      )
-    });
+
+    if (this.taskToggleTimeoutId !== null) {
+      window.clearTimeout(this.taskToggleTimeoutId);
+      this.taskToggleTimeoutId = null;
+    }
+
+    this.isEditing.set(true);
+  };
+
+  protected readonly handleChecklistToggle = (event: MouseEvent, itemId: string) => {
+    event.stopPropagation();
+
+    if (event.detail > 1) {
+      const timeoutId = this.checklistToggleTimeoutById.get(itemId);
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId);
+        this.checklistToggleTimeoutById.delete(itemId);
+      }
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      this.dataChange.emit({
+        taskItems: (this.node().taskItems ?? []).map((item) =>
+          item.id === itemId ? { ...item, checked: !item.checked } : item
+        )
+      });
+      this.checklistToggleTimeoutById.delete(itemId);
+    }, 200);
+
+    this.checklistToggleTimeoutById.set(itemId, timeoutId);
+  };
+
+  protected readonly handleChecklistEditStart = (event: Event, itemId: string) => {
+    event.stopPropagation();
+
+    const timeoutId = this.checklistToggleTimeoutById.get(itemId);
+    if (timeoutId !== undefined) {
+      window.clearTimeout(timeoutId);
+      this.checklistToggleTimeoutById.delete(itemId);
+    }
+
+    this.isEditing.set(true);
   };
 
   protected readonly handleTextInput = (event: Event) => {

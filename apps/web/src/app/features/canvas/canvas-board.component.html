@@ -70,7 +70,7 @@
           </svg>
         }
 
-        @for (node of nodes(); track node.id) {
+        @for (node of renderedNodes(); track node.id) {
           <app-canvas-node
             [node]="node"
             [selected]="selectedNodeId() === node.id"
@@ -78,7 +78,7 @@
             [style.left.px]="node.position.x"
             [style.top.px]="node.position.y"
             [style.width.px]="node.width"
-            [style.z-index]="node.zIndex + (selectedNodeId() === node.id ? 20 : 0)"
+            [style.z-index]="nodeStackLevel(node)"
             (connectorStart)="startConnectorDrag($event, node)"
             (dataChange)="updateNodeData(node.id, $event)"
             (pointerdown)="handleNodePointerDown($event, node)"
