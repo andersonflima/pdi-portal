@@ -45,7 +45,9 @@ const minZoom = 0.4;
 const maxZoom = 1.6;
 const zoomStep = 0.1;
 const dragStartThreshold = 4;
+const frameLayerMax = 999;
 const objectLayerBase = 1000;
+const autosaveDelayMs = 1200;
 
 const roundZoom = (value: number) => Math.round(value * 100) / 100;
 
@@ -133,7 +135,13 @@ const findDescendantNodeIds = (rootId: string, nodes: CanvasNodeView[]) => {
 const findTopNodeAtPoint = (point: XYPosition, nodes: CanvasNodeView[], excludedNodeId: string) =>
   [...nodes]
     .filter((node) => node.id !== excludedNodeId)
-    .sort((leftNode, rightNode) => rightNode.zIndex - leftNode.zIndex)
+    .sort((leftNode, rightNode) => {
+      const leftLayer = leftNode.kind === 'FRAME' ? Math.min(frameLayerMax, leftNode.zIndex) : Math.max(objectLayerBase, leftNode.zIndex);
+      const rightLayer =
+        rightNode.kind === 'FRAME' ? Math.min(frameLayerMax, rightNode.zIndex) : Math.max(objectLayerBase, rightNode.zIndex);
+
+      return rightLayer - leftLayer;
+    })
     .find((node) => isPointInsideNode(point, node));
 
 @Component({
@@ -172,6 +180,10 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
   private socket: WebSocket | null = null;
   private loadToken = 0;
   private isApplyingRemoteBoard = false;
+  private lastPersistedPlanId: string | null = null;
+  private lastPersistedBoardSnapshot: string | null = null;
+  private isPersistingBoard = false;
+  private queuedAutosaveSnapshot: { board: ReturnType<typeof toSaveBoard>; planId: string; snapshot: string } | null = null;
 
   protected readonly canvasSize = canvasSize;
   protected readonly activeConnector = signal<ConnectorDraft | null>(null);
@@ -188,10 +200,15 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
 
   protected readonly selectedNode = computed(() => this.nodes().find((node) => node.id === this.selectedNodeId()) ?? null);
   protected readonly selectedEdge = computed(() => this.edges().find((edge) => edge.id === this.selectedEdgeId()) ?? null);
+  protected readonly nodeStackLevel = (node: CanvasNodeView) =>
+    node.kind === 'FRAME' ? Math.min(frameLayerMax, node.zIndex) : Math.max(objectLayerBase, node.zIndex);
   protected readonly renderedNodes = computed(() =>
     [...this.nodes()].sort((leftNode, rightNode) => {
-      if (leftNode.zIndex !== rightNode.zIndex) {
-        return leftNode.zIndex - rightNode.zIndex;
+      const leftLayer = this.nodeStackLevel(leftNode);
+      const rightLayer = this.nodeStackLevel(rightNode);
+
+      if (leftLayer !== rightLayer) {
+        return leftLayer - rightLayer;
       }
 
       if (leftNode.kind === 'FRAME' && rightNode.kind !== 'FRAME') return -1;
@@ -201,7 +218,6 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
     })
   );
   protected readonly zoomPercent = computed(() => Math.round(this.zoom() * 100));
-  protected readonly nodeStackLevel = (node: CanvasNodeView) => node.zIndex;
 
   constructor() {
     effect((onCleanup) => {
@@ -215,6 +231,26 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
       const timeoutId = window.setTimeout(() => {
         this.sendLiveBoard(planId, title, nodes, edges);
       }, 180);
+
+      onCleanup(() => window.clearTimeout(timeoutId));
+    });
+
+    effect((onCleanup) => {
+      const planId = this.currentPlanId();
+      const title = this.boardTitle();
+      const nodes = this.nodes();
+      const edges = this.edges();
+
+      if (!planId || !title || this.isApplyingRemoteBoard) return;
+
+      const board = toSaveBoard(title || this.plan.title, nodes, edges);
+      const snapshot = JSON.stringify(board);
+
+      if (this.lastPersistedPlanId === planId && this.lastPersistedBoardSnapshot === snapshot) return;
+
+      const timeoutId = window.setTimeout(() => {
+        void this.persistBoard(planId, board, snapshot);
+      }, autosaveDelayMs);
 
       onCleanup(() => window.clearTimeout(timeoutId));
     });
@@ -287,26 +323,11 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
   protected readonly handleStageWheel = (event: WheelEvent) => {
     if (!event.ctrlKey && !event.metaKey) return;
 
-    const stage = this.stageElement()?.nativeElement;
-
-    if (!stage) return;
-
     event.preventDefault();
 
     const currentZoom = this.zoom();
     const nextZoom = clampZoom(currentZoom + (event.deltaY < 0 ? zoomStep : -zoomStep));
-
-    if (nextZoom === currentZoom) return;
-
-    const stageRect = stage.getBoundingClientRect();
-    const pointerOffsetX = event.clientX - stageRect.left;
-    const pointerOffsetY = event.clientY - stageRect.top;
-    const canvasX = (stage.scrollLeft + pointerOffsetX) / currentZoom;
-    const canvasY = (stage.scrollTop + pointerOffsetY) / currentZoom;
-
-    this.zoom.set(nextZoom);
-    stage.scrollLeft = canvasX * nextZoom - pointerOffsetX;
-    stage.scrollTop = canvasY * nextZoom - pointerOffsetY;
+    this.applyZoom(nextZoom, { clientX: event.clientX, clientY: event.clientY });
   };
 
   protected readonly handleNodePointerDown = (event: PointerEvent, node: CanvasNodeView) => {
@@ -408,15 +429,15 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
   };
 
   protected readonly zoomIn = () => {
-    this.zoom.update((currentZoom) => clampZoom(currentZoom + zoomStep));
+    this.applyZoom(clampZoom(this.zoom() + zoomStep));
   };
 
   protected readonly zoomOut = () => {
-    this.zoom.update((currentZoom) => clampZoom(currentZoom - zoomStep));
+    this.applyZoom(clampZoom(this.zoom() - zoomStep));
   };
 
   protected readonly resetZoom = () => {
-    this.zoom.set(1);
+    this.applyZoom(1);
   };
 
   protected readonly updateNodeData = (nodeId: string, input: CanvasNodeDataPatch) => {
@@ -521,16 +542,13 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
   };
 
   protected readonly saveCurrentBoard = async () => {
-    if (!this.currentPlanId()) return;
+    const planId = this.currentPlanId();
 
-    this.isSaving.set(true);
+    if (!planId) return;
 
-    try {
-      const board = await this.api.saveBoard(this.currentPlanId()!, toSaveBoard(this.boardTitle() || this.plan.title, this.nodes(), this.edges()));
-      this.boardTitle.set(board.title);
-    } finally {
-      this.isSaving.set(false);
-    }
+    const board = toSaveBoard(this.boardTitle() || this.plan.title, this.nodes(), this.edges());
+    const snapshot = JSON.stringify(board);
+    await this.persistBoard(planId, board, snapshot, true);
   };
 
   private readonly loadBoard = async (planId: string) => {
@@ -550,9 +568,13 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
 
       if (token !== this.loadToken) return;
 
+      const boardNodes = toCanvasNodes(board);
+      const boardEdges = toCanvasEdges(board);
+
       this.boardTitle.set(board.title);
-      this.nodes.set(toCanvasNodes(board));
-      this.edges.set(toCanvasEdges(board));
+      this.nodes.set(boardNodes);
+      this.edges.set(boardEdges);
+      this.markBoardAsPersisted(planId, board.title, boardNodes, boardEdges);
       this.openLiveConnection(planId);
     } finally {
       if (token === this.loadToken) {
@@ -577,9 +599,13 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
       if (message.type !== 'BOARD_SYNC' || message.clientId === this.clientId) return;
 
       this.isApplyingRemoteBoard = true;
+      const boardNodes = toCanvasNodes(message.payload);
+      const boardEdges = toCanvasEdges(message.payload);
+
       this.boardTitle.set(message.payload.title);
-      this.nodes.set(toCanvasNodes(message.payload));
-      this.edges.set(toCanvasEdges(message.payload));
+      this.nodes.set(boardNodes);
+      this.edges.set(boardEdges);
+      this.markBoardAsPersisted(message.payload.pdiPlanId, message.payload.title, boardNodes, boardEdges);
       window.setTimeout(() => {
         this.isApplyingRemoteBoard = false;
       }, 0);
@@ -601,6 +627,75 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
         type: 'BOARD_SYNC'
       })
     );
+  };
+
+  private readonly applyZoom = (nextZoom: number, pointer?: { clientX: number; clientY: number }) => {
+    const stage = this.stageElement()?.nativeElement;
+    const currentZoom = this.zoom();
+
+    if (!stage || nextZoom === currentZoom) return;
+
+    const stageRect = stage.getBoundingClientRect();
+    const pointerOffsetX = pointer ? pointer.clientX - stageRect.left : stage.clientWidth / 2;
+    const pointerOffsetY = pointer ? pointer.clientY - stageRect.top : stage.clientHeight / 2;
+    const clampedPointerOffsetX = Math.min(stage.clientWidth, Math.max(0, pointerOffsetX));
+    const clampedPointerOffsetY = Math.min(stage.clientHeight, Math.max(0, pointerOffsetY));
+    const canvasX = (stage.scrollLeft + clampedPointerOffsetX) / currentZoom;
+    const canvasY = (stage.scrollTop + clampedPointerOffsetY) / currentZoom;
+
+    this.zoom.set(nextZoom);
+
+    const maxScrollLeft = Math.max(0, canvasSize.width * nextZoom - stage.clientWidth);
+    const maxScrollTop = Math.max(0, canvasSize.height * nextZoom - stage.clientHeight);
+
+    stage.scrollLeft = Math.min(maxScrollLeft, Math.max(0, canvasX * nextZoom - clampedPointerOffsetX));
+    stage.scrollTop = Math.min(maxScrollTop, Math.max(0, canvasY * nextZoom - clampedPointerOffsetY));
+  };
+
+  private readonly markBoardAsPersisted = (
+    planId: string,
+    title: string,
+    nodes: CanvasNodeView[],
+    edges: CanvasEdgeView[]
+  ) => {
+    this.lastPersistedPlanId = planId;
+    this.lastPersistedBoardSnapshot = JSON.stringify(toSaveBoard(title || this.plan.title, nodes, edges));
+  };
+
+  private readonly persistBoard = async (
+    planId: string,
+    board: ReturnType<typeof toSaveBoard>,
+    snapshot: string,
+    force = false
+  ) => {
+    if (!force && this.lastPersistedPlanId === planId && this.lastPersistedBoardSnapshot === snapshot) return;
+
+    if (this.isPersistingBoard) {
+      this.queuedAutosaveSnapshot = { board, planId, snapshot };
+      return;
+    }
+
+    this.isPersistingBoard = true;
+    this.isSaving.set(true);
+
+    try {
+      const savedBoard = await this.api.saveBoard(planId, board);
+      const savedNodes = toCanvasNodes(savedBoard);
+      const savedEdges = toCanvasEdges(savedBoard);
+      this.markBoardAsPersisted(planId, savedBoard.title, savedNodes, savedEdges);
+      this.boardTitle.set(savedBoard.title);
+    } finally {
+      this.isPersistingBoard = false;
+      this.isSaving.set(false);
+    }
+
+    const queuedSnapshot = this.queuedAutosaveSnapshot;
+    this.queuedAutosaveSnapshot = null;
+
+    if (!queuedSnapshot) return;
+    if (this.currentPlanId() !== queuedSnapshot.planId) return;
+
+    await this.persistBoard(queuedSnapshot.planId, queuedSnapshot.board, queuedSnapshot.snapshot);
   };
 
   private readonly startCanvasPan = (event: PointerEvent) => {
