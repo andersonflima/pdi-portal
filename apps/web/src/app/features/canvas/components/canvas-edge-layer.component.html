@@ -14,18 +14,18 @@
           (pointerdown)="handleSelect($event, edge.id)"
         />
         <path
+          class="edge-line-live"
+          [class.edge-line-live-dashed]="edge.style.lineStyle === 'dashed'"
+          [attr.d]="path"
+          [attr.stroke]="edge.style.color"
+        />
+        <path
           class="edge-line"
           [class.edge-line-dashed]="edge.style.lineStyle === 'dashed'"
           [attr.d]="path"
           [attr.stroke]="edge.style.color"
           [attr.marker-end]="'url(#edge-arrow-head)'"
           [attr.marker-start]="isBidirectional(edge) ? 'url(#edge-arrow-head)' : null"
-        />
-        <path
-          class="edge-line-live"
-          [class.edge-line-live-dashed]="edge.style.lineStyle === 'dashed'"
-          [attr.d]="path"
-          [attr.stroke]="edge.style.color"
         />
       </g>
     }
