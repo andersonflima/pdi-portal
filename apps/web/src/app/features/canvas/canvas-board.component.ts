@@ -53,7 +53,7 @@ type MarqueeSelectionDraft = {
 type SvgTextAnchor = 'middle' | 'start' | 'end';
 
 const minZoom = 0.4;
-const maxZoom = 1.6;
+const maxZoom = 1;
 const zoomStep = 0.1;
 const wheelLineHeightPx = 16;
 const wheelZoomSensitivity = 0.0022;
