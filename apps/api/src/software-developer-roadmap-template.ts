@@ -97,7 +97,7 @@ const seedNodes: CanvasNode[] = [
   node(
     'north-star',
     'GOAL',
-    'North Star\nShip reliable features end-to-end with senior ownership',
+    'North Star\nDesign and operate reliable backend services with senior ownership',
     670,
     24,
     260,
@@ -108,7 +108,7 @@ const seedNodes: CanvasNode[] = [
   node(
     'principles',
     'CARD',
-    'Operating principles\nSmall slices, explicit tradeoffs, tests before refactors, production feedback loops.',
+    'Operating principles\nSmall slices, explicit tradeoffs, testable architecture, production feedback loops.',
     1000,
     64,
     420,
@@ -120,40 +120,40 @@ const seedNodes: CanvasNode[] = [
     backgroundColor: '#dcfdfa',
     textStyle: textStyle('left', 'top', 22, { bold: true })
   }),
-  node('phase-2', 'FRAME', 'Phase 2: Product implementation depth', 760, 360, 620, 430, '#7c3aed', {
+  node('phase-2', 'FRAME', 'Phase 2: Backend implementation depth', 760, 360, 620, 430, '#7c3aed', {
     backgroundColor: '#f3e8ff',
     textStyle: textStyle('left', 'top', 22, { bold: true })
   }),
-  node('phase-3', 'FRAME', 'Phase 3: Architecture, scale and quality', 1440, 360, 620, 430, '#ca8a04', {
+  node('phase-3', 'FRAME', 'Phase 3: Data, architecture and quality', 1440, 360, 620, 430, '#ca8a04', {
     backgroundColor: '#fef3c7',
     textStyle: textStyle('left', 'top', 22, { bold: true })
   }),
-  node('phase-4', 'FRAME', 'Phase 4: Operations, delivery and leadership', 2120, 360, 620, 430, '#16a34a', {
+  node('phase-4', 'FRAME', 'Phase 4: Operations, scale and reliability', 2120, 360, 620, 430, '#16a34a', {
     backgroundColor: '#dcfce7',
     textStyle: textStyle('left', 'top', 22, { bold: true })
   }),
-  node('foundation-ts', 'TASK_LIST', 'Language mastery', 120, 440, 250, 170, '#0f766e', {
+  node('foundation-ts', 'TASK_LIST', 'Backend foundations', 120, 440, 250, 170, '#0f766e', {
     taskItems: taskSteps('foundation-ts', [
-      'TypeScript generics and narrowing',
-      'Async/event loop and promises',
-      'Functional composition in JS',
-      'Debug runtime behavior'
+      'How internet and HTTP work',
+      'DNS, hosting and networking basics',
+      'Linux terminal and processes',
+      'Pick one backend language deeply'
     ]),
     textStyle: textStyle('left', 'top', 15, { bold: true })
   }),
-  node('foundation-craft', 'TASK_LIST', 'Engineering craft', 410, 440, 250, 170, '#0f766e', {
+  node('foundation-craft', 'TASK_LIST', 'Engineering workflow', 410, 440, 250, 170, '#0f766e', {
     taskItems: taskSteps('foundation-craft', [
-      'Gitflow and clean PRs',
-      'Readable commits',
-      'Small refactors',
-      'Terminal/editor fluency'
+      'Git and branching strategy',
+      'GitHub/GitLab pull requests',
+      'Debugging and profiling',
+      'Readable commits and ADR notes'
     ]),
     textStyle: textStyle('left', 'top', 15, { bold: true })
   }),
   node(
     'foundation-kata',
     'TASK',
-    'Weekly kata: algorithms, data structures and complexity analysis',
+    'Weekly kata: build CRUD API with validation, auth and persistence',
     120,
     650,
     330,
@@ -164,7 +164,7 @@ const seedNodes: CanvasNode[] = [
   node(
     'foundation-output',
     'STICKER',
-    'Output: 4 reviewed PRs with tests and clear review notes',
+    'Output: running API with logs, tests and versioned docs',
     480,
     642,
     170,
@@ -172,32 +172,32 @@ const seedNodes: CanvasNode[] = [
     '#0f766e',
     { textStyle: textStyle('center', 'center', 14, { bold: true }) }
   ),
-  node('product-frontend', 'TASK_LIST', 'Frontend depth', 800, 440, 250, 170, '#7c3aed', {
+  node('product-frontend', 'TASK_LIST', 'Databases and persistence', 800, 440, 250, 170, '#7c3aed', {
     taskItems: taskSteps('product-frontend', [
-      'Component boundaries',
-      'Server state and forms',
-      'A11y and keyboard flows',
-      'Performance profiling'
+      'Relational modeling and SQL',
+      'Indexes, transactions and ACID',
+      'NoSQL use cases',
+      'Migrations and failure modes'
     ]),
     textStyle: textStyle('left', 'top', 15, { bold: true })
   }),
-  node('product-backend', 'TASK_LIST', 'Backend depth', 1090, 440, 250, 170, '#7c3aed', {
+  node('product-backend', 'TASK_LIST', 'APIs and communication', 1090, 440, 250, 170, '#7c3aed', {
     taskItems: taskSteps('product-backend', [
-      'API contracts',
-      'Auth and authorization',
-      'Validation and errors',
-      'SQL modeling and indexes'
+      'REST, JSON and OpenAPI',
+      'GraphQL or gRPC basics',
+      'Authentication and authorization',
+      'Caching strategy (client/server)'
     ]),
     textStyle: textStyle('left', 'top', 15, { bold: true })
   }),
-  node('product-slice', 'SHAPE', 'Vertical slice\nUI + API + DB + tests', 820, 650, 210, 92, '#7c3aed', {
+  node('product-slice', 'SHAPE', 'Backend slice\nAPI + DB + cache + tests', 820, 650, 210, 92, '#7c3aed', {
     textStyle: textStyle('center', 'center', 16, { bold: true }),
     variant: 'ROUNDED_RECTANGLE'
   }),
   node(
     'product-output',
     'STICKER',
-    'Output: one feature shipped behind a safe release path',
+    'Output: one backend module with contract tests and docs',
     1090,
     642,
     190,
@@ -205,23 +205,28 @@ const seedNodes: CanvasNode[] = [
     '#7c3aed',
     { textStyle: textStyle('center', 'center', 14, { bold: true }) }
   ),
-  node('architecture-boundaries', 'TASK_LIST', 'Architecture decisions', 1480, 440, 250, 170, '#ca8a04', {
+  node('architecture-boundaries', 'TASK_LIST', 'Architecture patterns', 1480, 440, 250, 170, '#ca8a04', {
     taskItems: taskSteps('architecture-boundaries', [
-      'Use cases and boundaries',
-      'Ports/adapters',
-      'ADR writing',
-      'Tradeoff evaluation'
+      'Monolith vs microservices',
+      'DDD and bounded contexts',
+      'Event-driven and CQRS',
+      'Twelve-factor principles'
     ]),
     textStyle: textStyle('left', 'top', 15, { bold: true })
   }),
-  node('quality-system', 'TASK_LIST', 'Quality system', 1770, 440, 250, 170, '#ca8a04', {
-    taskItems: taskSteps('quality-system', ['Unit tests', 'Integration tests', 'Contract tests', 'E2E smoke tests']),
+  node('quality-system', 'TASK_LIST', 'Security and quality', 1770, 440, 250, 170, '#ca8a04', {
+    taskItems: taskSteps('quality-system', [
+      'Unit and integration tests',
+      'TDD for core use cases',
+      'OWASP API security',
+      'Hashing and secrets handling'
+    ]),
     textStyle: textStyle('left', 'top', 15, { bold: true })
   }),
   node(
     'quality-refactor',
     'CARD',
-    'Refactor rule\nNo structural change without behavioral safety net and rollback path.',
+    'Evolution rule\nNo structural change without tests, migration strategy and rollback path.',
     1490,
     650,
     270,
@@ -232,7 +237,7 @@ const seedNodes: CanvasNode[] = [
   node(
     'quality-output',
     'STICKER',
-    'Output: documented architecture decision and test strategy',
+    'Output: ADR set, test strategy and API security checklist',
     1810,
     642,
     170,
@@ -240,21 +245,21 @@ const seedNodes: CanvasNode[] = [
     '#ca8a04',
     { textStyle: textStyle('center', 'center', 14, { bold: true }) }
   ),
-  node('ops-devops', 'TASK_LIST', 'DevOps baseline', 2160, 440, 250, 170, '#16a34a', {
+  node('ops-devops', 'TASK_LIST', 'Platform and runtime', 2160, 440, 250, 170, '#16a34a', {
     taskItems: taskSteps('ops-devops', [
-      'Docker image quality',
+      'Docker and container lifecycle',
       'Kubernetes fundamentals',
-      'Config and secrets',
-      'Rollback and deploy checks'
+      'Web server and reverse proxy',
+      'CI/CD pipelines and rollback'
     ]),
     textStyle: textStyle('left', 'top', 15, { bold: true })
   }),
-  node('delivery-leadership', 'TASK_LIST', 'Delivery leadership', 2450, 440, 250, 170, '#16a34a', {
+  node('delivery-leadership', 'TASK_LIST', 'Scalability and reliability', 2450, 440, 250, 170, '#16a34a', {
     taskItems: taskSteps('delivery-leadership', [
-      'Clarify outcomes',
-      'Slice scope',
-      'Escalate risks',
-      'Mentor through reviews'
+      'Message brokers (RabbitMQ/Kafka)',
+      'WebSockets, SSE and polling',
+      'Search engines (Elasticsearch)',
+      'Scaling and graceful degradation'
     ]),
     textStyle: textStyle('left', 'top', 15, { bold: true })
   }),
@@ -265,7 +270,7 @@ const seedNodes: CanvasNode[] = [
   node(
     'delivery-output',
     'STICKER',
-    'Output: production feature with dashboard and runbook',
+    'Output: production-ready backend service with dashboard and runbook',
     2440,
     642,
     190,
@@ -277,28 +282,28 @@ const seedNodes: CanvasNode[] = [
     backgroundColor: '#dbeafe',
     textStyle: textStyle('left', 'top', 22, { bold: true })
   }),
-  node('day-30', 'GOAL', '30 days\nConsistent engineering habits', 480, 940, 190, 190, '#0f766e', {
+  node('day-30', 'GOAL', '30 days\nFoundations + first API', 480, 940, 190, 190, '#0f766e', {
     textStyle: textStyle('center', 'center', 16, { bold: true })
   }),
-  node('day-60', 'GOAL', '60 days\nOwn vertical slices', 760, 940, 190, 190, '#7c3aed', {
+  node('day-60', 'GOAL', '60 days\nDatabase + contracts + auth', 760, 940, 190, 190, '#7c3aed', {
     textStyle: textStyle('center', 'center', 16, { bold: true })
   }),
-  node('day-90', 'GOAL', '90 days\nProduction-grade ownership', 1040, 940, 190, 190, '#ca8a04', {
+  node('day-90', 'GOAL', '90 days\nScale + observability + operations', 1040, 940, 190, 190, '#ca8a04', {
     textStyle: textStyle('center', 'center', 16, { bold: true })
   }),
   node('measure', 'TASK_LIST', 'Measurement checklist', 1320, 930, 330, 180, '#2563eb', {
     taskItems: taskSteps('measure', [
-      'Cycle time trending down',
-      'Review comments become architectural',
-      'Defects found earlier',
-      'Incidents have runbooks'
+      'Latency and error rate trending down',
+      'Critical flows covered by tests',
+      'Incidents with postmortem actions',
+      'Release pipeline stays stable'
     ]),
     textStyle: textStyle('left', 'top', 15, { bold: true })
   }),
   node(
     'cadence',
     'CARD',
-    'Weekly cadence\nPlan 1 skill focus, pair once, ship one small increment, write one learning note.',
+    'Weekly cadence\nPlan one backend focus, ship one incremental API change and write one operational note.',
     1710,
     950,
     330,
@@ -313,7 +318,7 @@ const seedNodes: CanvasNode[] = [
   node(
     'risk-1',
     'NOTE',
-    'Do not study passively. Every skill must produce code, docs or operational evidence.',
+    'Do not study passively. Every topic must produce code, docs or operational evidence.',
     130,
     1340,
     260,
@@ -401,7 +406,7 @@ const seedEdges: CanvasEdge[] = [
 
 export const softwareDeveloperRoadmapPlanTitle = 'Software Developer Skills Roadmap';
 export const softwareDeveloperRoadmapPlanObjective =
-  'Develop senior-level software engineering skills through foundations, frontend, backend, architecture, quality, DevOps and delivery habits.';
+  'Develop senior-level backend engineering skills through foundations, APIs, databases, security, architecture, observability and scalable operations.';
 export const softwareDeveloperRoadmapPlanStatus = 'ACTIVE' as const;
 
 const toRoadmapBoardTitle = (planTitle: string) => `${planTitle} board`;
