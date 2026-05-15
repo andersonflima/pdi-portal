@@ -30,6 +30,8 @@ export class CanvasHeaderComponent {
   readonly createUser = output<{ email: string; name: string; password: string; role: User['role'] }>();
   readonly deletePlan = output<string>();
   readonly exportPlan = output<string>();
+  readonly exportBoardAsPng = output<void>();
+  readonly exportBoardAsSvg = output<void>();
   readonly importPlan = output<File>();
   readonly logout = output<void>();
   readonly saveBoard = output<void>();

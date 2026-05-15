@@ -34,6 +34,16 @@
       {{ isExportingPlan ? 'Exporting' : 'Export' }}
     </button>
 
+    <button class="secondary-action" type="button" title="Save board as SVG" (click)="exportBoardAsSvg.emit()">
+      <i-lucide name="download" [size]="17" />
+      Export SVG
+    </button>
+
+    <button class="secondary-action" type="button" title="Save board as PNG" (click)="exportBoardAsPng.emit()">
+      <i-lucide name="download" [size]="17" />
+      Export PNG
+    </button>
+
     <button class="save-board" type="button" (click)="saveBoard.emit()">
       <i-lucide name="save" [size]="17" />
       {{ isSaving ? 'Saving' : 'Save board' }}
