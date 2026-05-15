@@ -41,6 +41,12 @@ type ConnectorDraft = {
   targetPoint: XYPosition;
 };
 
+type MarqueeSelectionDraft = {
+  append: boolean;
+  current: XYPosition;
+  origin: XYPosition;
+};
+
 const minZoom = 0.4;
 const maxZoom = 1.6;
 const zoomStep = 0.1;
@@ -48,6 +54,9 @@ const dragStartThreshold = 4;
 const frameLayerMax = 999;
 const objectLayerBase = 1000;
 const autosaveDelayMs = 1200;
+const marqueeStartThreshold = 6;
+const minimapWidth = 240;
+const minimapHeight = Math.round((minimapWidth * canvasSize.height) / canvasSize.width);
 
 const roundZoom = (value: number) => Math.round(value * 100) / 100;
 
@@ -56,6 +65,13 @@ const clampZoom = (value: number) => Math.min(maxZoom, Math.max(minZoom, roundZo
 const clampPointToCanvas = (point: XYPosition): XYPosition => ({
   x: Math.min(canvasSize.width, Math.max(0, point.x)),
   y: Math.min(canvasSize.height, Math.max(0, point.y))
+});
+
+const toSelectionBounds = (first: XYPosition, second: XYPosition) => ({
+  bottom: Math.max(first.y, second.y),
+  left: Math.min(first.x, second.x),
+  right: Math.max(first.x, second.x),
+  top: Math.min(first.y, second.y)
 });
 
 const toLiveWebSocketUrl = (apiUrl: string, pdiPlanId: string, clientId: string, token: string | null) => {
@@ -186,6 +202,7 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
   private queuedAutosaveSnapshot: { board: ReturnType<typeof toSaveBoard>; planId: string; snapshot: string } | null = null;
 
   protected readonly canvasSize = canvasSize;
+  protected readonly minimapSize = { height: minimapHeight, width: minimapWidth };
   protected readonly activeConnector = signal<ConnectorDraft | null>(null);
   protected readonly boardTitle = signal('');
   protected readonly connectorSourceId = signal<string | null>(null);
@@ -193,13 +210,17 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
   protected readonly edges = signal<CanvasEdgeView[]>([]);
   protected readonly isPanning = signal(false);
   protected readonly isSaving = signal(false);
+  protected readonly marqueeSelection = signal<MarqueeSelectionDraft | null>(null);
   protected readonly nodes = signal<CanvasNodeView[]>([]);
   protected readonly selectedEdgeId = signal<string | null>(null);
+  protected readonly selectedNodeIds = signal<string[]>([]);
   protected readonly selectedNodeId = signal<string | null>(null);
+  protected readonly stageViewport = signal({ height: 0, left: 0, top: 0, width: 0 });
   protected readonly zoom = signal(1);
 
   protected readonly selectedNode = computed(() => this.nodes().find((node) => node.id === this.selectedNodeId()) ?? null);
   protected readonly selectedEdge = computed(() => this.edges().find((edge) => edge.id === this.selectedEdgeId()) ?? null);
+  protected readonly selectedNodeIdSet = computed(() => new Set(this.selectedNodeIds()));
   protected readonly nodeStackLevel = (node: CanvasNodeView) =>
     node.kind === 'FRAME' ? Math.min(frameLayerMax, node.zIndex) : Math.max(objectLayerBase, node.zIndex);
   protected readonly renderedNodes = computed(() =>
@@ -218,6 +239,44 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
     })
   );
   protected readonly zoomPercent = computed(() => Math.round(this.zoom() * 100));
+  protected readonly minimapScale = computed(() => minimapWidth / canvasSize.width);
+  protected readonly minimapNodes = computed(() => {
+    const scale = this.minimapScale();
+
+    return this.nodes().map((node) => ({
+      height: Math.max(2, node.height * scale),
+      id: node.id,
+      isSelected: this.selectedNodeIdSet().has(node.id),
+      width: Math.max(2, node.width * scale),
+      x: node.position.x * scale,
+      y: node.position.y * scale
+    }));
+  });
+  protected readonly minimapViewport = computed(() => {
+    const scale = this.minimapScale();
+    const viewport = this.stageViewport();
+
+    return {
+      height: Math.max(6, viewport.height * scale),
+      width: Math.max(6, viewport.width * scale),
+      x: viewport.left * scale,
+      y: viewport.top * scale
+    };
+  });
+  protected readonly marqueeBoxStyle = computed(() => {
+    const selection = this.marqueeSelection();
+
+    if (!selection) return null;
+
+    const bounds = toSelectionBounds(selection.origin, selection.current);
+
+    return {
+      height: `${bounds.bottom - bounds.top}px`,
+      left: `${bounds.left}px`,
+      top: `${bounds.top}px`,
+      width: `${bounds.right - bounds.left}px`
+    };
+  });
 
   constructor() {
     effect((onCleanup) => {
@@ -253,6 +312,19 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
       }, autosaveDelayMs);
 
       onCleanup(() => window.clearTimeout(timeoutId));
+    });
+
+    effect((onCleanup) => {
+      this.zoom();
+      this.nodes();
+      this.edges();
+      this.selectedNodeIds();
+
+      const frameId = window.requestAnimationFrame(() => {
+        this.syncStageViewport();
+      });
+
+      onCleanup(() => window.cancelAnimationFrame(frameId));
     });
   }
 
@@ -298,10 +370,12 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
   };
 
   protected readonly clearSelection = () => {
+    this.selectedNodeIds.set([]);
     this.selectedNodeId.set(null);
     this.selectedEdgeId.set(null);
     this.connectorSourceId.set(null);
     this.activeConnector.set(null);
+    this.marqueeSelection.set(null);
   };
 
   protected readonly handleCreateNode = (event: { kind: CanvasNodeKind; variant?: CanvasShapeVariant }) => {
@@ -313,11 +387,14 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
   protected readonly handlePlanePointerDown = (event: PointerEvent) => {
     if (event.target !== event.currentTarget) return;
 
-    this.clearSelection();
+    if (event.button === 1) {
+      this.startCanvasPan(event);
+      return;
+    }
 
-    if (event.button !== 0 && event.button !== 1) return;
+    if (event.button !== 0) return;
 
-    this.startCanvasPan(event);
+    this.startMarqueeSelection(event);
   };
 
   protected readonly handleStageWheel = (event: WheelEvent) => {
@@ -340,8 +417,23 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
     if (connectorSourceId && connectorSourceId !== node.id) {
       this.createConnector(connectorSourceId, node.id);
       this.connectorSourceId.set(null);
+      this.selectedNodeIds.set([]);
       this.selectedNodeId.set(null);
       return;
+    }
+
+    const isAdditiveSelection = event.shiftKey || event.metaKey || event.ctrlKey;
+
+    if (isAdditiveSelection) {
+      this.toggleNodeSelection(node.id);
+      this.selectedEdgeId.set(null);
+      return;
+    }
+
+    const selectedNodeIdSet = this.selectedNodeIdSet();
+
+    if (!selectedNodeIdSet.has(node.id) || selectedNodeIdSet.size <= 1) {
+      this.selectedNodeIds.set([node.id]);
     }
 
     this.selectedNodeId.set(node.id);
@@ -357,6 +449,7 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
     const sourcePoint = toConnectorHandlePoint(node, payload.handle);
     const initialTargetPoint = this.toCanvasPoint(payload.event.clientX, payload.event.clientY) ?? sourcePoint;
 
+    this.selectedNodeIds.set([node.id]);
     this.selectedNodeId.set(node.id);
     this.selectedEdgeId.set(null);
     this.connectorSourceId.set(null);
@@ -416,6 +509,7 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
 
   protected readonly handleSelectEdge = (edgeId: string) => {
     this.selectedEdgeId.set(edgeId);
+    this.selectedNodeIds.set([]);
     this.selectedNodeId.set(null);
     this.connectorSourceId.set(null);
   };
@@ -438,6 +532,38 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
 
   protected readonly resetZoom = () => {
     this.applyZoom(1);
+  };
+
+  protected readonly handleStageScroll = () => {
+    this.syncStageViewport();
+  };
+
+  protected readonly handleMinimapPointerDown = (event: PointerEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const stage = this.stageElement()?.nativeElement;
+
+    if (!stage || event.button !== 0) return;
+
+    const minimapElement = event.currentTarget as HTMLElement | null;
+
+    if (!minimapElement) return;
+
+    const rect = minimapElement.getBoundingClientRect();
+    const pointerX = Math.min(rect.width, Math.max(0, event.clientX - rect.left));
+    const pointerY = Math.min(rect.height, Math.max(0, event.clientY - rect.top));
+    const scale = this.minimapScale();
+    const viewport = this.stageViewport();
+    const centerX = pointerX / scale;
+    const centerY = pointerY / scale;
+
+    const nextCanvasLeft = Math.min(canvasSize.width - viewport.width, Math.max(0, centerX - viewport.width / 2));
+    const nextCanvasTop = Math.min(canvasSize.height - viewport.height, Math.max(0, centerY - viewport.height / 2));
+
+    stage.scrollLeft = nextCanvasLeft * this.zoom();
+    stage.scrollTop = nextCanvasTop * this.zoom();
+    this.syncStageViewport();
   };
 
   protected readonly updateNodeData = (nodeId: string, input: CanvasNodeDataPatch) => {
@@ -506,6 +632,8 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
     );
   };
 
+  protected readonly isNodeSelected = (nodeId: string) => this.selectedNodeIdSet().has(nodeId);
+
   protected readonly startNodeResize = (event: PointerEvent, node: CanvasNodeView) => {
     event.preventDefault();
 
@@ -559,6 +687,7 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
     this.currentPlanId.set(planId);
     this.nodes.set([]);
     this.edges.set([]);
+    this.selectedNodeIds.set([]);
     this.selectedNodeId.set(null);
     this.selectedEdgeId.set(null);
     this.activeConnector.set(null);
@@ -576,6 +705,7 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
       this.edges.set(boardEdges);
       this.markBoardAsPersisted(planId, board.title, boardNodes, boardEdges);
       this.openLiveConnection(planId);
+      this.syncStageViewport();
     } finally {
       if (token === this.loadToken) {
         window.setTimeout(() => {
@@ -606,6 +736,7 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
       this.nodes.set(boardNodes);
       this.edges.set(boardEdges);
       this.markBoardAsPersisted(message.payload.pdiPlanId, message.payload.title, boardNodes, boardEdges);
+      this.syncStageViewport();
       window.setTimeout(() => {
         this.isApplyingRemoteBoard = false;
       }, 0);
@@ -650,6 +781,7 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
 
     stage.scrollLeft = Math.min(maxScrollLeft, Math.max(0, canvasX * nextZoom - clampedPointerOffsetX));
     stage.scrollTop = Math.min(maxScrollTop, Math.max(0, canvasY * nextZoom - clampedPointerOffsetY));
+    this.syncStageViewport();
   };
 
   private readonly markBoardAsPersisted = (
@@ -726,7 +858,7 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
   };
 
   private readonly startNodeDrag = (event: PointerEvent, node: CanvasNodeView) => {
-    const nodeIdsToMove = new Set(node.kind === 'FRAME' ? findDescendantNodeIds(node.id, this.nodes()) : [node.id]);
+    const nodeIdsToMove = this.resolveNodeIdsToMove(node);
     const initialPositions = new Map(
       this.nodes()
         .filter((candidate) => nodeIdsToMove.has(candidate.id))
@@ -776,8 +908,14 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
       window.removeEventListener('pointermove', handleMove);
       window.removeEventListener('pointerup', handleEnd);
 
-      if (isDragging && node.kind !== 'FRAME') {
-        this.updateNodeParent(node.id);
+      if (isDragging) {
+        const nodesById = new Map(this.nodes().map((candidate) => [candidate.id, candidate]));
+        const movedNonFrameNodeIds = [...nodeIdsToMove].filter((nodeId) => {
+          const candidate = nodesById.get(nodeId);
+          return candidate !== undefined && candidate.kind !== 'FRAME';
+        });
+
+        this.updateNodeParents(movedNonFrameNodeIds);
       }
     };
 
@@ -785,22 +923,157 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
     window.addEventListener('pointerup', handleEnd, { once: true });
   };
 
-  private readonly updateNodeParent = (nodeId: string) => {
+  private readonly updateNodeParents = (nodeIds: string[]) => {
+    if (nodeIds.length === 0) return;
+
+    const nodeIdSet = new Set(nodeIds);
+
     this.nodes.update((nodes) => {
-      const draggedNode = nodes.find((node) => node.id === nodeId);
-
-      if (!draggedNode || draggedNode.kind === 'FRAME') return nodes;
-
-      const targetFrame = findContainingFrame(draggedNode, nodes);
-
       return nodes.map((node) =>
-        node.id === nodeId
+        nodeIdSet.has(node.id) && node.kind !== 'FRAME'
           ? {
               ...node,
-              parentId: targetFrame?.id
+              parentId: findContainingFrame(node, nodes)?.id
             }
           : node
       );
+    });
+  };
+
+  private readonly toggleNodeSelection = (nodeId: string) => {
+    const selectedIds = this.selectedNodeIds();
+    const hasNode = selectedIds.includes(nodeId);
+    const nextSelection = hasNode ? selectedIds.filter((id) => id !== nodeId) : [...selectedIds, nodeId];
+
+    this.selectedNodeIds.set(nextSelection);
+    this.selectedNodeId.set(nextSelection[nextSelection.length - 1] ?? null);
+  };
+
+  private readonly startMarqueeSelection = (event: PointerEvent) => {
+    const origin = this.toCanvasPoint(event.clientX, event.clientY);
+
+    if (!origin) {
+      this.clearSelection();
+      return;
+    }
+
+    const append = event.shiftKey || event.metaKey || event.ctrlKey;
+    const initialSelection = append ? this.selectedNodeIds() : [];
+    let isSelecting = false;
+
+    this.selectedEdgeId.set(null);
+    this.connectorSourceId.set(null);
+    this.marqueeSelection.set({
+      append,
+      current: origin,
+      origin
+    });
+
+    const handleMove = (moveEvent: PointerEvent) => {
+      const currentPoint = this.toCanvasPoint(moveEvent.clientX, moveEvent.clientY);
+
+      if (!currentPoint) return;
+
+      const distance = Math.hypot(currentPoint.x - origin.x, currentPoint.y - origin.y);
+
+      if (!isSelecting && distance >= marqueeStartThreshold) {
+        isSelecting = true;
+      }
+
+      this.marqueeSelection.set({
+        append,
+        current: currentPoint,
+        origin
+      });
+
+      if (!isSelecting) return;
+
+      this.applyMarqueeSelection(origin, currentPoint, initialSelection, append);
+    };
+
+    const handleEnd = (endEvent: PointerEvent) => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleEnd);
+
+      const releasePoint = this.toCanvasPoint(endEvent.clientX, endEvent.clientY) ?? origin;
+
+      if (!isSelecting) {
+        this.marqueeSelection.set(null);
+        if (!append) this.clearSelection();
+        return;
+      }
+
+      this.applyMarqueeSelection(origin, releasePoint, initialSelection, append);
+      this.marqueeSelection.set(null);
+    };
+
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleEnd, { once: true });
+  };
+
+  private readonly applyMarqueeSelection = (
+    origin: XYPosition,
+    current: XYPosition,
+    initialSelection: string[],
+    append: boolean
+  ) => {
+    const bounds = toSelectionBounds(origin, current);
+    const selectedByBounds = this.nodes()
+      .filter((node) => {
+        const nodeLeft = node.position.x;
+        const nodeTop = node.position.y;
+        const nodeRight = node.position.x + node.width;
+        const nodeBottom = node.position.y + node.height;
+
+        return !(
+          nodeRight < bounds.left ||
+          nodeLeft > bounds.right ||
+          nodeBottom < bounds.top ||
+          nodeTop > bounds.bottom
+        );
+      })
+      .map((node) => node.id);
+
+    const nextSelection = append
+      ? Array.from(new Set([...initialSelection, ...selectedByBounds]))
+      : selectedByBounds;
+
+    this.selectedNodeIds.set(nextSelection);
+    this.selectedNodeId.set(nextSelection[nextSelection.length - 1] ?? null);
+  };
+
+  private readonly resolveNodeIdsToMove = (draggedNode: CanvasNodeView) => {
+    const selectedSet = this.selectedNodeIdSet();
+    const nodes = this.nodes();
+    const canMoveSelection = selectedSet.size > 1 && selectedSet.has(draggedNode.id);
+
+    if (!canMoveSelection) {
+      return new Set(draggedNode.kind === 'FRAME' ? findDescendantNodeIds(draggedNode.id, nodes) : [draggedNode.id]);
+    }
+
+    return nodes.reduce((accumulator, node) => {
+      if (!selectedSet.has(node.id)) return accumulator;
+
+      const ids = node.kind === 'FRAME' ? findDescendantNodeIds(node.id, nodes) : [node.id];
+
+      for (const id of ids) accumulator.add(id);
+
+      return accumulator;
+    }, new Set<string>());
+  };
+
+  private readonly syncStageViewport = () => {
+    const stage = this.stageElement()?.nativeElement;
+
+    if (!stage) return;
+
+    const zoom = this.zoom();
+
+    this.stageViewport.set({
+      height: Math.min(canvasSize.height, stage.clientHeight / zoom),
+      left: Math.min(canvasSize.width, Math.max(0, stage.scrollLeft / zoom)),
+      top: Math.min(canvasSize.height, Math.max(0, stage.scrollTop / zoom)),
+      width: Math.min(canvasSize.width, stage.clientWidth / zoom)
     });
   };
 
@@ -947,11 +1220,22 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
   };
 
   private readonly removeSelectedNode = () => {
+    const selectedIds = this.selectedNodeIds();
     const selectedNodeId = this.selectedNodeId();
+    const baseSelection = selectedIds.length > 0 ? selectedIds : selectedNodeId ? [selectedNodeId] : [];
+    const nodes = this.nodes();
 
-    if (!selectedNodeId) return false;
+    if (baseSelection.length === 0) return false;
 
-    const nodeIdsToDelete = new Set(findDescendantNodeIds(selectedNodeId, this.nodes()));
+    const nodeIdsToDelete = nodes.reduce((accumulator, node) => {
+      if (!baseSelection.includes(node.id)) return accumulator;
+
+      const ids = node.kind === 'FRAME' ? findDescendantNodeIds(node.id, nodes) : [node.id];
+
+      for (const id of ids) accumulator.add(id);
+
+      return accumulator;
+    }, new Set<string>());
 
     this.nodes.update((nodes) => nodes.filter((node) => !nodeIdsToDelete.has(node.id)));
     this.edges.update((edges) =>
@@ -962,6 +1246,7 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
       this.connectorSourceId.set(null);
     }
 
+    this.selectedNodeIds.set([]);
     this.selectedNodeId.set(null);
     this.selectedEdgeId.set(null);
 

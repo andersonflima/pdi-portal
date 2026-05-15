@@ -97,6 +97,51 @@
   stroke-width: 2;
 }
 
+.selection-marquee {
+  background: rgba(37, 99, 235, 0.14);
+  border: 1px dashed rgba(37, 99, 235, 0.9);
+  border-radius: 4px;
+  pointer-events: none;
+  position: absolute;
+  z-index: 15;
+}
+
+.canvas-minimap {
+  bottom: 16px;
+  right: 16px;
+  pointer-events: none;
+  position: fixed;
+  z-index: 70;
+}
+
+.canvas-minimap-surface {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(15, 23, 42, 0.16);
+  border-radius: 10px;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.15);
+  cursor: pointer;
+  overflow: hidden;
+  pointer-events: auto;
+  position: relative;
+}
+
+.canvas-minimap-node {
+  background: rgba(15, 23, 42, 0.2);
+  border-radius: 1px;
+  position: absolute;
+}
+
+.canvas-minimap-node.is-selected {
+  background: rgba(37, 99, 235, 0.8);
+}
+
+.canvas-minimap-viewport {
+  border: 1px solid rgba(22, 163, 74, 0.95);
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.65);
+  position: absolute;
+}
+
 app-canvas-node {
   cursor: grab;
 }
@@ -108,5 +153,9 @@ app-canvas-node:active {
 @media (max-width: 860px) {
   .canvas-shell {
     height: 100svh;
+  }
+
+  .canvas-minimap {
+    display: none;
   }
 }
