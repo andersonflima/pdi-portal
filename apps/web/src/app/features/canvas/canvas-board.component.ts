@@ -21,7 +21,7 @@ import { CanvasHeaderComponent } from './components/canvas-header.component';
 import { CanvasNodeComponent } from './components/canvas-node.component';
 import { CanvasToolbarComponent } from './components/canvas-toolbar.component';
 import { canvasSize } from './canvas.constants';
-import { findContainingFrame, getNodeCenter, isPointInsideNode } from './canvas.geometry';
+import { findContainingFrame, getConnectorPath, getNodeCenter, isPointInsideNode } from './canvas.geometry';
 import { createCanvasNode, toCanvasEdges, toCanvasNodes, toSaveBoard } from './canvas.mappers';
 import type {
   CanvasEdgePatch,
@@ -46,6 +46,8 @@ type MarqueeSelectionDraft = {
   current: XYPosition;
   origin: XYPosition;
 };
+
+type SvgTextAnchor = 'middle' | 'start' | 'end';
 
 const minZoom = 0.4;
 const maxZoom = 1.6;
@@ -159,6 +161,64 @@ const findTopNodeAtPoint = (point: XYPosition, nodes: CanvasNodeView[], excluded
       return rightLayer - leftLayer;
     })
     .find((node) => isPointInsideNode(point, node));
+
+const escapeXml = (value: string) =>
+  value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+
+const toFileName = (title: string, extension: 'png' | 'svg') => {
+  const normalized = title
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  return `${normalized || 'pdi-board'}.${extension}`;
+};
+
+const toTextAnchor = (align?: CanvasTextStyle['align']): SvgTextAnchor => {
+  if (align === 'center') return 'middle';
+  if (align === 'right') return 'end';
+  return 'start';
+};
+
+const toTextX = (anchor: SvgTextAnchor, width: number, padding: number) => {
+  if (anchor === 'middle') return width / 2;
+  if (anchor === 'end') return Math.max(padding, width - padding);
+  return padding;
+};
+
+const getVerticalOffset = (verticalAlign: CanvasTextStyle['verticalAlign'], height: number, blockHeight: number, padding: number) => {
+  if (verticalAlign === 'center') return Math.max(padding, (height - blockHeight) / 2);
+  if (verticalAlign === 'bottom') return Math.max(padding, height - blockHeight - padding);
+  return padding;
+};
+
+const toNodeTextLines = (node: CanvasNodeView): string[] => {
+  if (node.kind === 'TASK_LIST') {
+    return (node.taskItems ?? []).map((item) => `${item.checked ? '✓' : '□'} ${item.label}`);
+  }
+
+  if (node.kind === 'TASK') {
+    return [`${node.checked ? '✓' : '□'} ${node.label}`];
+  }
+
+  return (node.label || '').split('\n');
+};
+
+const toNodeFillColor = (node: CanvasNodeView) => {
+  if (node.kind === 'TEXT') return 'transparent';
+  if (node.kind === 'FRAME') return node.backgroundColor ?? '#d8e6f4';
+  if (node.kind === 'NOTE') return node.backgroundColor ?? '#ffe08a';
+  if (node.kind === 'STICKER') return node.backgroundColor ?? '#f4f4f5';
+  if (node.kind === 'SHAPE') return node.backgroundColor ?? `${node.color}22`;
+  return node.backgroundColor ?? '#ffffff';
+};
 
 @Component({
   selector: 'app-canvas-board',
@@ -679,6 +739,54 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
     await this.persistBoard(planId, board, snapshot, true);
   };
 
+  protected readonly exportBoardToSvg = () => {
+    const title = this.boardTitle() || this.plan.title;
+    const markup = this.buildBoardSvgMarkup();
+    const blob = new Blob([markup], { type: 'image/svg+xml;charset=utf-8' });
+
+    this.downloadBlob(blob, toFileName(title, 'svg'));
+  };
+
+  protected readonly exportBoardToPng = async () => {
+    const title = this.boardTitle() || this.plan.title;
+    const svgBlob = new Blob([this.buildBoardSvgMarkup()], { type: 'image/svg+xml;charset=utf-8' });
+    const svgUrl = URL.createObjectURL(svgBlob);
+    const image = new Image();
+
+    try {
+      await new Promise<void>((resolve, reject) => {
+        image.onload = () => resolve();
+        image.onerror = () => reject(new Error('Failed to render board SVG'));
+        image.src = svgUrl;
+      });
+
+      const canvas = document.createElement('canvas');
+      canvas.width = canvasSize.width;
+      canvas.height = canvasSize.height;
+
+      const context = canvas.getContext('2d');
+
+      if (!context) throw new Error('Failed to get canvas context');
+
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+      const pngBlob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(blob);
+            return;
+          }
+
+          reject(new Error('Failed to encode board PNG'));
+        }, 'image/png');
+      });
+
+      this.downloadBlob(pngBlob, toFileName(title, 'png'));
+    } finally {
+      URL.revokeObjectURL(svgUrl);
+    }
+  };
+
   private readonly loadBoard = async (planId: string) => {
     const token = ++this.loadToken;
     this.closeLiveConnection();
@@ -705,7 +813,9 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
       this.edges.set(boardEdges);
       this.markBoardAsPersisted(planId, board.title, boardNodes, boardEdges);
       this.openLiveConnection(planId);
-      this.syncStageViewport();
+      window.requestAnimationFrame(() => {
+        this.centerStageViewport();
+      });
     } finally {
       if (token === this.loadToken) {
         window.setTimeout(() => {
@@ -1200,16 +1310,224 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
   };
 
   private readonly toCanvasPoint = (clientX: number, clientY: number): XYPosition | null => {
-    const plane = this.planeElement()?.nativeElement;
+    const stage = this.stageElement()?.nativeElement;
 
-    if (!plane) return null;
+    if (!stage) return null;
 
-    const planeRect = plane.getBoundingClientRect();
+    const stageRect = stage.getBoundingClientRect();
+    const zoom = this.zoom();
 
     return clampPointToCanvas({
-      x: (clientX - planeRect.left) / this.zoom(),
-      y: (clientY - planeRect.top) / this.zoom()
+      x: (stage.scrollLeft + (clientX - stageRect.left)) / zoom,
+      y: (stage.scrollTop + (clientY - stageRect.top)) / zoom
     });
+  };
+
+  private readonly centerStageViewport = () => {
+    const stage = this.stageElement()?.nativeElement;
+
+    if (!stage) return;
+
+    const zoom = this.zoom();
+    const viewportWidthInCanvas = stage.clientWidth / zoom;
+    const viewportHeightInCanvas = stage.clientHeight / zoom;
+    const centerXInCanvas = canvasSize.width / 2;
+    const centerYInCanvas = canvasSize.height / 2;
+    const nextCanvasLeft = Math.max(0, centerXInCanvas - viewportWidthInCanvas / 2);
+    const nextCanvasTop = Math.max(0, centerYInCanvas - viewportHeightInCanvas / 2);
+
+    stage.scrollLeft = nextCanvasLeft * zoom;
+    stage.scrollTop = nextCanvasTop * zoom;
+    this.syncStageViewport();
+  };
+
+  private readonly buildBoardSvgMarkup = () => {
+    const boardEdges = this.renderEdgesToSvg();
+    const boardNodes = this.renderNodesToSvg();
+
+    return `
+<svg xmlns="http://www.w3.org/2000/svg" width="${canvasSize.width}" height="${canvasSize.height}" viewBox="0 0 ${canvasSize.width} ${canvasSize.height}">
+  <defs>
+    <pattern id="grid-pattern" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r="1" fill="#d8dee8" />
+    </pattern>
+  </defs>
+  <rect x="0" y="0" width="${canvasSize.width}" height="${canvasSize.height}" fill="#f6f4ef" />
+  <rect x="0" y="0" width="${canvasSize.width}" height="${canvasSize.height}" fill="url(#grid-pattern)" />
+  ${boardEdges}
+  ${boardNodes}
+</svg>`.trim();
+  };
+
+  private readonly renderEdgesToSvg = () => {
+    const nodesById = new Map(this.nodes().map((node) => [node.id, node]));
+
+    return this.edges()
+      .map((edge) => {
+        const source = nodesById.get(edge.source);
+        const target = nodesById.get(edge.target);
+
+        if (!source || !target) return '';
+
+        const path = getConnectorPath(source, target, edge.style.type);
+        const lineStyle = edge.style.lineStyle === 'dashed' ? ' stroke-dasharray="8 6"' : '';
+        const color = escapeXml(edge.style.color);
+        const label = edge.label?.trim() ?? '';
+        const sourceCenter = getNodeCenter(source);
+        const targetCenter = getNodeCenter(target);
+        const labelX = (sourceCenter.x + targetCenter.x) / 2;
+        const labelY = (sourceCenter.y + targetCenter.y) / 2 - 10;
+
+        return `
+<g>
+  <path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"${lineStyle} />
+  ${
+    label
+      ? `<text x="${labelX}" y="${labelY}" fill="${color}" font-size="13" font-weight="700" text-anchor="middle">${escapeXml(label)}</text>`
+      : ''
+  }
+</g>`.trim();
+      })
+      .filter(Boolean)
+      .join('\n');
+  };
+
+  private readonly renderNodesToSvg = () =>
+    this.renderedNodes()
+      .map((node) => this.renderNodeToSvg(node))
+      .join('\n');
+
+  private readonly renderNodeToSvg = (node: CanvasNodeView) => {
+    const fillColor = escapeXml(toNodeFillColor(node));
+    const borderColor = escapeXml(node.color);
+    const borderWidth = node.kind === 'TEXT' ? 0 : node.kind === 'FRAME' ? 2 : 1.6;
+    const shapeMarkup = this.renderNodeShapeSvg(node, fillColor, borderColor, borderWidth);
+    const textMarkup = this.renderNodeTextSvg(node);
+
+    return `
+<g transform="translate(${node.position.x} ${node.position.y})">
+  ${shapeMarkup}
+  ${textMarkup}
+</g>`.trim();
+  };
+
+  private readonly renderNodeShapeSvg = (node: CanvasNodeView, fill: string, stroke: string, strokeWidth: number) => {
+    if (node.kind === 'TEXT') {
+      return '';
+    }
+
+    if (node.kind === 'NOTE') {
+      const foldStartX = Math.max(0, node.width - 26);
+      const foldStartY = Math.max(0, node.height - 26);
+
+      return `
+<polygon points="0,0 ${node.width},0 ${node.width},${foldStartY} ${foldStartX},${node.height} 0,${node.height}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />
+<polygon points="${foldStartX},${node.height} ${node.width},${foldStartY} ${node.width},${node.height}" fill="${stroke}" fill-opacity="0.15" />`.trim();
+    }
+
+    if (node.kind === 'SHAPE') {
+      const variant = node.variant ?? 'DIAMOND';
+
+      if (variant === 'DIAMOND') {
+        return `<polygon points="${node.width / 2},0 ${node.width},${node.height / 2} ${node.width / 2},${node.height} 0,${node.height / 2}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+      }
+
+      if (variant === 'TRIANGLE') {
+        return `<polygon points="${node.width / 2},0 ${node.width},${node.height} 0,${node.height}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+      }
+
+      if (variant === 'PARALLELOGRAM') {
+        return `<polygon points="${node.width * 0.18},0 ${node.width},0 ${node.width * 0.82},${node.height} 0,${node.height}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+      }
+
+      if (variant === 'HEXAGON') {
+        return `<polygon points="${node.width * 0.24},0 ${node.width * 0.76},0 ${node.width},${node.height / 2} ${node.width * 0.76},${node.height} ${node.width * 0.24},${node.height} 0,${node.height / 2}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+      }
+
+      if (variant === 'CYLINDER') {
+        const capRadiusY = Math.max(8, Math.min(20, node.height * 0.16));
+
+        return `
+<rect x="0" y="${capRadiusY / 2}" width="${node.width}" height="${Math.max(0, node.height - capRadiusY)}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />
+<ellipse cx="${node.width / 2}" cy="${capRadiusY / 2}" rx="${node.width / 2}" ry="${capRadiusY / 2}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />
+<ellipse cx="${node.width / 2}" cy="${Math.max(capRadiusY / 2, node.height - capRadiusY / 2)}" rx="${node.width / 2}" ry="${capRadiusY / 2}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />`.trim();
+      }
+
+      if (variant === 'DOCUMENT') {
+        const cut = Math.max(18, Math.min(node.width * 0.2, 34));
+
+        return `<polygon points="0,0 ${node.width - cut},0 ${node.width},${cut} ${node.width},${node.height} 0,${node.height}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+      }
+
+      if (variant === 'CLOUD') {
+        return `<rect x="0" y="0" width="${node.width}" height="${node.height}" rx="${Math.round(node.height * 0.42)}" ry="${Math.round(node.height * 0.42)}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+      }
+
+      if (variant === 'CIRCLE') {
+        const radius = Math.min(node.width, node.height) / 2;
+        return `<circle cx="${node.width / 2}" cy="${node.height / 2}" r="${radius}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+      }
+
+      if (variant === 'ROUNDED_RECTANGLE') {
+        return `<rect x="0" y="0" width="${node.width}" height="${node.height}" rx="20" ry="20" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+      }
+
+      return `<rect x="0" y="0" width="${node.width}" height="${node.height}" rx="4" ry="4" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+    }
+
+    if (node.kind === 'STICKER') {
+      return `<rect x="0" y="0" width="${node.width}" height="${node.height}" rx="18" ry="18" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+    }
+
+    if (node.kind === 'GOAL') {
+      const radius = Math.min(node.width, node.height) / 2;
+      return `<circle cx="${node.width / 2}" cy="${node.height / 2}" r="${radius}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+    }
+
+    if (node.kind === 'FRAME') {
+      return `<rect x="0" y="0" width="${node.width}" height="${node.height}" rx="8" ry="8" fill="${fill}" fill-opacity="0.4" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-dasharray="8 5" />`;
+    }
+
+    return `<rect x="0" y="0" width="${node.width}" height="${node.height}" rx="6" ry="6" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+  };
+
+  private readonly renderNodeTextSvg = (node: CanvasNodeView) => {
+    const lines = toNodeTextLines(node);
+
+    if (lines.length === 0) return '';
+
+    const fontSize = node.textStyle?.fontSize ?? (node.kind === 'TEXT' ? 22 : 14);
+    const lineHeight = Math.max(14, Math.round(fontSize * 1.22));
+    const anchor = toTextAnchor(node.textStyle?.align);
+    const horizontalPadding = node.kind === 'TASK' ? 36 : 12;
+    const x = toTextX(anchor, node.width, horizontalPadding);
+    const yOffset = getVerticalOffset(node.textStyle?.verticalAlign, node.height, lines.length * lineHeight, 12);
+    const firstLineY = yOffset + fontSize;
+    const fill = escapeXml(node.color);
+    const fontWeight = node.textStyle?.bold ? 800 : node.kind === 'TEXT' ? 700 : 650;
+    const fontStyle = node.textStyle?.italic ? 'italic' : 'normal';
+    const textDecoration = node.textStyle?.underline ? ' underline' : '';
+    const escapedLines = lines.map((line) => escapeXml(line));
+    const tspans = escapedLines
+      .map((line, index) => {
+        const dy = index === 0 ? 0 : lineHeight;
+        return `<tspan x="${x}" dy="${dy}">${line || ' '}</tspan>`;
+      })
+      .join('');
+
+    return `<text x="${x}" y="${firstLineY}" fill="${fill}" font-size="${fontSize}" font-style="${fontStyle}" font-weight="${fontWeight}" text-anchor="${anchor}" text-decoration="${textDecoration.trim()}" dominant-baseline="text-before-edge">${tspans}</text>`;
+  };
+
+  private readonly downloadBlob = (blob: Blob, fileName: string) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   private readonly removeSelectedEdge = () => {
