@@ -17,7 +17,6 @@ COPY apps/web apps/web
 RUN npm run build --prefix packages/contracts
 RUN npm run build --prefix apps/web
 RUN cp -R apps/web/dist apps/api/public
-RUN npm run prisma:generate --prefix apps/api
 RUN npm run build --prefix apps/api
 
 FROM base AS runtime

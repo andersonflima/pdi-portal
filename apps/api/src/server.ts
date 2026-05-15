@@ -1,13 +1,13 @@
+import { closeDatabase } from './database.js';
 import { env } from './env.js';
 import { buildApp } from './http.js';
-import { prisma } from './prisma.js';
 
 const start = async () => {
   const app = await buildApp();
 
   const close = async () => {
     await app.close();
-    await prisma.$disconnect();
+    closeDatabase();
   };
 
   process.on('SIGINT', close);

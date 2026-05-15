@@ -11,7 +11,7 @@ O projeto entrega uma experiencia de PDI com login, administracao de usuarios, g
 - `Node.js` com `Fastify` no backend
 - `Angular` no frontend
 - Canvas visual modular com componentes Angular
-- `Prisma` com `SQLite`
+- `node:sqlite` com `SQLite`
 - `Zod` para contratos compartilhados
 - Build unico Node.js servindo API, frontend e banco SQLite local
 - `Docker Compose` com um unico servico, sem banco externo
@@ -76,7 +76,7 @@ npm install --no-audit --no-fund
 npm run dev
 ```
 
-O comando `npm run dev` prepara o Prisma, sincroniza o SQLite, roda o seed e sobe API e Web.
+O comando `npm run dev` prepara o SQLite, inicializa o schema, roda o seed e sobe API e Web.
 
 ## Ambiente Local com Docker
 
@@ -139,12 +139,6 @@ Instale as dependencias:
 
 ```bash
 npm install
-```
-
-Gere o Prisma Client:
-
-```bash
-npm run prisma:generate --prefix apps/api
 ```
 
 Configure `DATABASE_URL`, `JWT_SECRET`, `PORT` e `WEB_ORIGIN` no ambiente da API.
