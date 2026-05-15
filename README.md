@@ -35,6 +35,7 @@ infra/
 - Gerenciamento de usuarios pelo administrador
 - Criacao, edicao e remocao de PDIs
 - Vinculo de PDI com usuario responsavel
+- Criacao automatica do roadmap padrao para cada novo usuario colaborador (`MEMBER`)
 - Board visual por PDI
 - Importacao e exportacao de PDI em JSON
 - Colaboracao em tempo real via WebSocket

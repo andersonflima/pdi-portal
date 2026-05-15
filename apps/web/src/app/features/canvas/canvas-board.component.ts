@@ -41,16 +41,11 @@ type ConnectorDraft = {
   targetPoint: XYPosition;
 };
 
-const orderFrameParentsFirst = (nodes: CanvasNodeView[]) =>
-  [...nodes].sort((leftNode, rightNode) => {
-    if (leftNode.kind === 'FRAME' && rightNode.kind !== 'FRAME') return -1;
-    if (leftNode.kind !== 'FRAME' && rightNode.kind === 'FRAME') return 1;
-    return 0;
-  });
-
 const minZoom = 0.4;
 const maxZoom = 1.6;
 const zoomStep = 0.1;
+const dragStartThreshold = 4;
+const objectLayerBase = 1000;
 
 const roundZoom = (value: number) => Math.round(value * 100) / 100;
 
@@ -193,7 +188,20 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
 
   protected readonly selectedNode = computed(() => this.nodes().find((node) => node.id === this.selectedNodeId()) ?? null);
   protected readonly selectedEdge = computed(() => this.edges().find((edge) => edge.id === this.selectedEdgeId()) ?? null);
+  protected readonly renderedNodes = computed(() =>
+    [...this.nodes()].sort((leftNode, rightNode) => {
+      if (leftNode.zIndex !== rightNode.zIndex) {
+        return leftNode.zIndex - rightNode.zIndex;
+      }
+
+      if (leftNode.kind === 'FRAME' && rightNode.kind !== 'FRAME') return -1;
+      if (leftNode.kind !== 'FRAME' && rightNode.kind === 'FRAME') return 1;
+
+      return 0;
+    })
+  );
   protected readonly zoomPercent = computed(() => Math.round(this.zoom() * 100));
+  protected readonly nodeStackLevel = (node: CanvasNodeView) => node.zIndex;
 
   constructor() {
     effect((onCleanup) => {
@@ -225,15 +233,32 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
   @HostListener('window:keydown', ['$event'])
   protected readonly handleWindowKeydown = (event: KeyboardEvent) => {
     if (event.defaultPrevented) return;
-    if (event.key !== 'Delete' && event.key !== 'Backspace') return;
     if (isEditableTarget(event.target)) return;
 
-    const hasRemovedEdge = this.removeSelectedEdge();
-    const hasRemovedNode = hasRemovedEdge ? false : this.removeSelectedNode();
+    if (event.key === 'Delete' || event.key === 'Backspace') {
+      const hasRemovedEdge = this.removeSelectedEdge();
+      const hasRemovedNode = hasRemovedEdge ? false : this.removeSelectedNode();
 
-    if (!hasRemovedEdge && !hasRemovedNode) return;
+      if (!hasRemovedEdge && !hasRemovedNode) return;
 
-    event.preventDefault();
+      event.preventDefault();
+      return;
+    }
+
+    if (event.key === 'PageUp') {
+      const hasMoved = event.shiftKey ? this.moveSelectedNodeOneLayerForward() : this.bringSelectedNodeToFront();
+      if (!hasMoved) return;
+
+      event.preventDefault();
+      return;
+    }
+
+    if (event.key === 'PageDown') {
+      const hasMoved = event.shiftKey ? this.moveSelectedNodeOneLayerBackward() : this.sendSelectedNodeToBack();
+      if (!hasMoved) return;
+
+      event.preventDefault();
+    }
   };
 
   protected readonly clearSelection = () => {
@@ -244,7 +269,9 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
   };
 
   protected readonly handleCreateNode = (event: { kind: CanvasNodeKind; variant?: CanvasShapeVariant }) => {
-    this.nodes.update((currentNodes) => currentNodes.concat(createCanvasNode(event.kind, currentNodes.length, event.variant)));
+    this.nodes.update((currentNodes) =>
+      currentNodes.concat(createCanvasNode(event.kind, currentNodes, currentNodes.length, event.variant))
+    );
   };
 
   protected readonly handlePlanePointerDown = (event: PointerEvent) => {
@@ -298,6 +325,7 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
 
     this.selectedNodeId.set(node.id);
     this.selectedEdgeId.set(null);
+    this.bringSelectedNodeToFront();
     this.startNodeDrag(event, node);
   };
 
@@ -603,8 +631,6 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
   };
 
   private readonly startNodeDrag = (event: PointerEvent, node: CanvasNodeView) => {
-    event.preventDefault();
-
     const nodeIdsToMove = new Set(node.kind === 'FRAME' ? findDescendantNodeIds(node.id, this.nodes()) : [node.id]);
     const initialPositions = new Map(
       this.nodes()
@@ -614,8 +640,21 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
     const rootInitialPosition = initialPositions.get(node.id) ?? { ...node.position };
     const start = { x: event.clientX, y: event.clientY };
     const initialZoom = this.zoom();
+    let isDragging = false;
 
     const handleMove = (moveEvent: PointerEvent) => {
+      const pointerDeltaX = moveEvent.clientX - start.x;
+      const pointerDeltaY = moveEvent.clientY - start.y;
+
+      if (!isDragging && Math.hypot(pointerDeltaX, pointerDeltaY) < dragStartThreshold) {
+        return;
+      }
+
+      if (!isDragging) {
+        isDragging = true;
+        moveEvent.preventDefault();
+      }
+
       const rawDeltaX = (moveEvent.clientX - start.x) / initialZoom;
       const rawDeltaY = (moveEvent.clientY - start.y) / initialZoom;
       const deltaX = Math.max(-rootInitialPosition.x, rawDeltaX);
@@ -642,7 +681,7 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
       window.removeEventListener('pointermove', handleMove);
       window.removeEventListener('pointerup', handleEnd);
 
-      if (node.kind !== 'FRAME') {
+      if (isDragging && node.kind !== 'FRAME') {
         this.updateNodeParent(node.id);
       }
     };
@@ -659,18 +698,133 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
 
       const targetFrame = findContainingFrame(draggedNode, nodes);
 
-      return orderFrameParentsFirst(
-        nodes.map((node) =>
-          node.id === nodeId
-            ? {
-                ...node,
-                parentId: targetFrame?.id,
-                zIndex: 10
-              }
-            : node
-        )
+      return nodes.map((node) =>
+        node.id === nodeId
+          ? {
+              ...node,
+              parentId: targetFrame?.id
+            }
+          : node
       );
     });
+  };
+
+  private readonly bringSelectedNodeToFront = () => {
+    const selectedNodeId = this.selectedNodeId();
+
+    if (!selectedNodeId) return false;
+
+    let hasChanged = false;
+
+    this.nodes.update((nodes) => {
+      const selectedNode = nodes.find((node) => node.id === selectedNodeId);
+
+      if (!selectedNode || selectedNode.kind === 'FRAME') return nodes;
+
+      const highestObjectLayer = nodes
+        .filter((node) => node.kind !== 'FRAME')
+        .reduce((highest, node) => Math.max(highest, node.zIndex), objectLayerBase - 1);
+      const nextZIndex = highestObjectLayer + 1;
+
+      if (selectedNode.zIndex === nextZIndex) return nodes;
+
+      hasChanged = true;
+
+      return nodes.map((node) => (node.id === selectedNodeId ? { ...node, zIndex: nextZIndex } : node));
+    });
+
+    return hasChanged;
+  };
+
+  private readonly sendSelectedNodeToBack = () => {
+    const selectedNodeId = this.selectedNodeId();
+
+    if (!selectedNodeId) return false;
+
+    let hasChanged = false;
+
+    this.nodes.update((nodes) => {
+      const selectedNode = nodes.find((node) => node.id === selectedNodeId);
+
+      if (!selectedNode || selectedNode.kind === 'FRAME') return nodes;
+
+      const lowestObjectLayer = nodes
+        .filter((node) => node.kind !== 'FRAME')
+        .reduce((lowest, node) => Math.min(lowest, node.zIndex), Number.POSITIVE_INFINITY);
+      const nextZIndex = Math.max(objectLayerBase, lowestObjectLayer - 1);
+
+      if (selectedNode.zIndex === nextZIndex) return nodes;
+
+      hasChanged = true;
+
+      return nodes.map((node) => (node.id === selectedNodeId ? { ...node, zIndex: nextZIndex } : node));
+    });
+
+    return hasChanged;
+  };
+
+  private readonly moveSelectedNodeOneLayerForward = () => {
+    const selectedNodeId = this.selectedNodeId();
+
+    if (!selectedNodeId) return false;
+
+    let hasChanged = false;
+
+    this.nodes.update((nodes) => {
+      const contentNodes = [...nodes]
+        .filter((node) => node.kind !== 'FRAME')
+        .sort((leftNode, rightNode) => leftNode.zIndex - rightNode.zIndex);
+      const selectedIndex = contentNodes.findIndex((node) => node.id === selectedNodeId);
+
+      if (selectedIndex === -1 || selectedIndex >= contentNodes.length - 1) return nodes;
+
+      const selectedNode = contentNodes[selectedIndex];
+      const nextNode = contentNodes[selectedIndex + 1];
+
+      if (!selectedNode || !nextNode) return nodes;
+
+      hasChanged = true;
+
+      return nodes.map((node) => {
+        if (node.id === selectedNode.id) return { ...node, zIndex: nextNode.zIndex };
+        if (node.id === nextNode.id) return { ...node, zIndex: selectedNode.zIndex };
+        return node;
+      });
+    });
+
+    return hasChanged;
+  };
+
+  private readonly moveSelectedNodeOneLayerBackward = () => {
+    const selectedNodeId = this.selectedNodeId();
+
+    if (!selectedNodeId) return false;
+
+    let hasChanged = false;
+
+    this.nodes.update((nodes) => {
+      const contentNodes = [...nodes]
+        .filter((node) => node.kind !== 'FRAME')
+        .sort((leftNode, rightNode) => leftNode.zIndex - rightNode.zIndex);
+      const selectedIndex = contentNodes.findIndex((node) => node.id === selectedNodeId);
+
+      if (selectedIndex <= 0) return nodes;
+
+      const selectedNode = contentNodes[selectedIndex];
+      const previousNode = contentNodes[selectedIndex - 1];
+
+      if (!selectedNode || !previousNode) return nodes;
+
+      hasChanged = true;
+
+      return nodes.map((node) => {
+        if (node.id === selectedNode.id) return { ...node, zIndex: previousNode.zIndex };
+        if (node.id === previousNode.id) return { ...node, zIndex: selectedNode.zIndex };
+        return node;
+      });
+    });
+
+    return hasChanged;
   };
 
   private readonly toCanvasPoint = (clientX: number, clientY: number): XYPosition | null => {

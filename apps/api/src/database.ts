@@ -218,6 +218,12 @@ WHERE owner_id = ?
 ORDER BY created_at DESC
 `);
 
+const plansCountByOwnerStatement = database.prepare(`
+SELECT COUNT(1) AS total
+FROM pdi_plans
+WHERE owner_id = ?
+`);
+
 const plansAllStatement = database.prepare(`
 SELECT id, owner_id, title, objective, status, due_date, created_at, updated_at
 FROM pdi_plans
@@ -388,6 +394,11 @@ export const listPdiPlans = (user: { id: string; role: UserRole }) => {
       : (plansByOwnerStatement.all(user.id) as PdiPlanRow[]);
 
   return rows.map(toPlan);
+};
+
+export const countPdiPlansByOwner = (ownerId: string) => {
+  const result = plansCountByOwnerStatement.get(ownerId) as { total: number } | undefined;
+  return result?.total ?? 0;
 };
 
 export const createPdiPlan = (input: {
