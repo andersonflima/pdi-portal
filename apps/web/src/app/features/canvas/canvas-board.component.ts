@@ -21,9 +21,10 @@ import { CanvasHeaderComponent } from './components/canvas-header.component';
 import { CanvasNodeComponent } from './components/canvas-node.component';
 import { CanvasToolbarComponent } from './components/canvas-toolbar.component';
 import { canvasSize } from './canvas.constants';
-import { findContainingFrame, getConnectorPath, getNodeCenter, isPointInsideNode } from './canvas.geometry';
+import { findContainingFrame, getConnectorEndpoints, getConnectorPath, getNodeCenter, isPointInsideNode } from './canvas.geometry';
 import { createCanvasNode, toCanvasEdges, toCanvasNodes, toSaveBoard } from './canvas.mappers';
 import type {
+  CanvasEdgeDirection,
   CanvasEdgePatch,
   CanvasEdgeView,
   CanvasHandlePosition,
@@ -59,6 +60,7 @@ const autosaveDelayMs = 1200;
 const marqueeStartThreshold = 6;
 const minimapWidth = 240;
 const minimapHeight = Math.round((minimapWidth * canvasSize.height) / canvasSize.width);
+const connectorHandleHitRadius = 14;
 
 const roundZoom = (value: number) => Math.round(value * 100) / 100;
 
@@ -161,6 +163,33 @@ const findTopNodeAtPoint = (point: XYPosition, nodes: CanvasNodeView[], excluded
       return rightLayer - leftLayer;
     })
     .find((node) => isPointInsideNode(point, node));
+
+const findNodeHandleAtPoint = (point: XYPosition, nodes: CanvasNodeView[], excludedNodeId: string) => {
+  const sortedNodes = [...nodes]
+    .filter((node) => node.id !== excludedNodeId)
+    .sort((leftNode, rightNode) => {
+      const leftLayer = leftNode.kind === 'FRAME' ? Math.min(frameLayerMax, leftNode.zIndex) : Math.max(objectLayerBase, leftNode.zIndex);
+      const rightLayer =
+        rightNode.kind === 'FRAME' ? Math.min(frameLayerMax, rightNode.zIndex) : Math.max(objectLayerBase, rightNode.zIndex);
+
+      return rightLayer - leftLayer;
+    });
+
+  for (const node of sortedNodes) {
+    const handles: CanvasHandlePosition[] = ['top', 'right', 'bottom', 'left'];
+
+    for (const handle of handles) {
+      const handlePoint = toConnectorHandlePoint(node, handle);
+      const distance = Math.hypot(point.x - handlePoint.x, point.y - handlePoint.y);
+
+      if (distance <= connectorHandleHitRadius) {
+        return { handle, node };
+      }
+    }
+  }
+
+  return null;
+};
 
 const escapeXml = (value: string) =>
   value
@@ -280,6 +309,17 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
 
   protected readonly selectedNode = computed(() => this.nodes().find((node) => node.id === this.selectedNodeId()) ?? null);
   protected readonly selectedEdge = computed(() => this.edges().find((edge) => edge.id === this.selectedEdgeId()) ?? null);
+  protected readonly selectedEdgeDirection = computed<CanvasEdgeDirection>(() => {
+    const selectedEdge = this.selectedEdge();
+
+    if (!selectedEdge) return 'left-to-right';
+
+    const reverseEdge = this.edges().find((edge) => edge.source === selectedEdge.target && edge.target === selectedEdge.source);
+
+    if (reverseEdge) return 'both';
+
+    return this.edgeHorizontalDirection(selectedEdge);
+  });
   protected readonly selectedNodeIdSet = computed(() => new Set(this.selectedNodeIds()));
   protected readonly nodeStackLevel = (node: CanvasNodeView) =>
     node.kind === 'FRAME' ? Math.min(frameLayerMax, node.zIndex) : Math.max(objectLayerBase, node.zIndex);
@@ -546,11 +586,13 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
       if (!connector) return;
 
       const dropPoint = this.toCanvasPoint(endEvent.clientX, endEvent.clientY) ?? connector.targetPoint;
-      const targetNode = findTopNodeAtPoint(dropPoint, this.nodes(), connector.sourceNodeId);
+      const nodes = this.nodes();
+      const handleHit = findNodeHandleAtPoint(dropPoint, nodes, connector.sourceNodeId);
+      const targetNode = handleHit?.node ?? findTopNodeAtPoint(dropPoint, nodes, connector.sourceNodeId);
 
       if (!targetNode || targetNode.id === connector.sourceNodeId) return;
 
-      const targetHandle = toClosestHandle(targetNode, dropPoint);
+      const targetHandle = handleHit?.handle ?? toClosestHandle(targetNode, dropPoint);
 
       this.createConnector(
         connector.sourceNodeId,
@@ -675,24 +717,79 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
 
     if (!selectedEdge) return;
 
-    this.edges.update((edges) =>
-      edges.map((edge) =>
-        edge.id === selectedEdge.id
-          ? {
-              ...edge,
-              label: input.label ?? edge.label,
-              style: {
-                color: input.color ?? edge.style.color,
-                lineStyle: input.lineStyle ?? edge.style.lineStyle,
-                type: input.type ?? edge.style.type
-              }
-            }
-          : edge
-      )
-    );
+    const { direction, ...edgePatch } = input;
+
+    this.edges.update((edges) => {
+      const currentEdge = edges.find((edge) => edge.id === selectedEdge.id) ?? selectedEdge;
+      const reverseEdge =
+        edges.find((edge) => edge.source === currentEdge.target && edge.target === currentEdge.source) ?? null;
+
+      const applyPatch = (edge: CanvasEdgeView): CanvasEdgeView => ({
+        ...edge,
+        label: edgePatch.label ?? edge.label,
+        style: {
+          color: edgePatch.color ?? edge.style.color,
+          lineStyle: edgePatch.lineStyle ?? edge.style.lineStyle,
+          type: edgePatch.type ?? edge.style.type
+        }
+      });
+
+      const patchedCurrent = applyPatch(currentEdge);
+      const patchedReverse = reverseEdge ? applyPatch(reverseEdge) : null;
+      const leftToRightEdge =
+        this.edgeHorizontalDirection(patchedCurrent) === 'left-to-right'
+          ? patchedCurrent
+          : patchedReverse ?? this.createReverseEdge(patchedCurrent);
+      const rightToLeftEdge =
+        this.edgeHorizontalDirection(patchedCurrent) === 'right-to-left'
+          ? patchedCurrent
+          : patchedReverse ?? this.createReverseEdge(patchedCurrent);
+
+      const pairlessEdges = edges.filter((edge) => edge.id !== patchedCurrent.id && edge.id !== patchedReverse?.id);
+
+      if (direction === 'both') {
+        return pairlessEdges.concat(leftToRightEdge, rightToLeftEdge);
+      }
+
+      if (direction === 'left-to-right') {
+        this.selectedEdgeId.set(leftToRightEdge.id);
+        return pairlessEdges.concat(leftToRightEdge);
+      }
+
+      if (direction === 'right-to-left') {
+        this.selectedEdgeId.set(rightToLeftEdge.id);
+        return pairlessEdges.concat(rightToLeftEdge);
+      }
+
+      if (patchedReverse) {
+        return pairlessEdges.concat(patchedCurrent, patchedReverse);
+      }
+
+      return pairlessEdges.concat(patchedCurrent);
+    });
   };
 
   protected readonly isNodeSelected = (nodeId: string) => this.selectedNodeIdSet().has(nodeId);
+  protected readonly shouldRenderEdgeLabel = (edge: CanvasEdgeView) => {
+    const reverseEdge = this.edges().find((candidate) => candidate.source === edge.target && candidate.target === edge.source);
+
+    if (!reverseEdge) return true;
+
+    return edge.id < reverseEdge.id;
+  };
+  protected readonly edgeLabelPosition = (edge: CanvasEdgeView) => {
+    const source = this.nodes().find((node) => node.id === edge.source);
+    const target = this.nodes().find((node) => node.id === edge.target);
+
+    if (!source || !target) return { x: 0, y: 0 };
+
+    const { start, end } = getConnectorEndpoints(source, target, edge.sourceHandle, edge.targetHandle);
+
+    return {
+      x: (start.x + end.x) / 2,
+      y: (start.y + end.y) / 2
+    };
+  };
 
   protected readonly startNodeResize = (event: PointerEvent, node: CanvasNodeView) => {
     event.preventDefault();
@@ -704,7 +801,7 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
     const handleMove = (moveEvent: PointerEvent) => {
       const width = Math.max(96, initialSize.width + (moveEvent.clientX - start.x) / initialZoom);
       const height = Math.max(72, initialSize.height + (moveEvent.clientY - start.y) / initialZoom);
-      const shouldKeepAspectRatio = node.kind === 'GOAL' || (node.kind === 'SHAPE' && node.variant === 'CIRCLE');
+      const shouldKeepAspectRatio = node.kind === 'SHAPE' && node.variant === 'CIRCLE';
       const nextSize = shouldKeepAspectRatio ? Math.max(width, height) : null;
 
       this.nodes.update((nodes) =>
@@ -1361,15 +1458,70 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
 
   private readonly renderEdgesToSvg = () => {
     const nodesById = new Map(this.nodes().map((node) => [node.id, node]));
+    const toHandlePosition = (handle?: string): CanvasHandlePosition | null => {
+      if (!handle) return null;
+      if (handle.includes('top')) return 'top';
+      if (handle.includes('right')) return 'right';
+      if (handle.includes('bottom')) return 'bottom';
+      if (handle.includes('left')) return 'left';
+      return null;
+    };
+    const resolveHandleAtPoint = (node: CanvasNodeView, explicitHandle: string | undefined, point: XYPosition): CanvasHandlePosition => {
+      const explicit = toHandlePosition(explicitHandle);
+      if (explicit) return explicit;
+
+      const distances: Record<CanvasHandlePosition, number> = {
+        bottom: Math.abs(point.y - (node.position.y + node.height)),
+        left: Math.abs(point.x - node.position.x),
+        right: Math.abs(point.x - (node.position.x + node.width)),
+        top: Math.abs(point.y - node.position.y)
+      };
+
+      return (Object.entries(distances).sort((left, right) => left[1] - right[1])[0]?.[0] as CanvasHandlePosition) ?? 'right';
+    };
+    const directionFromHandle = (handle: CanvasHandlePosition): XYPosition => {
+      if (handle === 'top') return { x: 0, y: -1 };
+      if (handle === 'right') return { x: 1, y: 0 };
+      if (handle === 'bottom') return { x: 0, y: 1 };
+      return { x: -1, y: 0 };
+    };
+    const toArrowPointsAtHandle = (anchor: XYPosition, handle: CanvasHandlePosition) => {
+      const direction = directionFromHandle(handle);
+      const size = 14;
+      const halfWidth = 6;
+      const tipOutset = size;
+      const tipX = anchor.x + direction.x * tipOutset;
+      const tipY = anchor.y + direction.y * tipOutset;
+      const baseX = tipX - direction.x * size;
+      const baseY = tipY - direction.y * size;
+      const perpendicular = { x: -direction.y, y: direction.x };
+      const leftX = baseX - perpendicular.x * halfWidth;
+      const leftY = baseY - perpendicular.y * halfWidth;
+      const rightX = baseX + perpendicular.x * halfWidth;
+      const rightY = baseY + perpendicular.y * halfWidth;
+
+      return `${tipX},${tipY} ${leftX},${leftY} ${rightX},${rightY}`;
+    };
+    const shouldRenderEdge = (edge: CanvasEdgeView) => {
+      const reverseEdge = this.edges().find((candidate) => candidate.source === edge.target && candidate.target === edge.source);
+      if (!reverseEdge) return true;
+      return edge.id < reverseEdge.id;
+    };
+    const isBidirectional = (edge: CanvasEdgeView) =>
+      this.edges().some((candidate) => candidate.source === edge.target && candidate.target === edge.source);
 
     return this.edges()
+      .filter(shouldRenderEdge)
       .map((edge) => {
         const source = nodesById.get(edge.source);
         const target = nodesById.get(edge.target);
 
         if (!source || !target) return '';
 
-        const path = getConnectorPath(source, target, edge.style.type);
+        const path = getConnectorPath(source, target, edge.style.type, edge.sourceHandle, edge.targetHandle);
+        const { start, end } = getConnectorEndpoints(source, target, edge.sourceHandle, edge.targetHandle);
+        const endHandle = resolveHandleAtPoint(target, edge.targetHandle, end);
+        const startHandle = resolveHandleAtPoint(source, edge.sourceHandle, start);
         const lineStyle = edge.style.lineStyle === 'dashed' ? ' stroke-dasharray="8 6"' : '';
         const color = escapeXml(edge.style.color);
         const label = edge.label?.trim() ?? '';
@@ -1377,10 +1529,16 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
         const targetCenter = getNodeCenter(target);
         const labelX = (sourceCenter.x + targetCenter.x) / 2;
         const labelY = (sourceCenter.y + targetCenter.y) / 2 - 10;
+        const forwardArrow = `<polygon points="${toArrowPointsAtHandle(end, endHandle)}" fill="${color}" />`;
+        const backwardArrow = isBidirectional(edge)
+          ? `<polygon points="${toArrowPointsAtHandle(start, startHandle)}" fill="${color}" />`
+          : '';
 
         return `
 <g>
   <path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"${lineStyle} />
+  ${forwardArrow}
+  ${backwardArrow}
   ${
     label
       ? `<text x="${labelX}" y="${labelY}" fill="${color}" font-size="13" font-weight="700" text-anchor="middle">${escapeXml(label)}</text>`
@@ -1402,13 +1560,29 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
     const borderColor = escapeXml(node.color);
     const borderWidth = node.kind === 'TEXT' ? 0 : node.kind === 'FRAME' ? 2 : 1.6;
     const shapeMarkup = this.renderNodeShapeSvg(node, fillColor, borderColor, borderWidth);
+    const iconMarkup = node.kind === 'GOAL' ? this.renderGoalIconSvg(node, borderColor) : '';
     const textMarkup = this.renderNodeTextSvg(node);
 
     return `
 <g transform="translate(${node.position.x} ${node.position.y})">
   ${shapeMarkup}
+  ${iconMarkup}
   ${textMarkup}
 </g>`.trim();
+  };
+
+  private readonly renderGoalIconSvg = (node: CanvasNodeView, stroke: string) => {
+    const iconInset = 14;
+    const maxRadius = Math.max(7, Math.min(12, Math.min(node.width, node.height) * 0.1));
+    const midRadius = Math.max(4.5, maxRadius * 0.66);
+    const innerRadius = Math.max(2.4, maxRadius * 0.26);
+    const centerX = iconInset + maxRadius;
+    const centerY = iconInset + maxRadius;
+
+    return `
+<circle cx="${centerX}" cy="${centerY}" r="${maxRadius}" fill="none" stroke="${stroke}" stroke-width="2.2" />
+<circle cx="${centerX}" cy="${centerY}" r="${midRadius}" fill="none" stroke="${stroke}" stroke-width="2.2" />
+<circle cx="${centerX}" cy="${centerY}" r="${innerRadius}" fill="${stroke}" />`.trim();
   };
 
   private readonly renderNodeShapeSvg = (node: CanvasNodeView, fill: string, stroke: string, strokeWidth: number) => {
@@ -1460,7 +1634,18 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
       }
 
       if (variant === 'CLOUD') {
-        return `<rect x="0" y="0" width="${node.width}" height="${node.height}" rx="${Math.round(node.height * 0.42)}" ry="${Math.round(node.height * 0.42)}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+        const path = [
+          `M ${node.width * 0.12} ${node.height * 0.7}`,
+          `C ${node.width * 0.04} ${node.height * 0.7}, ${node.width * 0.02} ${node.height * 0.58}, ${node.width * 0.09} ${node.height * 0.52}`,
+          `C ${node.width * 0.09} ${node.height * 0.36}, ${node.width * 0.23} ${node.height * 0.25}, ${node.width * 0.36} ${node.height * 0.3}`,
+          `C ${node.width * 0.43} ${node.height * 0.14}, ${node.width * 0.64} ${node.height * 0.12}, ${node.width * 0.74} ${node.height * 0.28}`,
+          `C ${node.width * 0.87} ${node.height * 0.24}, ${node.width * 0.97} ${node.height * 0.35}, ${node.width * 0.92} ${node.height * 0.49}`,
+          `C ${node.width * 0.99} ${node.height * 0.54}, ${node.width * 0.98} ${node.height * 0.7}, ${node.width * 0.85} ${node.height * 0.74}`,
+          `C ${node.width * 0.75} ${node.height * 0.79}, ${node.width * 0.24} ${node.height * 0.8}, ${node.width * 0.12} ${node.height * 0.7}`,
+          'Z'
+        ].join(' ');
+
+        return `<path d="${path}" fill="${fill}" stroke="none" />`;
       }
 
       if (variant === 'CIRCLE') {
@@ -1480,8 +1665,7 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
     }
 
     if (node.kind === 'GOAL') {
-      const radius = Math.min(node.width, node.height) / 2;
-      return `<circle cx="${node.width / 2}" cy="${node.height / 2}" r="${radius}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+      return `<rect x="0" y="0" width="${node.width}" height="${node.height}" rx="10" ry="10" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
     }
 
     if (node.kind === 'FRAME') {
@@ -1499,7 +1683,7 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
     const fontSize = node.textStyle?.fontSize ?? (node.kind === 'TEXT' ? 22 : 14);
     const lineHeight = Math.max(14, Math.round(fontSize * 1.22));
     const anchor = toTextAnchor(node.textStyle?.align);
-    const horizontalPadding = node.kind === 'TASK' ? 36 : 12;
+    const horizontalPadding = node.kind === 'TASK' ? 36 : node.kind === 'GOAL' ? 36 : 12;
     const x = toTextX(anchor, node.width, horizontalPadding);
     const yOffset = getVerticalOffset(node.textStyle?.verticalAlign, node.height, lines.length * lineHeight, 12);
     const firstLineY = yOffset + fontSize;
@@ -1530,12 +1714,46 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
     URL.revokeObjectURL(url);
   };
 
+  private readonly edgeHorizontalDirection = (edge: CanvasEdgeView): Exclude<CanvasEdgeDirection, 'both'> => {
+    const source = this.nodes().find((node) => node.id === edge.source);
+    const target = this.nodes().find((node) => node.id === edge.target);
+
+    if (!source || !target) return 'left-to-right';
+
+    return getNodeCenter(source).x <= getNodeCenter(target).x ? 'left-to-right' : 'right-to-left';
+  };
+
+  private readonly flipHandleRole = (handle?: string) => {
+    if (!handle) return undefined;
+    if (handle.includes('-source')) return handle.replace('-source', '-target');
+    if (handle.includes('-target')) return handle.replace('-target', '-source');
+
+    return handle;
+  };
+
+  private readonly createReverseEdge = (edge: CanvasEdgeView): CanvasEdgeView => ({
+    ...edge,
+    id: crypto.randomUUID(),
+    source: edge.target,
+    sourceHandle: this.flipHandleRole(edge.targetHandle),
+    target: edge.source,
+    targetHandle: this.flipHandleRole(edge.sourceHandle)
+  });
+
   private readonly removeSelectedEdge = () => {
     const selectedEdgeId = this.selectedEdgeId();
 
     if (!selectedEdgeId) return false;
 
-    this.edges.update((edges) => edges.filter((edge) => edge.id !== selectedEdgeId));
+    const selectedEdge = this.edges().find((edge) => edge.id === selectedEdgeId) ?? null;
+    const reverseEdgeId =
+      selectedEdge
+        ? this.edges().find((edge) => edge.source === selectedEdge.target && edge.target === selectedEdge.source)?.id
+        : undefined;
+
+    this.edges.update((edges) =>
+      edges.filter((edge) => edge.id !== selectedEdgeId && edge.id !== reverseEdgeId)
+    );
     this.selectedEdgeId.set(null);
 
     return true;
@@ -1581,20 +1799,27 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
     sourceHandle?: string,
     targetHandle?: string
   ) => {
-    this.edges.update((edges) =>
-      edges.concat({
-        id: crypto.randomUUID(),
-        label: '',
-        source,
-        sourceHandle,
-        style: {
-          color: '#64748b',
-          lineStyle: 'solid',
-          type: 'smoothstep'
-        },
-        target,
-        targetHandle
-      })
-    );
+    const createEdge = (reverseEdge?: CanvasEdgeView): CanvasEdgeView => ({
+      id: crypto.randomUUID(),
+      label: reverseEdge?.label ?? '',
+      source,
+      sourceHandle,
+      style: reverseEdge?.style ?? {
+        color: '#64748b',
+        lineStyle: 'solid' as const,
+        type: 'smoothstep' as const
+      },
+      target,
+      targetHandle
+    });
+
+    this.edges.update((edges) => {
+      const hasSameDirection = edges.some((edge) => edge.source === source && edge.target === target);
+      const reverseEdge = edges.find((edge) => edge.source === target && edge.target === source);
+
+      if (hasSameDirection) return edges;
+
+      return edges.concat(createEdge(reverseEdge));
+    });
   };
 }

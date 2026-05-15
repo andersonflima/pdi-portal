@@ -1,28 +1,30 @@
 <svg class="edge-layer" [attr.viewBox]="'0 0 ' + canvasSize.width + ' ' + canvasSize.height">
   @for (edge of edges(); track edge.id) {
-    @if (edgePath(edge); as path) {
+    @if (shouldRenderEdge(edge) && edgeGeometry(edge); as geometry) {
       <g [class.is-selected]="selectedEdgeId() === edge.id">
         <path
           class="edge-hit-area"
-          [attr.d]="path"
+          [attr.d]="geometry.path"
           (pointerdown)="handleSelect($event, edge.id)"
         />
         <path
           class="edge-line"
           [class.edge-line-dashed]="edge.style.lineStyle === 'dashed'"
-          [attr.d]="path"
+          [attr.d]="geometry.path"
           [attr.stroke]="edge.style.color"
         />
-        @if (edge.label) {
-          <text
-            class="edge-label"
-            [attr.x]="labelPosition(edge).x"
-            [attr.y]="labelPosition(edge).y - 10"
-            [attr.fill]="edge.style.color"
-          >
-            {{ edge.label }}
-          </text>
-        }
+        <path
+          class="edge-line-live"
+          [class.edge-line-live-dashed]="edge.style.lineStyle === 'dashed'"
+          [attr.d]="geometry.path"
+          [attr.stroke]="edge.style.color"
+        />
+
+        <polygon class="edge-arrow" [attr.points]="geometry.forwardArrow" [attr.fill]="edge.style.color" />
+
+        @if (geometry.backwardArrow) {
+          <polygon class="edge-arrow" [attr.points]="geometry.backwardArrow" [attr.fill]="edge.style.color" />
+          }
       </g>
     }
   }

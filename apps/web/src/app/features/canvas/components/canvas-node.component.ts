@@ -1,5 +1,6 @@
 import { NgStyle } from '@angular/common';
-import { Component, computed, input, output, signal } from '@angular/core';
+import { Component, ElementRef, computed, inject, input, output, signal } from '@angular/core';
+import { LucideAngularModule } from 'lucide-angular';
 import type { CanvasHandlePosition, CanvasNodeDataPatch, CanvasNodeView } from '../canvas.models';
 import { getNodeTextColor } from '../canvas.colors';
 import { toTaskItemsFromText } from '../canvas.mappers';
@@ -25,7 +26,7 @@ const toNodeClassName = (node: CanvasNodeView, selected: boolean) =>
 @Component({
   selector: 'app-canvas-node',
   standalone: true,
-  imports: [NgStyle],
+  imports: [NgStyle, LucideAngularModule],
   templateUrl: './canvas-node.component.html',
   styleUrl: './canvas-node.component.css'
 })
@@ -36,7 +37,9 @@ export class CanvasNodeComponent {
   readonly connectorStart = output<{ event: PointerEvent; handle: CanvasHandlePosition }>();
   readonly resizeStart = output<PointerEvent>();
 
+  private readonly hostElement = inject(ElementRef<HTMLElement>);
   protected readonly isEditing = signal(false);
+  protected readonly editingChecklistItemId = signal<string | null>(null);
   private taskToggleTimeoutId: number | null = null;
   private readonly checklistToggleTimeoutById = new Map<string, number>();
   protected readonly nodeClasses = computed(() => toNodeClassName(this.node(), this.selected()));
@@ -48,6 +51,10 @@ export class CanvasNodeComponent {
       ? Math.max((this.node().taskItems ?? []).length, 1)
       : Math.max(this.node().label.split('\n').length, 1)
   );
+  protected readonly goalIconSize = computed(() => {
+    const node = this.node();
+    return Math.max(16, Math.min(24, Math.round(Math.min(node.width, node.height) * 0.14)));
+  });
 
   protected readonly nodeStyle = computed(() => {
     const node = this.node();
@@ -76,6 +83,13 @@ export class CanvasNodeComponent {
 
   protected readonly stopCanvasInteraction = (event: Event) => {
     event.stopPropagation();
+  };
+
+  protected readonly handleNodeDoubleClick = (event: Event) => {
+    event.stopPropagation();
+
+    this.isEditing.set(true);
+    this.focusEditableControl();
   };
 
   protected readonly handleResizeStart = (event: PointerEvent) => {
@@ -115,6 +129,23 @@ export class CanvasNodeComponent {
     }
 
     this.isEditing.set(true);
+    this.focusEditableControl();
+  };
+
+  protected readonly handleTaskLabelInput = (event: Event) => {
+    const value = (event.target as HTMLTextAreaElement).value;
+    this.dataChange.emit({ label: value });
+  };
+
+  protected readonly handleTaskLabelBlur = () => {
+    this.isEditing.set(false);
+  };
+
+  protected readonly handleTaskLabelKeydown = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      (event.target as HTMLTextAreaElement).blur();
+    }
   };
 
   protected readonly handleChecklistToggle = (event: MouseEvent, itemId: string) => {
@@ -150,7 +181,33 @@ export class CanvasNodeComponent {
       this.checklistToggleTimeoutById.delete(itemId);
     }
 
+    const item = (this.node().taskItems ?? []).find((candidate) => candidate.id === itemId);
+
+    if (!item) return;
+
     this.isEditing.set(true);
+    this.editingChecklistItemId.set(itemId);
+    this.focusEditableControl();
+  };
+
+  protected readonly handleChecklistLabelInput = (event: Event, itemId: string) => {
+    const value = (event.target as HTMLTextAreaElement).value;
+
+    this.dataChange.emit({
+      taskItems: (this.node().taskItems ?? []).map((item) => (item.id === itemId ? { ...item, label: value } : item))
+    });
+  };
+
+  protected readonly handleChecklistLabelBlur = () => {
+    this.editingChecklistItemId.set(null);
+    this.isEditing.set(false);
+  };
+
+  protected readonly handleChecklistLabelKeydown = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      (event.target as HTMLTextAreaElement).blur();
+    }
   };
 
   protected readonly handleTextInput = (event: Event) => {
@@ -161,5 +218,52 @@ export class CanvasNodeComponent {
         ? { taskItems: toTaskItemsFromText(value, this.node().taskItems) }
         : { label: value }
     );
+  };
+
+  protected readonly handleEditableKeydown = (event: KeyboardEvent) => {
+    if (event.key !== 'Enter') return;
+
+    const control = event.target as HTMLTextAreaElement;
+    const value = control.value;
+    const selectionStart = control.selectionStart ?? value.length;
+    const selectionEnd = control.selectionEnd ?? selectionStart;
+
+    event.preventDefault();
+
+    if (event.shiftKey) {
+      const nextValue = `${value.slice(0, selectionEnd)}\n${value.slice(selectionEnd)}`;
+      const nextCursor = selectionEnd + 1;
+
+      control.value = nextValue;
+      control.setSelectionRange(nextCursor, nextCursor);
+      control.dispatchEvent(new Event('input', { bubbles: true }));
+      return;
+    }
+
+    const currentLineStart = value.lastIndexOf('\n', Math.max(0, selectionStart - 1)) + 1;
+    const nextValue = `${value.slice(0, currentLineStart)}\n${value.slice(currentLineStart)}`;
+
+    control.value = nextValue;
+    control.setSelectionRange(currentLineStart, currentLineStart);
+    control.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+
+  private readonly focusEditableControl = () => {
+    window.requestAnimationFrame(() => {
+      const control = this.hostElement.nativeElement.querySelector('.pdi-editable-control') as
+        | HTMLInputElement
+        | HTMLTextAreaElement
+        | null;
+
+      if (!control) return;
+
+      control.focus();
+
+      const length = control.value.length;
+
+      if (typeof control.setSelectionRange === 'function') {
+        control.setSelectionRange(length, length);
+      }
+    });
   };
 }
