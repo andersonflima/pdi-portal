@@ -31,12 +31,15 @@ export class CanvasEdgeLayerComponent {
   readonly edges = input.required<CanvasEdgeView[]>();
   readonly selectedEdgeId = input<string | null>(null);
   readonly selectEdge = output<string>();
+  readonly editEdge = output<string>();
 
   protected readonly canvasSize = canvasSize;
   protected readonly markerColors = () => Array.from(new Set(this.edges().map((edge) => edge.style.color)));
   protected readonly markerAngles = [0, 90, 180, -90];
   protected readonly markerIdForColorAndAngle = (color: string, angle: number) =>
     `edge-arrow-head-${encodeURIComponent(color).replaceAll('%', '_')}-${angle}`;
+  protected readonly edgeLiveMaskId = (edgeId: string, segment: 'start' | 'end') =>
+    `edge-live-mask-${encodeURIComponent(edgeId).replaceAll('%', '_')}-${segment}`;
 
   protected readonly findNode = (nodeId: string) => this.nodes().find((node) => node.id === nodeId);
   protected readonly inferTargetHandle = (edge: CanvasEdgeView): CanvasHandlePosition => {
@@ -111,5 +114,11 @@ export class CanvasEdgeLayerComponent {
   protected readonly handleSelect = (event: PointerEvent, edgeId: string) => {
     event.stopPropagation();
     this.selectEdge.emit(edgeId);
+  };
+
+  protected readonly handleEdit = (event: MouseEvent, edgeId: string) => {
+    event.preventDefault();
+    event.stopPropagation();
+    this.editEdge.emit(edgeId);
   };
 }

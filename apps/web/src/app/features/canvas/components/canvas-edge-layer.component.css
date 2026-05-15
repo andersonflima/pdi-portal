@@ -46,6 +46,18 @@
   stroke-width: 2.6;
 }
 
+.edge-line-live-bidirectional {
+  animation: none;
+}
+
+.edge-line-live-bidirectional-forward {
+  animation: edge-dash-flow 0.95s linear infinite;
+}
+
+.edge-line-live-bidirectional-reverse {
+  animation: edge-dash-flow-reverse 0.95s linear infinite;
+}
+
 .edge-line-live-dashed {
   stroke-dasharray: 24 12;
 }
@@ -70,6 +82,12 @@
 @keyframes edge-dash-flow {
   to {
     stroke-dashoffset: -46;
+  }
+}
+
+@keyframes edge-dash-flow-reverse {
+  to {
+    stroke-dashoffset: 46;
   }
 }
 
