@@ -1,4 +1,5 @@
 import {
+  AfterViewInit,
   Component,
   ElementRef,
   HostListener,
@@ -279,7 +280,7 @@ const toNodeFillColor = (node: CanvasNodeView) => {
   templateUrl: './canvas-board.component.html',
   styleUrl: './canvas-board.component.css'
 })
-export class CanvasBoardComponent implements OnChanges, OnDestroy {
+export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy {
   @Input({ required: true }) isCreatingPlan = false;
   @Input({ required: true }) isCreatingUser = false;
   @Input({ required: true }) isDeletingPlan = false;
@@ -312,6 +313,7 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
   private lastPersistedBoardSnapshot: string | null = null;
   private isPersistingBoard = false;
   private queuedAutosaveSnapshot: { board: ReturnType<typeof toSaveBoard>; planId: string; snapshot: string } | null = null;
+  private removeStageWheelListener: (() => void) | null = null;
 
   protected readonly canvasSize = canvasSize;
   protected readonly minimapSize = { height: minimapHeight, width: minimapWidth };
@@ -457,7 +459,24 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
     }
   }
 
+  ngAfterViewInit() {
+    const stage = this.stageElement()?.nativeElement;
+
+    if (!stage) return;
+
+    const wheelListener = (event: WheelEvent) => {
+      this.handleStageWheel(event);
+    };
+
+    stage.addEventListener('wheel', wheelListener, { passive: false });
+    this.removeStageWheelListener = () => {
+      stage.removeEventListener('wheel', wheelListener);
+    };
+  }
+
   ngOnDestroy() {
+    this.removeStageWheelListener?.();
+    this.removeStageWheelListener = null;
     this.closeLiveConnection();
   }
 
@@ -527,12 +546,14 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
     if (!stage) return;
 
     event.preventDefault();
+    event.stopPropagation();
 
     const normalizedDelta = normalizeWheelDeltaY(event, stage.clientHeight);
     if (Math.abs(normalizedDelta) < 0.01) return;
+    const boundedDelta = Math.max(-240, Math.min(240, normalizedDelta));
 
     const currentZoom = this.zoom();
-    const zoomFactor = Math.exp(-normalizedDelta * wheelZoomSensitivity);
+    const zoomFactor = Math.exp(-boundedDelta * wheelZoomSensitivity);
     const nextZoom = clampZoom(currentZoom * zoomFactor);
 
     this.applyZoom(nextZoom, { clientX: event.clientX, clientY: event.clientY });
@@ -1527,8 +1548,8 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
 
     const markerDefs = `
 <defs>
-  <marker id="export-edge-arrow-head" viewBox="0 0 20 14" markerWidth="20" markerHeight="14" refX="0" refY="7" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
-    <path d="M 0 7 L 18 1 L 18 13 Z" fill="context-stroke" />
+  <marker id="export-edge-arrow-head" viewBox="0 0 20 14" markerWidth="20" markerHeight="14" refX="18" refY="7" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+    <path d="M 18 7 L 0 1 L 0 13 Z" fill="context-stroke" />
   </marker>
 </defs>`.trim();
 

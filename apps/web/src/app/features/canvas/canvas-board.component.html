@@ -43,7 +43,6 @@
     [class.is-panning]="isPanning()"
     [class.is-selecting]="marqueeSelection() !== null"
     (scroll)="handleStageScroll()"
-    (wheel)="handleStageWheel($event)"
   >
     <div class="canvas-zoom-controls" aria-label="Canvas zoom controls">
       <button type="button" aria-label="Zoom out" title="Zoom out" (click)="zoomOut()">
