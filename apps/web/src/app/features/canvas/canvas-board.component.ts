@@ -1650,13 +1650,13 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
       if (variant === 'CLOUD') {
         const path = [
-          `M ${node.width * 0.12} ${node.height * 0.7}`,
-          `C ${node.width * 0.04} ${node.height * 0.7}, ${node.width * 0.02} ${node.height * 0.58}, ${node.width * 0.09} ${node.height * 0.52}`,
+          `M ${node.width * 0.12} ${node.height * 0.72}`,
+          `C ${node.width * 0.04} ${node.height * 0.72}, ${node.width * 0.02} ${node.height * 0.58}, ${node.width * 0.09} ${node.height * 0.52}`,
           `C ${node.width * 0.09} ${node.height * 0.36}, ${node.width * 0.23} ${node.height * 0.25}, ${node.width * 0.36} ${node.height * 0.3}`,
           `C ${node.width * 0.43} ${node.height * 0.14}, ${node.width * 0.64} ${node.height * 0.12}, ${node.width * 0.74} ${node.height * 0.28}`,
-          `C ${node.width * 0.87} ${node.height * 0.24}, ${node.width * 0.97} ${node.height * 0.35}, ${node.width * 0.92} ${node.height * 0.49}`,
-          `C ${node.width * 0.99} ${node.height * 0.54}, ${node.width * 0.98} ${node.height * 0.7}, ${node.width * 0.85} ${node.height * 0.74}`,
-          `C ${node.width * 0.75} ${node.height * 0.79}, ${node.width * 0.24} ${node.height * 0.8}, ${node.width * 0.12} ${node.height * 0.7}`,
+          `C ${node.width * 0.87} ${node.height * 0.24}, ${node.width * 0.97} ${node.height * 0.35}, ${node.width * 0.92} ${node.height * 0.5}`,
+          `C ${node.width * 0.98} ${node.height * 0.56}, ${node.width * 0.98} ${node.height * 0.67}, ${node.width * 0.9} ${node.height * 0.72}`,
+          `L ${node.width * 0.1} ${node.height * 0.72}`,
           'Z'
         ].join(' ');
 
