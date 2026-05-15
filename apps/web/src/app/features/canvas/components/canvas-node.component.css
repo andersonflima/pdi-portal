@@ -34,6 +34,7 @@
   max-width: 100%;
   min-width: 0;
   overflow: hidden;
+  white-space: pre-wrap;
   overflow-wrap: anywhere;
   text-decoration: var(--node-text-decoration, none);
   width: 100%;
@@ -86,12 +87,14 @@
   max-height: 100%;
   min-height: 1.22em;
   outline: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: hidden;
   overflow-wrap: anywhere;
   padding: 0;
   resize: none;
   text-align: inherit;
   text-decoration: var(--node-text-decoration, none);
+  white-space: pre-wrap;
   -webkit-text-fill-color: var(--node-text-color, #172033);
   width: 100%;
   word-break: break-word;

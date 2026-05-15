@@ -134,6 +134,7 @@ export class CanvasNodeComponent {
 
   protected readonly handleTaskLabelInput = (event: Event) => {
     const value = (event.target as HTMLTextAreaElement).value;
+    this.resizeEditableTextarea(event.target);
     this.dataChange.emit({ label: value });
   };
 
@@ -192,6 +193,7 @@ export class CanvasNodeComponent {
 
   protected readonly handleChecklistLabelInput = (event: Event, itemId: string) => {
     const value = (event.target as HTMLTextAreaElement).value;
+    this.resizeEditableTextarea(event.target);
 
     this.dataChange.emit({
       taskItems: (this.node().taskItems ?? []).map((item) => (item.id === itemId ? { ...item, label: value } : item))
@@ -211,7 +213,9 @@ export class CanvasNodeComponent {
   };
 
   protected readonly handleTextInput = (event: Event) => {
-    const value = (event.target as HTMLTextAreaElement).value;
+    const control = event.target as HTMLTextAreaElement;
+    const value = control.value;
+    this.resizeEditableTextarea(control);
 
     this.dataChange.emit(
       this.node().kind === 'TASK_LIST'
@@ -252,6 +256,21 @@ export class CanvasNodeComponent {
       if (typeof control.setSelectionRange === 'function') {
         control.setSelectionRange(length, length);
       }
+
+      this.resizeEditableTextarea(control);
     });
+  };
+
+  private readonly resizeEditableTextarea = (target: EventTarget | null) => {
+    if (!(target instanceof HTMLTextAreaElement)) return;
+
+    const editor = target.closest('.pdi-node-editor') as HTMLElement | null;
+    const maxHeight = editor?.clientHeight ?? 0;
+    target.style.height = '0px';
+    const fullHeight = target.scrollHeight;
+    const nextHeight = maxHeight > 0 ? Math.min(fullHeight, maxHeight) : fullHeight;
+
+    target.style.height = `${Math.max(nextHeight, 20)}px`;
+    target.style.overflowY = maxHeight > 0 && fullHeight > maxHeight ? 'auto' : 'hidden';
   };
 }

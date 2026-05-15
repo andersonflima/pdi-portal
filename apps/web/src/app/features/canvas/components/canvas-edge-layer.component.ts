@@ -16,6 +16,9 @@ export class CanvasEdgeLayerComponent {
   readonly selectEdge = output<string>();
 
   protected readonly canvasSize = canvasSize;
+  protected readonly markerColors = () => Array.from(new Set(this.edges().map((edge) => edge.style.color)));
+  protected readonly markerIdForColor = (color: string) => `edge-arrow-head-${encodeURIComponent(color).replaceAll('%', '_')}`;
+  protected readonly markerIdForEdge = (edge: CanvasEdgeView) => this.markerIdForColor(edge.style.color);
 
   protected readonly findNode = (nodeId: string) => this.nodes().find((node) => node.id === nodeId);
 

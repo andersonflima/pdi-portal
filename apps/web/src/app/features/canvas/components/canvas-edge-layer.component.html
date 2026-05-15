@@ -1,8 +1,19 @@
 <svg class="edge-layer" [attr.viewBox]="'0 0 ' + canvasSize.width + ' ' + canvasSize.height">
   <defs>
-    <marker id="edge-arrow-head" viewBox="0 0 20 14" markerWidth="20" markerHeight="14" refX="18" refY="7" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
-      <path d="M 18 7 L 0 1 L 0 13 Z" fill="context-stroke" />
-    </marker>
+    @for (color of markerColors(); track color) {
+      <marker
+        [attr.id]="markerIdForColor(color)"
+        viewBox="0 0 20 14"
+        markerWidth="20"
+        markerHeight="14"
+        refX="18"
+        refY="7"
+        orient="auto-start-reverse"
+        markerUnits="userSpaceOnUse"
+      >
+        <path d="M 18 7 L 0 1 L 0 13 Z" [attr.fill]="color" />
+      </marker>
+    }
   </defs>
 
   @for (edge of edges(); track edge.id) {
@@ -24,8 +35,8 @@
           [class.edge-line-dashed]="edge.style.lineStyle === 'dashed'"
           [attr.d]="path"
           [attr.stroke]="edge.style.color"
-          [attr.marker-end]="'url(#edge-arrow-head)'"
-          [attr.marker-start]="isBidirectional(edge) ? 'url(#edge-arrow-head)' : null"
+          [attr.marker-end]="'url(#' + markerIdForEdge(edge) + ')'"
+          [attr.marker-start]="isBidirectional(edge) ? 'url(#' + markerIdForEdge(edge) + ')' : null"
         />
       </g>
     }
