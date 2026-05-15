@@ -2,7 +2,8 @@ import { boardSchema, saveBoardSchema } from '@pdi/contracts';
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { authenticate } from '../auth.js';
-import { findPdiPlanById, upsertBoardByPdiPlanId } from '../database.js';
+import { findBoardByPdiPlanId, findPdiPlanById, upsertBoardByPdiPlanId } from '../database.js';
+import { createSoftwareDeveloperRoadmapTemplate, softwareDeveloperRoadmapPlanTitle } from '../software-developer-roadmap-template.js';
 
 const paramsSchema = z.object({
   pdiPlanId: z.string()
@@ -106,12 +107,33 @@ export const boardRoutes: FastifyPluginAsync = async (app) => {
       throw app.httpErrors.notFound('PDI plan not found');
     }
 
-    const board = upsertBoardByPdiPlanId({
-      pdiPlanId,
-      title: `${plan.title} board`,
-      nodes: [],
-      edges: []
-    });
+    const existingBoard = findBoardByPdiPlanId(pdiPlanId);
+
+    if (
+      existingBoard &&
+      existingBoard.nodes.length === 0 &&
+      existingBoard.edges.length === 0 &&
+      plan.title === softwareDeveloperRoadmapPlanTitle
+    ) {
+      const template = createSoftwareDeveloperRoadmapTemplate();
+      const recoveredBoard = upsertBoardByPdiPlanId({
+        pdiPlanId,
+        title: existingBoard.title || template.board.title,
+        nodes: template.board.nodes,
+        edges: template.board.edges
+      });
+
+      return toBoardDto(recoveredBoard);
+    }
+
+    const board =
+      existingBoard ??
+      upsertBoardByPdiPlanId({
+        pdiPlanId,
+        title: `${plan.title} board`,
+        nodes: [],
+        edges: []
+      });
 
     return toBoardDto(board);
   });
