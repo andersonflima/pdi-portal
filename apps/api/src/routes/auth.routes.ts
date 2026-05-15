@@ -2,7 +2,16 @@ import { bootstrapAdminSchema, bootstrapStatusSchema, loginSchema, userSchema } 
 import { compare, hash } from 'bcryptjs';
 import type { FastifyPluginAsync } from 'fastify';
 import { buildAuthToken, authenticate } from '../auth.js';
-import { countAdmins, createUser, findUserByEmail, findUserById, isUniqueUserEmailError, withTransaction } from '../database.js';
+import {
+  countAdmins,
+  countPdiPlansByOwner,
+  createUser,
+  findUserByEmail,
+  findUserById,
+  isUniqueUserEmailError,
+  withTransaction
+} from '../database.js';
+import { upsertDefaultRoadmapForUser } from '../default-roadmap-plan.js';
 
 const toUserDto = (user: {
   id: string;
@@ -56,6 +65,10 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
     if (!user || !(await compare(input.password, user.passwordHash))) {
       throw app.httpErrors.unauthorized('Invalid credentials');
+    }
+
+    if (user.role === 'MEMBER' && countPdiPlansByOwner(user.id) === 0) {
+      upsertDefaultRoadmapForUser({ ownerId: user.id });
     }
 
     return reply.send({

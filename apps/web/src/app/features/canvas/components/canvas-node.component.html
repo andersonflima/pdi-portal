@@ -14,8 +14,7 @@
       [attr.aria-label]="node().checked ? 'Mark task as open' : 'Mark task as done'"
       [attr.aria-pressed]="node().checked ?? false"
       (click)="handleTaskToggle($event)"
-      (dblclick)="stopCanvasInteraction($event)"
-      (pointerdown)="stopCanvasInteraction($event)"
+      (dblclick)="handleTaskEditStart($event)"
     >
       {{ node().checked ? '✓' : '' }}
     </button>
@@ -40,8 +39,7 @@
           type="button"
           [attr.aria-pressed]="item.checked"
           (click)="handleChecklistToggle($event, item.id)"
-          (dblclick)="stopCanvasInteraction($event)"
-          (pointerdown)="stopCanvasInteraction($event)"
+          (dblclick)="handleChecklistEditStart($event, item.id)"
         >
           <span>{{ item.checked ? '✓' : '' }}</span>
           <strong>{{ item.label }}</strong>
