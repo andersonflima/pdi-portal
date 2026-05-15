@@ -14,6 +14,7 @@ import {
   viewChild
 } from '@angular/core';
 import type { CanvasNodeKind, CanvasShapeVariant, PdiPlan, User } from '@pdi/contracts';
+import { toBlob as toDomBlob, toSvg as toDomSvg } from 'html-to-image';
 import { LucideAngularModule } from 'lucide-angular';
 import { ApiService } from '../../core/api/api.service';
 import { CanvasEdgeLayerComponent } from './components/canvas-edge-layer.component';
@@ -53,6 +54,8 @@ type SvgTextAnchor = 'middle' | 'start' | 'end';
 const minZoom = 0.4;
 const maxZoom = 1.6;
 const zoomStep = 0.1;
+const wheelLineHeightPx = 16;
+const wheelZoomSensitivity = 0.0022;
 const dragStartThreshold = 4;
 const frameLayerMax = 999;
 const objectLayerBase = 1000;
@@ -61,10 +64,23 @@ const marqueeStartThreshold = 6;
 const minimapWidth = 240;
 const minimapHeight = Math.round((minimapWidth * canvasSize.height) / canvasSize.width);
 const connectorHandleHitRadius = 14;
+const exportImagePixelRatio = 2;
 
 const roundZoom = (value: number) => Math.round(value * 100) / 100;
 
 const clampZoom = (value: number) => Math.min(maxZoom, Math.max(minZoom, roundZoom(value)));
+
+const normalizeWheelDeltaY = (event: WheelEvent, viewportHeight: number) => {
+  if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) {
+    return event.deltaY * wheelLineHeightPx;
+  }
+
+  if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) {
+    return event.deltaY * viewportHeight;
+  }
+
+  return event.deltaY;
+};
 
 const clampPointToCanvas = (point: XYPosition): XYPosition => ({
   x: Math.min(canvasSize.width, Math.max(0, point.x)),
@@ -125,6 +141,13 @@ const toClosestHandle = (node: CanvasNodeView, point: XYPosition): CanvasHandleP
   }
 
   return verticalDistance < 0 ? 'top' : 'bottom';
+};
+
+const toOppositeHandle = (handle: CanvasHandlePosition): CanvasHandlePosition => {
+  if (handle === 'top') return 'bottom';
+  if (handle === 'right') return 'left';
+  if (handle === 'bottom') return 'top';
+  return 'right';
 };
 
 const findDescendantNodeIds = (rootId: string, nodes: CanvasNodeView[]) => {
@@ -500,10 +523,18 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
   protected readonly handleStageWheel = (event: WheelEvent) => {
     if (!event.ctrlKey && !event.metaKey) return;
 
+    const stage = this.stageElement()?.nativeElement;
+    if (!stage) return;
+
     event.preventDefault();
 
+    const normalizedDelta = normalizeWheelDeltaY(event, stage.clientHeight);
+    if (Math.abs(normalizedDelta) < 0.01) return;
+
     const currentZoom = this.zoom();
-    const nextZoom = clampZoom(currentZoom + (event.deltaY < 0 ? zoomStep : -zoomStep));
+    const zoomFactor = Math.exp(-normalizedDelta * wheelZoomSensitivity);
+    const nextZoom = clampZoom(currentZoom * zoomFactor);
+
     this.applyZoom(nextZoom, { clientX: event.clientX, clientY: event.clientY });
   };
 
@@ -592,7 +623,7 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
 
       if (!targetNode || targetNode.id === connector.sourceNodeId) return;
 
-      const targetHandle = handleHit?.handle ?? toClosestHandle(targetNode, dropPoint);
+      const targetHandle = handleHit?.handle ?? toOppositeHandle(connector.sourceHandle) ?? toClosestHandle(targetNode, dropPoint);
 
       this.createConnector(
         connector.sourceNodeId,
@@ -836,51 +867,48 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
     await this.persistBoard(planId, board, snapshot, true);
   };
 
-  protected readonly exportBoardToSvg = () => {
-    const title = this.boardTitle() || this.plan.title;
-    const markup = this.buildBoardSvgMarkup();
-    const blob = new Blob([markup], { type: 'image/svg+xml;charset=utf-8' });
+  protected readonly exportBoardToSvg = async () => {
+    const exportNode = this.createBoardExportNode();
 
-    this.downloadBlob(blob, toFileName(title, 'svg'));
+    if (!exportNode) return;
+
+    const title = this.boardTitle() || this.plan.title;
+
+    try {
+      const dataUrl = await toDomSvg(exportNode, {
+        cacheBust: true,
+        height: canvasSize.height,
+        width: canvasSize.width
+      });
+      const blob = await this.dataUrlToBlob(dataUrl);
+      this.downloadBlob(blob, toFileName(title, 'svg'));
+    } finally {
+      document.body.removeChild(exportNode);
+    }
   };
 
   protected readonly exportBoardToPng = async () => {
+    const exportNode = this.createBoardExportNode();
+
+    if (!exportNode) return;
+
     const title = this.boardTitle() || this.plan.title;
-    const svgBlob = new Blob([this.buildBoardSvgMarkup()], { type: 'image/svg+xml;charset=utf-8' });
-    const svgUrl = URL.createObjectURL(svgBlob);
-    const image = new Image();
 
     try {
-      await new Promise<void>((resolve, reject) => {
-        image.onload = () => resolve();
-        image.onerror = () => reject(new Error('Failed to render board SVG'));
-        image.src = svgUrl;
+      const pngBlob = await toDomBlob(exportNode, {
+        cacheBust: true,
+        canvasHeight: canvasSize.height,
+        canvasWidth: canvasSize.width,
+        height: canvasSize.height,
+        pixelRatio: exportImagePixelRatio,
+        width: canvasSize.width
       });
 
-      const canvas = document.createElement('canvas');
-      canvas.width = canvasSize.width;
-      canvas.height = canvasSize.height;
-
-      const context = canvas.getContext('2d');
-
-      if (!context) throw new Error('Failed to get canvas context');
-
-      context.drawImage(image, 0, 0, canvas.width, canvas.height);
-
-      const pngBlob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob((blob) => {
-          if (blob) {
-            resolve(blob);
-            return;
-          }
-
-          reject(new Error('Failed to encode board PNG'));
-        }, 'image/png');
-      });
+      if (!pngBlob) throw new Error('Failed to encode board PNG');
 
       this.downloadBlob(pngBlob, toFileName(title, 'png'));
     } finally {
-      URL.revokeObjectURL(svgUrl);
+      document.body.removeChild(exportNode);
     }
   };
 
@@ -1458,50 +1486,6 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
 
   private readonly renderEdgesToSvg = () => {
     const nodesById = new Map(this.nodes().map((node) => [node.id, node]));
-    const toHandlePosition = (handle?: string): CanvasHandlePosition | null => {
-      if (!handle) return null;
-      if (handle.includes('top')) return 'top';
-      if (handle.includes('right')) return 'right';
-      if (handle.includes('bottom')) return 'bottom';
-      if (handle.includes('left')) return 'left';
-      return null;
-    };
-    const resolveHandleAtPoint = (node: CanvasNodeView, explicitHandle: string | undefined, point: XYPosition): CanvasHandlePosition => {
-      const explicit = toHandlePosition(explicitHandle);
-      if (explicit) return explicit;
-
-      const distances: Record<CanvasHandlePosition, number> = {
-        bottom: Math.abs(point.y - (node.position.y + node.height)),
-        left: Math.abs(point.x - node.position.x),
-        right: Math.abs(point.x - (node.position.x + node.width)),
-        top: Math.abs(point.y - node.position.y)
-      };
-
-      return (Object.entries(distances).sort((left, right) => left[1] - right[1])[0]?.[0] as CanvasHandlePosition) ?? 'right';
-    };
-    const directionFromHandle = (handle: CanvasHandlePosition): XYPosition => {
-      if (handle === 'top') return { x: 0, y: -1 };
-      if (handle === 'right') return { x: 1, y: 0 };
-      if (handle === 'bottom') return { x: 0, y: 1 };
-      return { x: -1, y: 0 };
-    };
-    const toArrowPointsAtHandle = (anchor: XYPosition, handle: CanvasHandlePosition) => {
-      const direction = directionFromHandle(handle);
-      const size = 14;
-      const halfWidth = 6;
-      const tipOutset = size;
-      const tipX = anchor.x + direction.x * tipOutset;
-      const tipY = anchor.y + direction.y * tipOutset;
-      const baseX = tipX - direction.x * size;
-      const baseY = tipY - direction.y * size;
-      const perpendicular = { x: -direction.y, y: direction.x };
-      const leftX = baseX - perpendicular.x * halfWidth;
-      const leftY = baseY - perpendicular.y * halfWidth;
-      const rightX = baseX + perpendicular.x * halfWidth;
-      const rightY = baseY + perpendicular.y * halfWidth;
-
-      return `${tipX},${tipY} ${leftX},${leftY} ${rightX},${rightY}`;
-    };
     const shouldRenderEdge = (edge: CanvasEdgeView) => {
       const reverseEdge = this.edges().find((candidate) => candidate.source === edge.target && candidate.target === edge.source);
       if (!reverseEdge) return true;
@@ -1510,7 +1494,7 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
     const isBidirectional = (edge: CanvasEdgeView) =>
       this.edges().some((candidate) => candidate.source === edge.target && candidate.target === edge.source);
 
-    return this.edges()
+    const edgeGroups = this.edges()
       .filter(shouldRenderEdge)
       .map((edge) => {
         const source = nodesById.get(edge.source);
@@ -1519,9 +1503,6 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
         if (!source || !target) return '';
 
         const path = getConnectorPath(source, target, edge.style.type, edge.sourceHandle, edge.targetHandle);
-        const { start, end } = getConnectorEndpoints(source, target, edge.sourceHandle, edge.targetHandle);
-        const endHandle = resolveHandleAtPoint(target, edge.targetHandle, end);
-        const startHandle = resolveHandleAtPoint(source, edge.sourceHandle, start);
         const lineStyle = edge.style.lineStyle === 'dashed' ? ' stroke-dasharray="8 6"' : '';
         const color = escapeXml(edge.style.color);
         const label = edge.label?.trim() ?? '';
@@ -1529,16 +1510,11 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
         const targetCenter = getNodeCenter(target);
         const labelX = (sourceCenter.x + targetCenter.x) / 2;
         const labelY = (sourceCenter.y + targetCenter.y) / 2 - 10;
-        const forwardArrow = `<polygon points="${toArrowPointsAtHandle(end, endHandle)}" fill="${color}" />`;
-        const backwardArrow = isBidirectional(edge)
-          ? `<polygon points="${toArrowPointsAtHandle(start, startHandle)}" fill="${color}" />`
-          : '';
+        const markerStart = isBidirectional(edge) ? ' marker-start="url(#export-edge-arrow-head)"' : '';
 
         return `
 <g>
-  <path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"${lineStyle} />
-  ${forwardArrow}
-  ${backwardArrow}
+  <path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"${lineStyle}${markerStart} marker-end="url(#export-edge-arrow-head)" />
   ${
     label
       ? `<text x="${labelX}" y="${labelY}" fill="${color}" font-size="13" font-weight="700" text-anchor="middle">${escapeXml(label)}</text>`
@@ -1548,6 +1524,15 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
       })
       .filter(Boolean)
       .join('\n');
+
+    const markerDefs = `
+<defs>
+  <marker id="export-edge-arrow-head" viewBox="0 0 20 14" markerWidth="20" markerHeight="14" refX="0" refY="7" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+    <path d="M 0 7 L 18 1 L 18 13 Z" fill="context-stroke" />
+  </marker>
+</defs>`.trim();
+
+    return `${markerDefs}\n${edgeGroups}`;
   };
 
   private readonly renderNodesToSvg = () =>
@@ -1712,6 +1697,42 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  private readonly dataUrlToBlob = async (dataUrl: string) => {
+    const response = await fetch(dataUrl);
+    return response.blob();
+  };
+
+  private readonly createBoardExportNode = () => {
+    const plane = this.planeElement()?.nativeElement;
+
+    if (!plane) return null;
+
+    const exportNode = document.createElement('div');
+    exportNode.style.background = 'radial-gradient(circle at 1px 1px, #d8dee8 1px, transparent 0), #f6f4ef';
+    exportNode.style.backgroundSize = '24px 24px';
+    exportNode.style.height = `${canvasSize.height}px`;
+    exportNode.style.left = '-100000px';
+    exportNode.style.overflow = 'hidden';
+    exportNode.style.pointerEvents = 'none';
+    exportNode.style.position = 'fixed';
+    exportNode.style.top = '0';
+    exportNode.style.width = `${canvasSize.width}px`;
+    exportNode.style.zIndex = '-1';
+
+    const planeClone = plane.cloneNode(true);
+
+    if (!(planeClone instanceof HTMLDivElement)) return null;
+
+    planeClone.style.height = `${canvasSize.height}px`;
+    planeClone.style.transform = 'scale(1)';
+    planeClone.style.transformOrigin = 'left top';
+    planeClone.style.width = `${canvasSize.width}px`;
+    exportNode.appendChild(planeClone);
+    document.body.appendChild(exportNode);
+
+    return exportNode;
   };
 
   private readonly edgeHorizontalDirection = (edge: CanvasEdgeView): Exclude<CanvasEdgeDirection, 'both'> => {

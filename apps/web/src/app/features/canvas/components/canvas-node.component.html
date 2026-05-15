@@ -26,7 +26,7 @@
     </div>
   }
 
-  @if (isEditing() && node().kind !== 'TASK_LIST' && node().kind !== 'TASK') {
+  @if (isEditing() && node().kind !== 'TASK_LIST') {
     <div class="pdi-node-editor" (pointerdown)="stopCanvasInteraction($event)">
       <textarea
         class="pdi-editable-control"
@@ -40,24 +40,7 @@
       ></textarea>
     </div>
   } @else if (node().kind === 'TASK') {
-    @if (isEditing()) {
-      <div class="pdi-node-editor" (pointerdown)="stopCanvasInteraction($event)">
-        <textarea
-          class="pdi-editable-control pdi-task-input"
-          rows="1"
-          [value]="node().label"
-          autofocus
-          (blur)="handleTaskLabelBlur()"
-          (click)="$event.stopPropagation()"
-          (dblclick)="$event.stopPropagation()"
-          (input)="handleTaskLabelInput($event)"
-          (keydown)="handleEditableKeydown($event); handleTaskLabelKeydown($event)"
-          (pointerdown)="stopCanvasInteraction($event)"
-        ></textarea>
-      </div>
-    } @else {
-      <strong>{{ node().label }}</strong>
-    }
+    <strong>{{ node().label }}</strong>
   } @else if (node().kind === 'TASK_LIST') {
     <div class="pdi-task-list">
       @for (item of node().taskItems ?? []; track item.id) {

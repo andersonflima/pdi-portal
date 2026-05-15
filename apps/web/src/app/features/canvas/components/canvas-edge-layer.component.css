@@ -27,10 +27,6 @@
   stroke-width: 2;
 }
 
-.edge-arrow {
-  pointer-events: none;
-}
-
 .edge-line-dashed {
   stroke-dasharray: 8 6;
 }
