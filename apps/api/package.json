@@ -5,14 +5,10 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "db:push": "node ../../scripts/ensure-api-data-dir.mjs && prisma db push",
-    "db:seed": "node ../../scripts/ensure-api-data-dir.mjs && tsx prisma/seed.ts",
+    "db:push": "node ../../scripts/ensure-api-data-dir.mjs && tsx src/database-init.ts",
+    "db:seed": "node ../../scripts/ensure-api-data-dir.mjs && tsx src/seed.ts",
     "dev": "tsx watch src/server.ts",
     "lint": "tsc -p tsconfig.json --noEmit",
-    "prebuild": "npm run prisma:generate",
-    "prelint": "npm run prisma:generate",
-    "pretypecheck": "npm run prisma:generate",
-    "prisma:generate": "prisma generate",
     "start": "node dist/server.js",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc -p tsconfig.json --noEmit"
@@ -23,7 +19,6 @@
     "@fastify/sensible": "^6.0.3",
     "@fastify/websocket": "^11.2.0",
     "@pdi/contracts": "file:../../packages/contracts",
-    "@prisma/client": "^6.7.0",
     "bcryptjs": "^3.0.2",
     "dotenv": "^16.5.0",
     "fastify": "^5.3.2",
@@ -31,7 +26,6 @@
   },
   "devDependencies": {
     "@types/node": "^22.15.17",
-    "prisma": "^6.7.0",
     "tsx": "4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^3.1.3"

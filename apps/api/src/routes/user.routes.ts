@@ -3,7 +3,7 @@ import { hash } from 'bcryptjs';
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { requireAdmin } from '../auth.js';
-import { prisma } from '../prisma.js';
+import { createUser, isUniqueUserEmailError, listUsers } from '../database.js';
 
 const createUserSchema = z.object({
   email: z.string().email(),
@@ -21,21 +21,28 @@ const toUserDto = (user: {
 
 export const userRoutes: FastifyPluginAsync = async (app) => {
   app.get('/users', { preHandler: requireAdmin }, async () => {
-    const users = await prisma.user.findMany({ orderBy: { name: 'asc' } });
+    const users = listUsers();
     return users.map(toUserDto);
   });
 
   app.post('/users', { preHandler: requireAdmin }, async (request, reply) => {
     const input = createUserSchema.parse(request.body);
-    const user = await prisma.user.create({
-      data: {
+
+    try {
+      const user = createUser({
         email: input.email,
         name: input.name,
         passwordHash: await hash(input.password, 10),
         role: input.role
-      }
-    });
+      });
 
-    return reply.code(201).send(toUserDto(user));
+      return reply.code(201).send(toUserDto(user));
+    } catch (error) {
+      if (isUniqueUserEmailError(error)) {
+        throw app.httpErrors.conflict('User email already exists');
+      }
+
+      throw error;
+    }
   });
 };

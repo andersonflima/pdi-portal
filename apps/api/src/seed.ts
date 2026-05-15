@@ -1,7 +1,5 @@
-import { PrismaClient, type Prisma } from '@prisma/client';
+import { upsertBoardByPdiPlanId, upsertPdiPlanById, upsertUserByEmail } from './database.js';
 import { hash } from 'bcryptjs';
-
-const prisma = new PrismaClient();
 
 type TextStyle = {
   align: 'left' | 'center' | 'right';
@@ -348,7 +346,7 @@ const seedNodes = [
   node('risk-4', 'NOTE', 'Track outcomes, not hours. Evidence beats intention.', 1030, 1340, 260, 110, '#dc2626', {
     textStyle: textStyle('center', 'center', 15, { bold: true })
   })
-] satisfies Prisma.InputJsonValue;
+];
 
 const seedEdges = [
   edge('e-title-north', 'title', 'north-star', 'purpose', { color: '#2563eb' }),
@@ -398,7 +396,7 @@ const seedEdges = [
     sourceHandle: 'top-source',
     targetHandle: 'bottom-target'
   })
-] satisfies Prisma.InputJsonValue;
+];
 
 const createUser = async (input: {
   email: string;
@@ -408,24 +406,16 @@ const createUser = async (input: {
 }) => {
   const passwordHash = await hash(input.password, 10);
 
-  return prisma.user.upsert({
-    create: {
-      email: input.email,
-      name: input.name,
-      passwordHash,
-      role: input.role
-    },
-    update: {
-      name: input.name,
-      passwordHash,
-      role: input.role
-    },
-    where: { email: input.email }
+  return upsertUserByEmail({
+    email: input.email,
+    name: input.name,
+    passwordHash,
+    role: input.role
   });
 };
 
 const main = async () => {
-  const admin = await createUser({
+  await createUser({
     email: 'admin@pdi.local',
     name: 'Anderson Espindola',
     password: 'admin123',
@@ -439,47 +429,24 @@ const main = async () => {
     role: 'MEMBER'
   });
 
-  const pdiPlan = await prisma.pdiPlan.upsert({
-    create: {
-      id: 'seed-pdi-plan',
-      objective:
-        'Develop senior-level software engineering skills through foundations, frontend, backend, architecture, quality, DevOps and delivery habits.',
-      ownerId: member.id,
-      status: 'ACTIVE',
-      title: 'Software Developer Skills Roadmap'
-    },
-    update: {
-      objective:
-        'Develop senior-level software engineering skills through foundations, frontend, backend, architecture, quality, DevOps and delivery habits.',
-      ownerId: member.id,
-      status: 'ACTIVE',
-      title: 'Software Developer Skills Roadmap'
-    },
-    where: { id: 'seed-pdi-plan' }
+  const pdiPlan = upsertPdiPlanById({
+    id: 'seed-pdi-plan',
+    objective:
+      'Develop senior-level software engineering skills through foundations, frontend, backend, architecture, quality, DevOps and delivery habits.',
+    ownerId: member.id,
+    status: 'ACTIVE',
+    title: 'Software Developer Skills Roadmap'
   });
 
-  await prisma.board.upsert({
-    create: {
-      edges: seedEdges,
-      nodes: seedNodes,
-      pdiPlanId: pdiPlan.id,
-      title: 'Software Developer Skills Roadmap board'
-    },
-    update: {
-      edges: seedEdges,
-      nodes: seedNodes,
-      title: 'Software Developer Skills Roadmap board'
-    },
-    where: { pdiPlanId: pdiPlan.id }
+  upsertBoardByPdiPlanId({
+    edges: seedEdges,
+    nodes: seedNodes,
+    pdiPlanId: pdiPlan.id,
+    title: 'Software Developer Skills Roadmap board'
   });
-
-  return { admin, member };
 };
 
-main()
-  .then(() => prisma.$disconnect())
-  .catch(async (error) => {
-    console.error(error);
-    await prisma.$disconnect();
-    process.exit(1);
-  });
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
