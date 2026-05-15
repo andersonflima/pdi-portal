@@ -405,20 +405,24 @@ const createUser = async (input: {
   name: string;
   password: string;
   role: 'ADMIN' | 'MEMBER';
-}) =>
-  prisma.user.upsert({
+}) => {
+  const passwordHash = await hash(input.password, 10);
+
+  return prisma.user.upsert({
     create: {
       email: input.email,
       name: input.name,
-      passwordHash: await hash(input.password, 10),
+      passwordHash,
       role: input.role
     },
     update: {
       name: input.name,
+      passwordHash,
       role: input.role
     },
     where: { email: input.email }
   });
+};
 
 const main = async () => {
   const admin = await createUser({

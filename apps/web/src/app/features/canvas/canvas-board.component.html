@@ -30,7 +30,7 @@
     (toggleConnectorMode)="handleToggleConnectorMode()"
   />
 
-  <div class="canvas-stage">
+  <div #canvasStage class="canvas-stage" [class.is-panning]="isPanning()" (wheel)="handleStageWheel($event)">
     <div class="canvas-zoom-controls" aria-label="Canvas zoom controls">
       <button type="button" aria-label="Zoom out" title="Zoom out" (click)="zoomOut()">
         <i-lucide name="zoom-out" [size]="16" />
@@ -46,11 +46,12 @@
 
     <div class="canvas-viewport" [style.height.px]="canvasSize.height * zoom()" [style.width.px]="canvasSize.width * zoom()">
       <div
+        #canvasPlane
         class="canvas-plane"
         [style.height.px]="canvasSize.height"
         [style.transform]="'scale(' + zoom() + ')'"
         [style.width.px]="canvasSize.width"
-        (pointerdown)="clearSelection()"
+        (pointerdown)="handlePlanePointerDown($event)"
       >
         <app-canvas-edge-layer
           [edges]="edges()"
@@ -58,6 +59,12 @@
           [selectedEdgeId]="selectedEdgeId()"
           (selectEdge)="handleSelectEdge($event)"
         />
+
+        @if (activeConnector(); as activeConnector) {
+          <svg class="edge-layer edge-layer-preview" [attr.viewBox]="'0 0 ' + canvasSize.width + ' ' + canvasSize.height">
+            <path class="edge-line edge-line-preview" [attr.d]="connectorPreviewPath(activeConnector)" />
+          </svg>
+        }
 
         @for (node of nodes(); track node.id) {
           <app-canvas-node
@@ -68,6 +75,7 @@
             [style.top.px]="node.position.y"
             [style.width.px]="node.width"
             [style.z-index]="node.zIndex + (selectedNodeId() === node.id ? 20 : 0)"
+            (connectorStart)="startConnectorDrag($event, node)"
             (dataChange)="updateNodeData(node.id, $event)"
             (pointerdown)="handleNodePointerDown($event, node)"
             (resizeStart)="startNodeResize($event, node)"

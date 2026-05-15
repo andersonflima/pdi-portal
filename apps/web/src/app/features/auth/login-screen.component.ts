@@ -1,8 +1,15 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
-import { ApiService } from '../../core/api/api.service';
+import { ApiRequestError, ApiService } from '../../core/api/api.service';
 import { AuthService } from '../../core/auth/auth.service';
+
+const toAuthErrorMessage = (error: unknown, canCreateAdmin: boolean) => {
+  if (error instanceof ApiRequestError && error.status === null) return error.message;
+  if (error instanceof ApiRequestError && error.status !== 401) return error.message;
+
+  return canCreateAdmin ? 'Could not create admin user' : 'Invalid email or password';
+};
 
 @Component({
   selector: 'app-login-screen',
@@ -51,8 +58,8 @@ export class LoginScreenComponent implements OnInit {
       }
 
       await this.auth.login(this.email(), this.password());
-    } catch {
-      this.error.set(this.canCreateAdmin() ? 'Could not create admin user' : 'Invalid email or password');
+    } catch (error) {
+      this.error.set(toAuthErrorMessage(error, this.canCreateAdmin()));
     } finally {
       this.isSubmitting.set(false);
     }

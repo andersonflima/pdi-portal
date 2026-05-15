@@ -1,9 +1,9 @@
 <article [class]="nodeClasses()" [ngStyle]="nodeStyle()" (dblclick)="isEditing.set(true)">
   @if (selected()) {
-    <span class="pdi-node-handle pdi-node-handle-top"></span>
-    <span class="pdi-node-handle pdi-node-handle-right"></span>
-    <span class="pdi-node-handle pdi-node-handle-bottom"></span>
-    <span class="pdi-node-handle pdi-node-handle-left"></span>
+    <button class="pdi-node-handle pdi-node-handle-top" title="Connect from top" type="button" (pointerdown)="handleConnectorStart($event, 'top')"></button>
+    <button class="pdi-node-handle pdi-node-handle-right" title="Connect from right" type="button" (pointerdown)="handleConnectorStart($event, 'right')"></button>
+    <button class="pdi-node-handle pdi-node-handle-bottom" title="Connect from bottom" type="button" (pointerdown)="handleConnectorStart($event, 'bottom')"></button>
+    <button class="pdi-node-handle pdi-node-handle-left" title="Connect from left" type="button" (pointerdown)="handleConnectorStart($event, 'left')"></button>
     <button class="pdi-node-resize-handle" title="Resize item" type="button" (pointerdown)="handleResizeStart($event)"></button>
   }
 

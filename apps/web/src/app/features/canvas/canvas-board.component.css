@@ -17,6 +17,11 @@
   position: relative;
 }
 
+.canvas-stage.is-panning {
+  cursor: grabbing;
+  user-select: none;
+}
+
 .canvas-zoom-controls {
   align-items: center;
   background: rgba(255, 255, 255, 0.92);
@@ -69,6 +74,27 @@
   min-width: 100%;
   position: relative;
   transform-origin: left top;
+}
+
+.edge-layer-preview {
+  display: block;
+  height: 100%;
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  width: 100%;
+  z-index: 12;
+}
+
+.edge-line-preview {
+  fill: none;
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.8));
+  pointer-events: none;
+  stroke: #64748b;
+  stroke-dasharray: 8 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
 }
 
 app-canvas-node {

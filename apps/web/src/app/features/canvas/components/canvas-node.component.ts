@@ -1,6 +1,6 @@
 import { NgStyle } from '@angular/common';
 import { Component, computed, input, output, signal } from '@angular/core';
-import type { CanvasNodeDataPatch, CanvasNodeView } from '../canvas.models';
+import type { CanvasHandlePosition, CanvasNodeDataPatch, CanvasNodeView } from '../canvas.models';
 import { getNodeTextColor } from '../canvas.colors';
 import { toTaskItemsFromText } from '../canvas.mappers';
 
@@ -33,6 +33,7 @@ export class CanvasNodeComponent {
   readonly node = input.required<CanvasNodeView>();
   readonly selected = input(false);
   readonly dataChange = output<CanvasNodeDataPatch>();
+  readonly connectorStart = output<{ event: PointerEvent; handle: CanvasHandlePosition }>();
   readonly resizeStart = output<PointerEvent>();
 
   protected readonly isEditing = signal(false);
@@ -78,6 +79,12 @@ export class CanvasNodeComponent {
   protected readonly handleResizeStart = (event: PointerEvent) => {
     event.stopPropagation();
     this.resizeStart.emit(event);
+  };
+
+  protected readonly handleConnectorStart = (event: PointerEvent, handle: CanvasHandlePosition) => {
+    event.preventDefault();
+    event.stopPropagation();
+    this.connectorStart.emit({ event, handle });
   };
 
   protected readonly handleTaskToggle = (event: Event) => {
