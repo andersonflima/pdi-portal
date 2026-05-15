@@ -1,4 +1,18 @@
-import { Component, Input, OnChanges, OnDestroy, SimpleChanges, computed, effect, inject, output, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  HostListener,
+  Input,
+  OnChanges,
+  OnDestroy,
+  SimpleChanges,
+  computed,
+  effect,
+  inject,
+  output,
+  signal,
+  viewChild
+} from '@angular/core';
 import type { CanvasNodeKind, CanvasShapeVariant, PdiPlan, User } from '@pdi/contracts';
 import { LucideAngularModule } from 'lucide-angular';
 import { ApiService } from '../../core/api/api.service';
@@ -7,16 +21,25 @@ import { CanvasHeaderComponent } from './components/canvas-header.component';
 import { CanvasNodeComponent } from './components/canvas-node.component';
 import { CanvasToolbarComponent } from './components/canvas-toolbar.component';
 import { canvasSize } from './canvas.constants';
-import { findContainingFrame } from './canvas.geometry';
+import { findContainingFrame, getNodeCenter, isPointInsideNode } from './canvas.geometry';
 import { createCanvasNode, toCanvasEdges, toCanvasNodes, toSaveBoard } from './canvas.mappers';
 import type {
   CanvasEdgePatch,
   CanvasEdgeView,
+  CanvasHandlePosition,
   CanvasNodeDataPatch,
   CanvasNodeStylePatch,
   CanvasNodeView,
-  CanvasTextStyle
+  CanvasTextStyle,
+  XYPosition
 } from './canvas.models';
+
+type ConnectorDraft = {
+  sourceHandle: CanvasHandlePosition;
+  sourceNodeId: string;
+  sourcePoint: XYPosition;
+  targetPoint: XYPosition;
+};
 
 const orderFrameParentsFirst = (nodes: CanvasNodeView[]) =>
   [...nodes].sort((leftNode, rightNode) => {
@@ -33,6 +56,11 @@ const roundZoom = (value: number) => Math.round(value * 100) / 100;
 
 const clampZoom = (value: number) => Math.min(maxZoom, Math.max(minZoom, roundZoom(value)));
 
+const clampPointToCanvas = (point: XYPosition): XYPosition => ({
+  x: Math.min(canvasSize.width, Math.max(0, point.x)),
+  y: Math.min(canvasSize.height, Math.max(0, point.y))
+});
+
 const toLiveWebSocketUrl = (apiUrl: string, pdiPlanId: string, clientId: string, token: string | null) => {
   const url = new URL(apiUrl);
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -42,6 +70,76 @@ const toLiveWebSocketUrl = (apiUrl: string, pdiPlanId: string, clientId: string,
 
   return url.toString();
 };
+
+const isEditableTarget = (target: EventTarget | null) => {
+  if (!(target instanceof HTMLElement)) return false;
+
+  return (
+    target.isContentEditable ||
+    target.closest('input') !== null ||
+    target.closest('textarea') !== null ||
+    target.closest('select') !== null
+  );
+};
+
+const toConnectorPath = (source: XYPosition, target: XYPosition) => {
+  const curveOffset = Math.max(80, Math.abs(target.x - source.x) / 2);
+
+  return `M ${source.x} ${source.y} C ${source.x + curveOffset} ${source.y}, ${target.x - curveOffset} ${target.y}, ${target.x} ${target.y}`;
+};
+
+const toConnectorHandlePoint = (node: CanvasNodeView, handle: CanvasHandlePosition): XYPosition => {
+  const center = getNodeCenter(node);
+
+  if (handle === 'top') return { x: center.x, y: node.position.y };
+  if (handle === 'right') return { x: node.position.x + node.width, y: center.y };
+  if (handle === 'bottom') return { x: center.x, y: node.position.y + node.height };
+
+  return { x: node.position.x, y: center.y };
+};
+
+const toClosestHandle = (node: CanvasNodeView, point: XYPosition): CanvasHandlePosition => {
+  const center = getNodeCenter(node);
+  const horizontalDistance = point.x - center.x;
+  const verticalDistance = point.y - center.y;
+
+  if (Math.abs(horizontalDistance) > Math.abs(verticalDistance)) {
+    return horizontalDistance < 0 ? 'left' : 'right';
+  }
+
+  return verticalDistance < 0 ? 'top' : 'bottom';
+};
+
+const findDescendantNodeIds = (rootId: string, nodes: CanvasNodeView[]) => {
+  const childrenByParent = nodes.reduce((accumulator, node) => {
+    if (!node.parentId) return accumulator;
+
+    return new Map(accumulator).set(node.parentId, [...(accumulator.get(node.parentId) ?? []), node.id]);
+  }, new Map<string, string[]>());
+
+  const collect = (queue: string[], collected: Set<string>): Set<string> => {
+    if (queue.length === 0) return collected;
+
+    const head = queue[0];
+    const tail = queue.slice(1);
+
+    if (!head) return collected;
+
+    if (collected.has(head)) return collect(tail, collected);
+
+    const children = childrenByParent.get(head) ?? [];
+
+    return collect([...tail, ...children], new Set(collected).add(head));
+  };
+
+  return Array.from(collect([rootId], new Set<string>()));
+};
+
+const findTopNodeAtPoint = (point: XYPosition, nodes: CanvasNodeView[], excludedNodeId: string) =>
+  [...nodes]
+    .filter((node) => node.id !== excludedNodeId)
+    .sort((leftNode, rightNode) => rightNode.zIndex - leftNode.zIndex)
+    .find((node) => isPointInsideNode(point, node));
 
 @Component({
   selector: 'app-canvas-board',
@@ -69,16 +167,20 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
   readonly updatePlan = output<{ id: string; data: Partial<Pick<PdiPlan, 'objective' | 'ownerId' | 'status' | 'title'>> }>();
 
   private readonly api = inject(ApiService);
+  private readonly stageElement = viewChild<ElementRef<HTMLDivElement>>('canvasStage');
+  private readonly planeElement = viewChild<ElementRef<HTMLDivElement>>('canvasPlane');
   private readonly clientId = crypto.randomUUID();
   private socket: WebSocket | null = null;
   private loadToken = 0;
   private isApplyingRemoteBoard = false;
 
   protected readonly canvasSize = canvasSize;
+  protected readonly activeConnector = signal<ConnectorDraft | null>(null);
   protected readonly boardTitle = signal('');
   protected readonly connectorSourceId = signal<string | null>(null);
   protected readonly currentPlanId = signal<string | null>(null);
   protected readonly edges = signal<CanvasEdgeView[]>([]);
+  protected readonly isPanning = signal(false);
   protected readonly isSaving = signal(false);
   protected readonly nodes = signal<CanvasNodeView[]>([]);
   protected readonly selectedEdgeId = signal<string | null>(null);
@@ -116,14 +218,64 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
     this.closeLiveConnection();
   }
 
+  @HostListener('window:keydown', ['$event'])
+  protected readonly handleWindowKeydown = (event: KeyboardEvent) => {
+    if (event.defaultPrevented) return;
+    if (event.key !== 'Delete' && event.key !== 'Backspace') return;
+    if (isEditableTarget(event.target)) return;
+
+    const hasRemovedEdge = this.removeSelectedEdge();
+    const hasRemovedNode = hasRemovedEdge ? false : this.removeSelectedNode();
+
+    if (!hasRemovedEdge && !hasRemovedNode) return;
+
+    event.preventDefault();
+  };
+
   protected readonly clearSelection = () => {
     this.selectedNodeId.set(null);
     this.selectedEdgeId.set(null);
     this.connectorSourceId.set(null);
+    this.activeConnector.set(null);
   };
 
   protected readonly handleCreateNode = (event: { kind: CanvasNodeKind; variant?: CanvasShapeVariant }) => {
     this.nodes.update((currentNodes) => currentNodes.concat(createCanvasNode(event.kind, currentNodes.length, event.variant)));
+  };
+
+  protected readonly handlePlanePointerDown = (event: PointerEvent) => {
+    if (event.target !== event.currentTarget) return;
+
+    this.clearSelection();
+
+    if (event.button !== 0 && event.button !== 1) return;
+
+    this.startCanvasPan(event);
+  };
+
+  protected readonly handleStageWheel = (event: WheelEvent) => {
+    if (!event.ctrlKey && !event.metaKey) return;
+
+    const stage = this.stageElement()?.nativeElement;
+
+    if (!stage) return;
+
+    event.preventDefault();
+
+    const currentZoom = this.zoom();
+    const nextZoom = clampZoom(currentZoom + (event.deltaY < 0 ? zoomStep : -zoomStep));
+
+    if (nextZoom === currentZoom) return;
+
+    const stageRect = stage.getBoundingClientRect();
+    const pointerOffsetX = event.clientX - stageRect.left;
+    const pointerOffsetY = event.clientY - stageRect.top;
+    const canvasX = (stage.scrollLeft + pointerOffsetX) / currentZoom;
+    const canvasY = (stage.scrollTop + pointerOffsetY) / currentZoom;
+
+    this.zoom.set(nextZoom);
+    stage.scrollLeft = canvasX * nextZoom - pointerOffsetX;
+    stage.scrollTop = canvasY * nextZoom - pointerOffsetY;
   };
 
   protected readonly handleNodePointerDown = (event: PointerEvent, node: CanvasNodeView) => {
@@ -144,6 +296,70 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
     this.selectedEdgeId.set(null);
     this.startNodeDrag(event, node);
   };
+
+  protected readonly startConnectorDrag = (
+    payload: { event: PointerEvent; handle: CanvasHandlePosition },
+    node: CanvasNodeView
+  ) => {
+    const sourcePoint = toConnectorHandlePoint(node, payload.handle);
+    const initialTargetPoint = this.toCanvasPoint(payload.event.clientX, payload.event.clientY) ?? sourcePoint;
+
+    this.selectedNodeId.set(node.id);
+    this.selectedEdgeId.set(null);
+    this.connectorSourceId.set(null);
+    this.activeConnector.set({
+      sourceHandle: payload.handle,
+      sourceNodeId: node.id,
+      sourcePoint,
+      targetPoint: initialTargetPoint
+    });
+
+    const handleMove = (moveEvent: PointerEvent) => {
+      const nextTargetPoint = this.toCanvasPoint(moveEvent.clientX, moveEvent.clientY);
+
+      if (!nextTargetPoint) return;
+
+      this.activeConnector.update((currentConnector) =>
+        currentConnector
+          ? {
+              ...currentConnector,
+              targetPoint: nextTargetPoint
+            }
+          : currentConnector
+      );
+    };
+
+    const handleEnd = (endEvent: PointerEvent) => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleEnd);
+
+      const connector = this.activeConnector();
+
+      this.activeConnector.set(null);
+
+      if (!connector) return;
+
+      const dropPoint = this.toCanvasPoint(endEvent.clientX, endEvent.clientY) ?? connector.targetPoint;
+      const targetNode = findTopNodeAtPoint(dropPoint, this.nodes(), connector.sourceNodeId);
+
+      if (!targetNode || targetNode.id === connector.sourceNodeId) return;
+
+      const targetHandle = toClosestHandle(targetNode, dropPoint);
+
+      this.createConnector(
+        connector.sourceNodeId,
+        targetNode.id,
+        `${connector.sourceHandle}-source`,
+        `${targetHandle}-target`
+      );
+    };
+
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleEnd, { once: true });
+  };
+
+  protected readonly connectorPreviewPath = (connector: ConnectorDraft) =>
+    toConnectorPath(connector.sourcePoint, connector.targetPoint);
 
   protected readonly handleSelectEdge = (edgeId: string) => {
     this.selectedEdgeId.set(edgeId);
@@ -295,6 +511,7 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
     this.edges.set([]);
     this.selectedNodeId.set(null);
     this.selectedEdgeId.set(null);
+    this.activeConnector.set(null);
 
     try {
       const board = await this.api.board(planId);
@@ -354,28 +571,76 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
     );
   };
 
-  private readonly startNodeDrag = (event: PointerEvent, node: CanvasNodeView) => {
+  private readonly startCanvasPan = (event: PointerEvent) => {
+    const stage = this.stageElement()?.nativeElement;
+
+    if (!stage) return;
+
     event.preventDefault();
 
     const start = { x: event.clientX, y: event.clientY };
-    const initialPosition = { ...node.position };
+    const initialScroll = { left: stage.scrollLeft, top: stage.scrollTop };
+
+    this.isPanning.set(true);
+
+    const handleMove = (moveEvent: PointerEvent) => {
+      stage.scrollLeft = initialScroll.left - (moveEvent.clientX - start.x);
+      stage.scrollTop = initialScroll.top - (moveEvent.clientY - start.y);
+    };
+
+    const handleEnd = () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleEnd);
+      this.isPanning.set(false);
+    };
+
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleEnd, { once: true });
+  };
+
+  private readonly startNodeDrag = (event: PointerEvent, node: CanvasNodeView) => {
+    event.preventDefault();
+
+    const nodeIdsToMove = new Set(node.kind === 'FRAME' ? findDescendantNodeIds(node.id, this.nodes()) : [node.id]);
+    const initialPositions = new Map(
+      this.nodes()
+        .filter((candidate) => nodeIdsToMove.has(candidate.id))
+        .map((candidate) => [candidate.id, { ...candidate.position }])
+    );
+    const rootInitialPosition = initialPositions.get(node.id) ?? { ...node.position };
+    const start = { x: event.clientX, y: event.clientY };
     const initialZoom = this.zoom();
 
     const handleMove = (moveEvent: PointerEvent) => {
-      const nextPosition = {
-        x: Math.max(0, initialPosition.x + (moveEvent.clientX - start.x) / initialZoom),
-        y: Math.max(0, initialPosition.y + (moveEvent.clientY - start.y) / initialZoom)
-      };
+      const rawDeltaX = (moveEvent.clientX - start.x) / initialZoom;
+      const rawDeltaY = (moveEvent.clientY - start.y) / initialZoom;
+      const deltaX = Math.max(-rootInitialPosition.x, rawDeltaX);
+      const deltaY = Math.max(-rootInitialPosition.y, rawDeltaY);
 
       this.nodes.update((nodes) =>
-        nodes.map((candidate) => (candidate.id === node.id ? { ...candidate, position: nextPosition } : candidate))
+        nodes.map((candidate) => {
+          if (!nodeIdsToMove.has(candidate.id)) return candidate;
+
+          const initialPosition = initialPositions.get(candidate.id) ?? candidate.position;
+
+          return {
+            ...candidate,
+            position: {
+              x: Math.max(0, initialPosition.x + deltaX),
+              y: Math.max(0, initialPosition.y + deltaY)
+            }
+          };
+        })
       );
     };
 
     const handleEnd = () => {
       window.removeEventListener('pointermove', handleMove);
       window.removeEventListener('pointerup', handleEnd);
-      this.updateNodeParent(node.id);
+
+      if (node.kind !== 'FRAME') {
+        this.updateNodeParent(node.id);
+      }
     };
 
     window.addEventListener('pointermove', handleMove);
@@ -396,7 +661,7 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
             ? {
                 ...node,
                 parentId: targetFrame?.id,
-                zIndex: targetFrame ? 10 : node.zIndex
+                zIndex: 10
               }
             : node
         )
@@ -404,18 +669,71 @@ export class CanvasBoardComponent implements OnChanges, OnDestroy {
     });
   };
 
-  private readonly createConnector = (source: string, target: string) => {
+  private readonly toCanvasPoint = (clientX: number, clientY: number): XYPosition | null => {
+    const plane = this.planeElement()?.nativeElement;
+
+    if (!plane) return null;
+
+    const planeRect = plane.getBoundingClientRect();
+
+    return clampPointToCanvas({
+      x: (clientX - planeRect.left) / this.zoom(),
+      y: (clientY - planeRect.top) / this.zoom()
+    });
+  };
+
+  private readonly removeSelectedEdge = () => {
+    const selectedEdgeId = this.selectedEdgeId();
+
+    if (!selectedEdgeId) return false;
+
+    this.edges.update((edges) => edges.filter((edge) => edge.id !== selectedEdgeId));
+    this.selectedEdgeId.set(null);
+
+    return true;
+  };
+
+  private readonly removeSelectedNode = () => {
+    const selectedNodeId = this.selectedNodeId();
+
+    if (!selectedNodeId) return false;
+
+    const nodeIdsToDelete = new Set(findDescendantNodeIds(selectedNodeId, this.nodes()));
+
+    this.nodes.update((nodes) => nodes.filter((node) => !nodeIdsToDelete.has(node.id)));
+    this.edges.update((edges) =>
+      edges.filter((edge) => !nodeIdsToDelete.has(edge.source) && !nodeIdsToDelete.has(edge.target))
+    );
+
+    if (this.connectorSourceId() && nodeIdsToDelete.has(this.connectorSourceId()!)) {
+      this.connectorSourceId.set(null);
+    }
+
+    this.selectedNodeId.set(null);
+    this.selectedEdgeId.set(null);
+
+    return true;
+  };
+
+  private readonly createConnector = (
+    source: string,
+    target: string,
+    sourceHandle?: string,
+    targetHandle?: string
+  ) => {
     this.edges.update((edges) =>
       edges.concat({
         id: crypto.randomUUID(),
         label: '',
         source,
+        sourceHandle,
         style: {
           color: '#64748b',
           lineStyle: 'solid',
           type: 'smoothstep'
         },
-        target
+        target,
+        targetHandle
       })
     );
   };

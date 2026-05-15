@@ -18,6 +18,30 @@ const toRequestHeaders = (token: string | null, init: RequestInit) => ({
   ...init.headers
 });
 
+const toErrorMessage = async (response: Response) => {
+  const fallback = `Request failed with ${response.status}`;
+  const body = await response.text();
+
+  if (!body) return fallback;
+
+  try {
+    const parsed = JSON.parse(body) as { message?: unknown };
+    return typeof parsed.message === 'string' && parsed.message ? parsed.message : fallback;
+  } catch {
+    return body;
+  }
+};
+
+export class ApiRequestError extends Error {
+  constructor(
+    message: string,
+    readonly status: number | null
+  ) {
+    super(message);
+    this.name = 'ApiRequestError';
+  }
+}
+
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   readonly apiUrl = environment.apiUrl;
@@ -31,11 +55,12 @@ export class ApiService {
     const response = await fetch(`${this.apiUrl}${path}`, {
       ...init,
       headers: toRequestHeaders(this.getToken(), init)
+    }).catch(() => {
+      throw new ApiRequestError('Could not connect to the API. Check whether the backend is running.', null);
     });
 
     if (!response.ok) {
-      const message = await response.text();
-      throw new Error(message || `Request failed with ${response.status}`);
+      throw new ApiRequestError(await toErrorMessage(response), response.status);
     }
 
     return response.status === 204 ? (undefined as T) : ((await response.json()) as T);

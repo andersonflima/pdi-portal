@@ -12,6 +12,8 @@ export type XYPosition = {
   y: number;
 };
 
+export type CanvasHandlePosition = 'top' | 'right' | 'bottom' | 'left';
+
 export type CanvasTaskItem = {
   checked: boolean;
   id: string;
