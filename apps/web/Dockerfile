@@ -1,9 +1,9 @@
 FROM node:22-alpine AS build
 WORKDIR /app
-COPY package.json tsconfig.base.json ./
+COPY package.json package-lock.json tsconfig.base.json ./
 COPY apps/web/package.json apps/web/package.json
 COPY packages/contracts/package.json packages/contracts/package.json
-RUN npm install
+RUN npm ci
 COPY packages/contracts packages/contracts
 COPY apps/web apps/web
 RUN npm run build --workspace @pdi/contracts

@@ -2,10 +2,10 @@ FROM node:22-alpine AS base
 WORKDIR /app
 
 FROM base AS deps
-COPY package.json tsconfig.base.json ./
+COPY package.json package-lock.json tsconfig.base.json ./
 COPY apps/api/package.json apps/api/package.json
 COPY packages/contracts/package.json packages/contracts/package.json
-RUN npm install
+RUN npm ci
 
 FROM deps AS build
 COPY packages/contracts packages/contracts

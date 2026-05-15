@@ -48,7 +48,7 @@ infra/
 ## Requisitos
 
 - `Node.js` 22+
-- `pnpm` 9+
+- `npm` 10+
 - `Docker` e `Docker Compose`
 
 ## Ambiente Local com Docker
@@ -111,13 +111,13 @@ Esse board possui uma trilha de evolucao para desenvolvimento de software, cobri
 Instale as dependencias:
 
 ```bash
-pnpm install
+npm install
 ```
 
 Gere o Prisma Client:
 
 ```bash
-pnpm --filter @pdi/api prisma:generate
+npm run prisma:generate --workspace @pdi/api
 ```
 
 Configure `DATABASE_URL`, `JWT_SECRET`, `PORT` e `WEB_ORIGIN` no ambiente da API.
@@ -125,14 +125,14 @@ Configure `DATABASE_URL`, `JWT_SECRET`, `PORT` e `WEB_ORIGIN` no ambiente da API
 Sincronize o banco e rode o seed:
 
 ```bash
-pnpm --filter @pdi/api db:push
-pnpm --filter @pdi/api db:seed
+npm run db:push --workspace @pdi/api
+npm run db:seed --workspace @pdi/api
 ```
 
 Suba os servicos em modo desenvolvimento:
 
 ```bash
-pnpm dev
+npm run dev
 ```
 
 ## Qualidade
@@ -140,9 +140,9 @@ pnpm dev
 Execute a validacao completa:
 
 ```bash
-pnpm build
-pnpm lint
-pnpm test
+npm run build
+npm run lint
+npm run test
 ```
 
 ## Kubernetes
