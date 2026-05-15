@@ -105,8 +105,8 @@ export const getConnectorPath = (
     y: start.y + sourceVector.y * curveOffset
   };
   const controlEnd = {
-    x: end.x - targetVector.x * curveOffset,
-    y: end.y - targetVector.y * curveOffset
+    x: end.x + targetVector.x * curveOffset,
+    y: end.y + targetVector.y * curveOffset
   };
 
   return `M ${start.x} ${start.y} C ${controlStart.x} ${controlStart.y}, ${controlEnd.x} ${controlEnd.y}, ${end.x} ${end.y}`;
