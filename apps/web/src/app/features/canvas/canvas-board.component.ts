@@ -1507,7 +1507,46 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
   private readonly renderEdgesToSvg = () => {
     const nodesById = new Map(this.nodes().map((node) => [node.id, node]));
-    const markerIdForColor = (color: string) => `export-edge-arrow-head-${encodeURIComponent(color).replaceAll('%', '_')}`;
+    const markerIdForColorAndAngle = (color: string, angle: number) =>
+      `export-edge-arrow-head-${encodeURIComponent(color).replaceAll('%', '_')}-${angle}`;
+    const toHandleSide = (handle?: string): CanvasHandlePosition | undefined => {
+      if (!handle) return undefined;
+      if (handle.includes('top')) return 'top';
+      if (handle.includes('right')) return 'right';
+      if (handle.includes('bottom')) return 'bottom';
+      if (handle.includes('left')) return 'left';
+      return undefined;
+    };
+    const toInboundAngle = (handle: CanvasHandlePosition) => {
+      if (handle === 'left') return 0;
+      if (handle === 'right') return 180;
+      if (handle === 'top') return 90;
+      return -90;
+    };
+    const inferTargetHandle = (source: CanvasNodeView, target: CanvasNodeView): CanvasHandlePosition => {
+      const sourceCenter = getNodeCenter(source);
+      const targetCenter = getNodeCenter(target);
+      const dx = targetCenter.x - sourceCenter.x;
+      const dy = targetCenter.y - sourceCenter.y;
+
+      if (Math.abs(dx) > Math.abs(dy)) {
+        return dx >= 0 ? 'left' : 'right';
+      }
+
+      return dy >= 0 ? 'top' : 'bottom';
+    };
+    const inferSourceHandle = (source: CanvasNodeView, target: CanvasNodeView): CanvasHandlePosition => {
+      const sourceCenter = getNodeCenter(source);
+      const targetCenter = getNodeCenter(target);
+      const dx = targetCenter.x - sourceCenter.x;
+      const dy = targetCenter.y - sourceCenter.y;
+
+      if (Math.abs(dx) > Math.abs(dy)) {
+        return dx >= 0 ? 'right' : 'left';
+      }
+
+      return dy >= 0 ? 'bottom' : 'top';
+    };
     const shouldRenderEdge = (edge: CanvasEdgeView) => {
       const reverseEdge = this.edges().find((candidate) => candidate.source === edge.target && candidate.target === edge.source);
       if (!reverseEdge) return true;
@@ -1532,12 +1571,15 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
         const targetCenter = getNodeCenter(target);
         const labelX = (sourceCenter.x + targetCenter.x) / 2;
         const labelY = (sourceCenter.y + targetCenter.y) / 2 - 10;
-        const markerId = markerIdForColor(edge.style.color);
-        const markerStart = isBidirectional(edge) ? ` marker-start="url(#${markerId})"` : '';
+        const targetHandle = toHandleSide(edge.targetHandle) ?? inferTargetHandle(source, target);
+        const sourceHandle = toHandleSide(edge.sourceHandle) ?? inferSourceHandle(source, target);
+        const endMarkerId = markerIdForColorAndAngle(edge.style.color, toInboundAngle(targetHandle));
+        const startMarkerId = markerIdForColorAndAngle(edge.style.color, toInboundAngle(sourceHandle));
+        const markerStart = isBidirectional(edge) ? ` marker-start="url(#${startMarkerId})"` : '';
 
         return `
 <g>
-  <path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"${lineStyle}${markerStart} marker-end="url(#${markerId})" />
+  <path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"${lineStyle}${markerStart} marker-end="url(#${endMarkerId})" />
   ${
     label
       ? `<text x="${labelX}" y="${labelY}" fill="${color}" font-size="13" font-weight="700" text-anchor="middle">${escapeXml(label)}</text>`
@@ -1550,10 +1592,14 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
     const markerDefsByColor = Array.from(new Set(this.edges().map((edge) => edge.style.color)))
       .map((color) => {
-        const markerId = markerIdForColor(color);
         const escapedColor = escapeXml(color);
-
-        return `<marker id="${markerId}" viewBox="0 0 20 14" markerWidth="20" markerHeight="14" refX="0" refY="7" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M 18 7 L 0 1 L 0 13 Z" fill="${escapedColor}" /></marker>`;
+        const angles = [0, 90, 180, -90];
+        return angles
+          .map((angle) => {
+            const markerId = markerIdForColorAndAngle(color, angle);
+            return `<marker id="${markerId}" viewBox="0 0 20 14" markerWidth="20" markerHeight="14" refX="0" refY="7" orient="${angle}" markerUnits="userSpaceOnUse"><path d="M 18 7 L 0 1 L 0 13 Z" fill="${escapedColor}" /></marker>`;
+          })
+          .join('');
       })
       .join('');
 

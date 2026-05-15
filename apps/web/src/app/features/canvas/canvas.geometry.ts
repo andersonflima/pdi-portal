@@ -43,6 +43,16 @@ const toNodeAnchorPoint = (node: CanvasNodeView, explicitHandle: string | undefi
   return toHandlePoint(node, handle);
 };
 
+const resolveNodeHandle = (node: CanvasNodeView, explicitHandle: string | undefined, oppositePoint: XYPosition) =>
+  toHandlePosition(explicitHandle) ?? toClosestHandle(node, oppositePoint);
+
+const toHandleVector = (handle: ConnectorHandlePosition): XYPosition => {
+  if (handle === 'top') return { x: 0, y: -1 };
+  if (handle === 'right') return { x: 1, y: 0 };
+  if (handle === 'bottom') return { x: 0, y: 1 };
+  return { x: -1, y: 0 };
+};
+
 export const getConnectorEndpoints = (
   source: CanvasNodeView,
   target: CanvasNodeView,
@@ -64,13 +74,31 @@ export const getConnectorPath = (
   sourceHandle?: string,
   targetHandle?: string
 ) => {
-  const { start, end } = getConnectorEndpoints(source, target, sourceHandle, targetHandle);
-  const curveOffset = Math.max(80, Math.abs(end.x - start.x) / 2);
+  const sourceCenter = getNodeCenter(source);
+  const targetCenter = getNodeCenter(target);
+  const sourceResolvedHandle = resolveNodeHandle(source, sourceHandle, targetCenter);
+  const targetResolvedHandle = resolveNodeHandle(target, targetHandle, sourceCenter);
+  const start = toHandlePoint(source, sourceResolvedHandle);
+  const end = toHandlePoint(target, targetResolvedHandle);
+  const dx = Math.abs(end.x - start.x);
+  const dy = Math.abs(end.y - start.y);
+  const curveOffset = Math.max(56, Math.min(220, Math.hypot(dx, dy) * 0.45));
 
   if (type === 'straight') return `M ${start.x} ${start.y} L ${end.x} ${end.y}`;
   if (type === 'step') return `M ${start.x} ${start.y} L ${(start.x + end.x) / 2} ${start.y} L ${(start.x + end.x) / 2} ${end.y} L ${end.x} ${end.y}`;
 
-  return `M ${start.x} ${start.y} C ${start.x + curveOffset} ${start.y}, ${end.x - curveOffset} ${end.y}, ${end.x} ${end.y}`;
+  const sourceVector = toHandleVector(sourceResolvedHandle);
+  const targetVector = toHandleVector(targetResolvedHandle);
+  const controlStart = {
+    x: start.x + sourceVector.x * curveOffset,
+    y: start.y + sourceVector.y * curveOffset
+  };
+  const controlEnd = {
+    x: end.x - targetVector.x * curveOffset,
+    y: end.y - targetVector.y * curveOffset
+  };
+
+  return `M ${start.x} ${start.y} C ${controlStart.x} ${controlStart.y}, ${controlEnd.x} ${controlEnd.y}, ${end.x} ${end.y}`;
 };
 
 export const isPointInsideNode = (point: XYPosition, node: CanvasNodeView) =>
