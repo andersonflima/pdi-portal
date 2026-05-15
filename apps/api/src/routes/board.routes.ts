@@ -3,7 +3,11 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { authenticate } from '../auth.js';
 import { findBoardByPdiPlanId, findPdiPlanById, upsertBoardByPdiPlanId } from '../database.js';
-import { createSoftwareDeveloperRoadmapTemplate, softwareDeveloperRoadmapPlanTitle } from '../software-developer-roadmap-template.js';
+import {
+  createSoftwareDeveloperRoadmapTemplate,
+  normalizeNodesParentingByFrames,
+  softwareDeveloperRoadmapPlanTitle
+} from '../software-developer-roadmap-template.js';
 
 const paramsSchema = z.object({
   pdiPlanId: z.string()
@@ -108,6 +112,35 @@ export const boardRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const existingBoard = findBoardByPdiPlanId(pdiPlanId);
+    const existingBoardData = existingBoard
+      ? saveBoardSchema.safeParse({
+          title: existingBoard.title,
+          nodes: existingBoard.nodes,
+          edges: existingBoard.edges
+        })
+      : null;
+
+    if (
+      existingBoard &&
+      existingBoardData?.success &&
+      plan.title === softwareDeveloperRoadmapPlanTitle &&
+      existingBoardData.data.nodes.length > 0 &&
+      existingBoardData.data.nodes.some((node) => node.kind === 'FRAME') &&
+      existingBoardData.data.nodes.every((node) => !node.parentId)
+    ) {
+      const normalizedNodes = normalizeNodesParentingByFrames(existingBoardData.data.nodes);
+
+      if (normalizedNodes.some((node) => node.parentId)) {
+        const normalizedBoard = upsertBoardByPdiPlanId({
+          pdiPlanId,
+          title: existingBoard.title,
+          nodes: normalizedNodes,
+          edges: existingBoardData.data.edges
+        });
+
+        return toBoardDto(normalizedBoard);
+      }
+    }
 
     if (
       existingBoard &&

@@ -129,6 +129,14 @@
             <option value="dashed">Dashed</option>
           </select>
         </label>
+        <label title="Connector direction">
+          <span>Direction</span>
+          <select [value]="selectedEdgeDirection()" (change)="setEdgeDirection($event)">
+            <option value="left-to-right">Left to right</option>
+            <option value="right-to-left">Right to left</option>
+            <option value="both">Both</option>
+          </select>
+        </label>
       </div>
     }
   }

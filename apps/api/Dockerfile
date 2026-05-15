@@ -11,6 +11,7 @@ RUN npm install --no-audit --no-fund --prefix apps/api
 RUN npm install --no-audit --no-fund --prefix apps/web
 
 FROM deps AS build
+COPY scripts scripts
 COPY packages/contracts packages/contracts
 COPY apps/api apps/api
 COPY apps/web apps/web
@@ -21,6 +22,7 @@ RUN npm run build --prefix apps/api
 
 FROM base AS runtime
 ENV NODE_ENV=production
+COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/packages/contracts ./packages/contracts
 COPY --from=build /app/apps/api ./apps/api
 WORKDIR /app/apps/api

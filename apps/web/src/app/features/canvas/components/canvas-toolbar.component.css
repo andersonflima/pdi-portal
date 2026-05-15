@@ -119,7 +119,7 @@
 
 .edge-style-panel {
   align-items: end;
-  grid-template-columns: 180px auto 128px 112px;
+  grid-template-columns: 180px auto 128px 112px 132px;
 }
 
 .node-style-panel label,

@@ -90,6 +90,117 @@ const edge = (
   targetHandle: input.targetHandle ?? 'left-target'
 });
 
+const templateBoardSize = { height: 2400, width: 4000 };
+
+const nodeSize = (node: CanvasNode) => ({
+  height: node.style.height ?? 0,
+  width: node.style.width ?? 0
+});
+
+const nodeCenter = (node: CanvasNode) => {
+  const size = nodeSize(node);
+
+  return {
+    x: node.position.x + size.width / 2,
+    y: node.position.y + size.height / 2
+  };
+};
+
+const isPointInsideFrame = (point: { x: number; y: number }, frame: CanvasNode) => {
+  const size = nodeSize(frame);
+
+  return (
+    point.x >= frame.position.x &&
+    point.x <= frame.position.x + size.width &&
+    point.y >= frame.position.y &&
+    point.y <= frame.position.y + size.height
+  );
+};
+
+const sortFramesByAreaAscending = (frames: CanvasNode[]) =>
+  [...frames].sort((leftFrame, rightFrame) => {
+    const leftSize = nodeSize(leftFrame);
+    const rightSize = nodeSize(rightFrame);
+
+    return leftSize.width * leftSize.height - rightSize.width * rightSize.height;
+  });
+
+const withoutParentId = (node: CanvasNode): CanvasNode => {
+  const copy = { ...node };
+  delete copy.parentId;
+
+  return copy;
+};
+
+const centerNodesOnBoard = (nodes: CanvasNode[]) => {
+  if (nodes.length === 0) return nodes;
+
+  const bounds = nodes.reduce(
+    (accumulator, currentNode) => {
+      const size = nodeSize(currentNode);
+      const left = currentNode.position.x;
+      const top = currentNode.position.y;
+      const right = currentNode.position.x + size.width;
+      const bottom = currentNode.position.y + size.height;
+
+      return {
+        bottom: Math.max(accumulator.bottom, bottom),
+        left: Math.min(accumulator.left, left),
+        right: Math.max(accumulator.right, right),
+        top: Math.min(accumulator.top, top)
+      };
+    },
+    { bottom: Number.NEGATIVE_INFINITY, left: Number.POSITIVE_INFINITY, right: Number.NEGATIVE_INFINITY, top: Number.POSITIVE_INFINITY }
+  );
+
+  const currentCenter = {
+    x: (bounds.left + bounds.right) / 2,
+    y: (bounds.top + bounds.bottom) / 2
+  };
+  const boardCenter = {
+    x: templateBoardSize.width / 2,
+    y: templateBoardSize.height / 2
+  };
+  const offset = {
+    x: boardCenter.x - currentCenter.x,
+    y: boardCenter.y - currentCenter.y
+  };
+
+  return nodes.map((currentNode) => ({
+    ...currentNode,
+    position: {
+      x: currentNode.position.x + offset.x,
+      y: currentNode.position.y + offset.y
+    }
+  }));
+};
+
+export const normalizeNodesParentingByFrames = (nodes: CanvasNode[]): CanvasNode[] => {
+  const frames = sortFramesByAreaAscending(nodes.filter((node) => node.kind === 'FRAME'));
+
+  return nodes.map((node) => {
+    if (node.kind === 'FRAME') {
+      return withoutParentId(node);
+    }
+
+    const center = nodeCenter(node);
+    const parentFrame = frames.find((frame) => frame.id !== node.id && isPointInsideFrame(center, frame));
+
+    if (!parentFrame) {
+      return withoutParentId(node);
+    }
+
+    return {
+      ...node,
+      parentId: parentFrame.id,
+      position: {
+        x: node.position.x - parentFrame.position.x,
+        y: node.position.y - parentFrame.position.y
+      }
+    };
+  });
+};
+
 const seedNodes: CanvasNode[] = [
   node('title', 'TEXT', 'Software Developer Skills Roadmap', 80, 40, 520, 88, '#172033', {
     textStyle: textStyle('left', 'center', 34, { bold: true })
@@ -413,11 +524,13 @@ const toRoadmapBoardTitle = (planTitle: string) => `${planTitle} board`;
 
 export const createSoftwareDeveloperRoadmapTemplate = () => {
   const planTitle = softwareDeveloperRoadmapPlanTitle;
+  const centeredNodes = centerNodesOnBoard(structuredClone(seedNodes));
+  const nodes = normalizeNodesParentingByFrames(centeredNodes);
 
   return {
     board: {
       edges: structuredClone(seedEdges),
-      nodes: structuredClone(seedNodes),
+      nodes,
       title: toRoadmapBoardTitle(planTitle)
     },
     plan: {
