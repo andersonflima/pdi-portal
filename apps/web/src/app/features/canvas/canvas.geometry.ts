@@ -72,14 +72,27 @@ export const getConnectorPath = (
   target: CanvasNodeView,
   type: string,
   sourceHandle?: string,
-  targetHandle?: string
+  targetHandle?: string,
+  endpointOffsets?: { end?: number; start?: number }
 ) => {
   const sourceCenter = getNodeCenter(source);
   const targetCenter = getNodeCenter(target);
   const sourceResolvedHandle = resolveNodeHandle(source, sourceHandle, targetCenter);
   const targetResolvedHandle = resolveNodeHandle(target, targetHandle, sourceCenter);
-  const start = toHandlePoint(source, sourceResolvedHandle);
-  const end = toHandlePoint(target, targetResolvedHandle);
+  const sourceAnchor = toHandlePoint(source, sourceResolvedHandle);
+  const targetAnchor = toHandlePoint(target, targetResolvedHandle);
+  const sourceVector = toHandleVector(sourceResolvedHandle);
+  const targetVector = toHandleVector(targetResolvedHandle);
+  const startOffset = endpointOffsets?.start ?? 0;
+  const endOffset = endpointOffsets?.end ?? 0;
+  const start = {
+    x: sourceAnchor.x + sourceVector.x * startOffset,
+    y: sourceAnchor.y + sourceVector.y * startOffset
+  };
+  const end = {
+    x: targetAnchor.x + targetVector.x * endOffset,
+    y: targetAnchor.y + targetVector.y * endOffset
+  };
   const dx = Math.abs(end.x - start.x);
   const dy = Math.abs(end.y - start.y);
   const curveOffset = Math.max(56, Math.min(220, Math.hypot(dx, dy) * 0.45));
@@ -87,8 +100,6 @@ export const getConnectorPath = (
   if (type === 'straight') return `M ${start.x} ${start.y} L ${end.x} ${end.y}`;
   if (type === 'step') return `M ${start.x} ${start.y} L ${(start.x + end.x) / 2} ${start.y} L ${(start.x + end.x) / 2} ${end.y} L ${end.x} ${end.y}`;
 
-  const sourceVector = toHandleVector(sourceResolvedHandle);
-  const targetVector = toHandleVector(targetResolvedHandle);
   const controlStart = {
     x: start.x + sourceVector.x * curveOffset,
     y: start.y + sourceVector.y * curveOffset

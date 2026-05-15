@@ -18,6 +18,7 @@ const toInboundAngle = (handle: CanvasHandlePosition) => {
   if (handle === 'top') return 90;
   return -90;
 };
+const arrowNeckOffset = 18;
 
 @Component({
   selector: 'app-canvas-edge-layer',
@@ -84,9 +85,13 @@ export class CanvasEdgeLayerComponent {
   protected readonly edgePath = (edge: CanvasEdgeView) => {
     const source = this.findNode(edge.source);
     const target = this.findNode(edge.target);
+    const hasStartArrow = this.isBidirectional(edge);
 
     return source && target
-      ? getConnectorPath(source, target, edge.style.type, edge.sourceHandle, edge.targetHandle)
+      ? getConnectorPath(source, target, edge.style.type, edge.sourceHandle, edge.targetHandle, {
+          end: arrowNeckOffset,
+          start: hasStartArrow ? arrowNeckOffset : 0
+        })
       : '';
   };
 

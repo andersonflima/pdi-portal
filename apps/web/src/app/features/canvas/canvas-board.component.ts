@@ -66,6 +66,7 @@ const minimapWidth = 240;
 const minimapHeight = Math.round((minimapWidth * canvasSize.height) / canvasSize.width);
 const connectorHandleHitRadius = 14;
 const exportImagePixelRatio = 2;
+const arrowNeckOffset = 18;
 
 const roundZoom = (value: number) => Math.round(value * 100) / 100;
 
@@ -1563,7 +1564,10 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
         if (!source || !target) return '';
 
-        const path = getConnectorPath(source, target, edge.style.type, edge.sourceHandle, edge.targetHandle);
+        const path = getConnectorPath(source, target, edge.style.type, edge.sourceHandle, edge.targetHandle, {
+          end: arrowNeckOffset,
+          start: isBidirectional(edge) ? arrowNeckOffset : 0
+        });
         const lineStyle = edge.style.lineStyle === 'dashed' ? ' stroke-dasharray="8 6"' : '';
         const color = escapeXml(edge.style.color);
         const label = edge.label?.trim() ?? '';
