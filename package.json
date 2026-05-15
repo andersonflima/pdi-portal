@@ -3,21 +3,14 @@
   "private": true,
   "version": "0.1.0",
   "packageManager": "npm@10.9.8",
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
-    "dev": "npm run dev --workspace @pdi/api & npm run dev --workspace @pdi/web & wait",
-    "lint": "npm run lint --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present"
-  },
-  "overrides": {
-    "esbuild": "0.27.3"
-  },
-  "devDependencies": {
-    "typescript": "^5.9.3"
+    "build": "node scripts/run-package-script.mjs build",
+    "db:setup": "node scripts/setup-local-db.mjs",
+    "dev": "node scripts/dev.mjs",
+    "install:all": "node scripts/install-all.mjs",
+    "lint": "node scripts/run-package-script.mjs lint",
+    "postinstall": "node scripts/install-all.mjs",
+    "typecheck": "node scripts/run-package-script.mjs typecheck",
+    "test": "node scripts/run-package-script.mjs test"
   }
 }

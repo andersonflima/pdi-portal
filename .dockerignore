@@ -5,8 +5,11 @@ build
 .turbo
 coverage
 *.log
+*.db
+*.db-journal
 *.tsbuildinfo
 .DS_Store
+apps/api/data
 apps/*/node_modules
 packages/*/node_modules
 apps/*/dist

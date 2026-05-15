@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "db:push": "prisma db push",
-    "db:seed": "tsx prisma/seed.ts",
+    "db:push": "node ../../scripts/ensure-api-data-dir.mjs && prisma db push",
+    "db:seed": "node ../../scripts/ensure-api-data-dir.mjs && tsx prisma/seed.ts",
     "dev": "tsx watch src/server.ts",
     "lint": "tsc -p tsconfig.json --noEmit",
     "prisma:generate": "prisma generate",
@@ -32,5 +32,8 @@
     "tsx": "4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^3.1.3"
+  },
+  "overrides": {
+    "esbuild": "0.27.3"
   }
 }

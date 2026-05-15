@@ -11,9 +11,9 @@ O projeto entrega uma experiencia de PDI com login, administracao de usuarios, g
 - `Node.js` com `Fastify` no backend
 - `Angular` no frontend
 - Canvas visual modular com componentes Angular
-- `Prisma` com `PostgreSQL`
+- `Prisma` com `SQLite`
 - `Zod` para contratos compartilhados
-- `Docker Compose` para ambiente local
+- `Docker Compose` para ambiente local sem banco externo
 - Manifestos Kubernetes em `infra/k8s`
 
 ## Estrutura
@@ -25,7 +25,7 @@ apps/
 packages/
   contracts/ Schemas e tipos compartilhados entre frontend e backend
 infra/
-  k8s/       Manifests base para namespace, PostgreSQL, API e Web
+  k8s/       Manifests base para namespace, API e Web
 ```
 
 ## Funcionalidades
@@ -49,7 +49,31 @@ infra/
 
 - `Node.js` 22+
 - `npm` 10+
-- `Docker` e `Docker Compose`
+- `Docker` e `Docker Compose` apenas se for usar containers
+
+## Ambiente Corporativo
+
+Para maquinas corporativas com acesso restrito a internet e dependencias via Artifactory, o projeto evita servicos externos obrigatorios no desenvolvimento local:
+
+- banco local em `SQLite`;
+- `esbuild` fixado em `0.27.3`;
+- scripts de desenvolvimento em Node.js, sem dependencia de Bash;
+- Docker sem `npm ci`, `npm audit` ou `npm fund` no build.
+
+Configure o registry corporativo antes de instalar as dependencias, quando necessario:
+
+```bash
+npm config set registry <url-do-artifactory>
+```
+
+Instale e suba o ambiente local:
+
+```bash
+npm install --no-audit --no-fund
+npm run dev
+```
+
+O comando `npm run dev` prepara o Prisma, sincroniza o SQLite, roda o seed e sobe API e Web.
 
 ## Ambiente Local com Docker
 
@@ -63,7 +87,7 @@ Servicos:
 
 - Web: `http://localhost:5173`
 - API: `http://localhost:3333`
-- PostgreSQL: `localhost:5432`
+- Banco SQLite persistido no volume Docker `api-data`
 
 O servico da API executa automaticamente:
 
@@ -71,7 +95,7 @@ O servico da API executa automaticamente:
 npm run db:push && npm run db:seed && node dist/server.js
 ```
 
-Isso sincroniza o schema, popula os dados iniciais e inicia o servidor.
+Isso cria o arquivo SQLite quando necessario, sincroniza o schema, popula os dados iniciais e inicia o servidor.
 
 ## Acessos Iniciais
 
@@ -117,16 +141,21 @@ npm install
 Gere o Prisma Client:
 
 ```bash
-npm run prisma:generate --workspace @pdi/api
+npm run prisma:generate --prefix apps/api
 ```
 
 Configure `DATABASE_URL`, `JWT_SECRET`, `PORT` e `WEB_ORIGIN` no ambiente da API.
 
+Para desenvolvimento local sem Docker, uma URL SQLite simples e suficiente:
+
+```bash
+DATABASE_URL="file:../data/pdi.db"
+```
+
 Sincronize o banco e rode o seed:
 
 ```bash
-npm run db:push --workspace @pdi/api
-npm run db:seed --workspace @pdi/api
+npm run db:setup
 ```
 
 Suba os servicos em modo desenvolvimento:
@@ -150,7 +179,6 @@ npm run test
 Os manifests base ficam em `infra/k8s`:
 
 - `namespace.yaml`
-- `postgres.yaml`
 - `api.yaml`
 - `web.yaml`
 
@@ -158,9 +186,8 @@ Aplicacao:
 
 ```bash
 kubectl apply -f infra/k8s/namespace.yaml
-kubectl apply -f infra/k8s/postgres.yaml
 kubectl apply -f infra/k8s/api.yaml
 kubectl apply -f infra/k8s/web.yaml
 ```
 
-Antes de usar em producao, revise secrets, imagens, storage, ingress, TLS, politicas de rede e estrategia de backup.
+Antes de usar em producao, revise secrets, imagens, storage, ingress, TLS, politicas de rede e estrategia de backup do arquivo SQLite.
