@@ -1,4 +1,10 @@
-<svg class="edge-layer" [attr.viewBox]="'0 0 ' + canvasSize.width + ' ' + canvasSize.height">
+<svg
+  class="edge-layer"
+  [attr.viewBox]="'0 0 ' + canvasSize.width + ' ' + canvasSize.height"
+  [attr.width]="canvasSize.width"
+  [attr.height]="canvasSize.height"
+  preserveAspectRatio="none"
+>
   <defs>
     @for (color of markerColors(); track color) {
       @for (angle of markerAngles; track angle) {
@@ -24,6 +30,7 @@
         <path
           class="edge-hit-area"
           [attr.d]="path"
+          fill="none"
           (pointerdown)="handleSelect($event, edge.id)"
           (dblclick)="handleEdit($event, edge.id)"
         />
@@ -75,6 +82,10 @@
             class="edge-line-live edge-line-live-bidirectional edge-line-live-bidirectional-forward"
             [class.edge-line-live-dashed]="edge.style.lineStyle === 'dashed'"
             [attr.d]="path"
+            fill="none"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2.6"
             [attr.stroke]="edge.style.color"
             [attr.mask]="'url(#' + edgeLiveMaskId(edge.id, 'start') + ')'"
           />
@@ -82,6 +93,10 @@
             class="edge-line-live edge-line-live-bidirectional edge-line-live-bidirectional-reverse"
             [class.edge-line-live-dashed]="edge.style.lineStyle === 'dashed'"
             [attr.d]="path"
+            fill="none"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2.6"
             [attr.stroke]="edge.style.color"
             [attr.mask]="'url(#' + edgeLiveMaskId(edge.id, 'end') + ')'"
           />
@@ -90,6 +105,10 @@
             class="edge-line-live"
             [class.edge-line-live-dashed]="edge.style.lineStyle === 'dashed'"
             [attr.d]="path"
+            fill="none"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2.6"
             [attr.stroke]="edge.style.color"
           />
         }
@@ -97,6 +116,10 @@
           class="edge-line"
           [class.edge-line-dashed]="edge.style.lineStyle === 'dashed'"
           [attr.d]="path"
+          fill="none"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
           [attr.stroke]="edge.style.color"
           [attr.marker-end]="'url(#' + edgeEndMarkerId(edge) + ')'"
           [attr.marker-start]="isBidirectional(edge) ? 'url(#' + edgeStartMarkerId(edge) + ')' : null"
