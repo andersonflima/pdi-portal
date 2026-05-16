@@ -2106,6 +2106,23 @@ svg[data-pdi-interactive="true"] {
   width: 100vw;
 }
 svg[data-pdi-panning="true"] { cursor: grabbing; }
+.edge-line-live {
+  animation: edge-dash-flow 0.95s linear infinite !important;
+  opacity: 0.95;
+  stroke-dasharray: 30 16;
+}
+.edge-line-live-dashed {
+  stroke-dasharray: 24 12;
+}
+.edge-line-live-bidirectional {
+  animation: none !important;
+}
+.edge-line-live-bidirectional-forward {
+  animation: edge-dash-flow 0.95s linear infinite !important;
+}
+.edge-line-live-bidirectional-reverse {
+  animation: edge-dash-flow-reverse 0.95s linear infinite !important;
+}
 @keyframes edge-dash-flow {
   to {
     stroke-dashoffset: -46;
