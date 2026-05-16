@@ -2349,13 +2349,29 @@ svg[data-pdi-panning="true"] { cursor: grabbing; }
     planeClone.style.transformOrigin = 'left top';
     planeClone.style.width = `${canvasSize.width}px`;
 
-    planeClone.querySelectorAll<HTMLElement>('.edge-line, .edge-line-live, .edge-line-preview').forEach((edgeLine) => {
-      edgeLine.style.filter = 'none';
-      edgeLine.style.webkitFilter = 'none';
-      edgeLine.style.fill = 'none';
-      edgeLine.style.strokeLinecap = 'round';
-      edgeLine.style.strokeLinejoin = 'round';
-    });
+    planeClone
+      .querySelectorAll<SVGPathElement>('path.edge-line, path.edge-line-live, path.edge-line-preview, path.edge-line-live-export')
+      .forEach((edgeLine) => {
+        edgeLine.style.filter = 'none';
+        edgeLine.style.webkitFilter = 'none';
+        edgeLine.style.fill = 'none';
+        edgeLine.style.strokeLinecap = 'round';
+        edgeLine.style.strokeLinejoin = 'round';
+
+        if (edgeLine.classList.contains('edge-line-dashed')) {
+          edgeLine.style.strokeDasharray = '8 6';
+          return;
+        }
+
+        if (edgeLine.classList.contains('edge-line-live-dashed')) {
+          edgeLine.style.strokeDasharray = '24 12';
+          return;
+        }
+
+        if (edgeLine.classList.contains('edge-line-live') || edgeLine.classList.contains('edge-line-live-export')) {
+          edgeLine.style.strokeDasharray = '30 16';
+        }
+      });
 
     exportNode.appendChild(planeClone);
     document.body.appendChild(exportNode);
