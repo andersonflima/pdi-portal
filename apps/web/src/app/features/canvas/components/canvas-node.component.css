@@ -30,10 +30,11 @@
   font-style: var(--node-font-style, normal);
   font-weight: var(--node-font-weight, 680);
   line-height: 1.22;
-  max-height: 100%;
+  max-height: none;
   max-width: 100%;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
+  white-space: pre-wrap;
   overflow-wrap: anywhere;
   text-decoration: var(--node-text-decoration, none);
   width: 100%;
@@ -50,7 +51,7 @@
   justify-self: stretch;
   min-height: 0;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
   text-align: var(--node-text-align, left);
   width: 100%;
 }
@@ -83,15 +84,17 @@
   font-weight: var(--node-font-weight, 680);
   height: auto;
   line-height: 1.22;
-  max-height: 100%;
+  max-height: none;
   min-height: 1.22em;
   outline: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: hidden;
   overflow-wrap: anywhere;
   padding: 0;
   resize: none;
   text-align: inherit;
   text-decoration: var(--node-text-decoration, none);
+  white-space: pre-wrap;
   -webkit-text-fill-color: var(--node-text-color, #172033);
   width: 100%;
   word-break: break-word;
@@ -253,35 +256,6 @@
   clip-path: polygon(0 0, 84% 0, 100% 18%, 100% 100%, 0 100%);
 }
 
-.pdi-shape-cloud {
-  --cloud-fill: color-mix(in srgb, var(--node-color) 12%, #ffffff);
-  background: transparent;
-  border: 0;
-  filter: drop-shadow(0 8px 18px color-mix(in srgb, var(--node-color) 20%, transparent));
-  overflow: visible;
-  padding: 20px 26px;
-}
-
-.pdi-shape-cloud::before {
-  background:
-    radial-gradient(circle at 12% 62%, var(--cloud-fill) 0 16%, transparent 17%),
-    radial-gradient(circle at 30% 44%, var(--cloud-fill) 0 24%, transparent 25%),
-    radial-gradient(circle at 50% 30%, var(--cloud-fill) 0 28%, transparent 29%),
-    radial-gradient(circle at 70% 42%, var(--cloud-fill) 0 24%, transparent 25%),
-    radial-gradient(circle at 88% 60%, var(--cloud-fill) 0 16%, transparent 17%),
-    radial-gradient(ellipse at 50% 70%, var(--cloud-fill) 0 41%, transparent 42%);
-  content: "";
-  inset: 2px;
-  pointer-events: none;
-  position: absolute;
-}
-
-.pdi-shape-cloud > strong,
-.pdi-shape-cloud .pdi-node-editor {
-  position: relative;
-  z-index: 1;
-}
-
 .pdi-node-text {
   background: transparent;
   padding: 8px;
@@ -335,33 +309,34 @@
 }
 
 .pdi-task-list {
+  align-content: stretch;
+  align-items: stretch;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
+  justify-content: flex-start;
+  overflow: visible;
 }
 
-.pdi-task-list button {
-  align-items: center;
+.pdi-task-list-item {
+  align-items: flex-start;
   background: transparent;
   color: var(--node-text-color, #172033);
   display: grid;
   gap: 8px;
   grid-template-columns: 22px minmax(0, 1fr) 22px;
-  min-height: 26px;
+  min-height: 22px;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
   padding: 0;
   text-align: var(--node-text-align, left);
   width: 100%;
 }
 
-.pdi-task-list button::after {
-  content: "";
-  display: block;
-  width: 22px;
-}
-
-.pdi-task-list span {
+.pdi-task-list-check {
   align-items: center;
   background: color-mix(in srgb, var(--node-color) 12%, #ffffff);
+  border: 0;
   border-radius: 5px;
   color: var(--node-color);
   display: flex;
@@ -369,14 +344,36 @@
   font-weight: 900;
   height: 22px;
   justify-content: center;
+  padding: 0;
+  width: 22px;
+}
+
+.pdi-task-list-check:hover,
+.pdi-task-list-check[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--node-color) 20%, #ffffff);
+}
+
+.pdi-task-list-item > span {
+  display: block;
+  min-height: 22px;
   width: 22px;
 }
 
 .pdi-task-list strong {
+  display: block;
   font-size: var(--node-font-size, clamp(11px, 6cqw, 18px));
   font-weight: var(--node-font-weight, 650);
-  line-height: 1.2;
+  line-height: 1.32;
+  max-height: none;
+  overflow: visible;
+  overflow-wrap: anywhere;
   text-align: var(--node-text-align, left);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.pdi-task-list-label {
+  cursor: text;
 }
 
 .pdi-task-list-input {
@@ -388,16 +385,26 @@
   font-size: var(--node-font-size, clamp(11px, 6cqw, 18px));
   font-style: var(--node-font-style, normal);
   font-weight: var(--node-font-weight, 650);
-  line-height: 1.2;
+  line-height: 1.32;
+  max-height: none;
+  min-height: 1.32em;
   min-width: 0;
   outline: 0;
-  overflow: hidden;
+  overflow-y: hidden;
+  overflow-wrap: anywhere;
   padding: 0;
   resize: none;
   text-align: var(--node-text-align, left);
   text-decoration: var(--node-text-decoration, none);
+  white-space: pre-wrap;
   -webkit-text-fill-color: var(--node-text-color, #172033);
   width: 100%;
+  word-break: break-word;
+}
+
+.pdi-node-task > strong {
+  max-height: none;
+  overflow: visible;
 }
 
 .pdi-task-input {

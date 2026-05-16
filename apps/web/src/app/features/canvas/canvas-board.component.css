@@ -83,11 +83,10 @@
 
 .edge-layer-preview {
   display: block;
-  height: 100%;
-  inset: 0;
+  left: 0;
   pointer-events: none;
   position: absolute;
-  width: 100%;
+  top: 0;
   z-index: 12;
 }
 
@@ -104,12 +103,11 @@
 
 .edge-label-overlay {
   display: block;
-  height: 100%;
-  inset: 0;
+  left: 0;
   pointer-events: none;
   position: absolute;
-  width: 100%;
-  z-index: 100000;
+  top: 0;
+  z-index: 300000;
 }
 
 .edge-label-overlay-text {

@@ -301,9 +301,8 @@ const seedNodes: CanvasNode[] = [
     ]),
     textStyle: textStyle('left', 'top', 15, { bold: true })
   }),
-  node('product-slice', 'SHAPE', 'Backend slice\nAPI + DB + cache + tests', 820, 650, 210, 92, '#7c3aed', {
-    textStyle: textStyle('center', 'center', 16, { bold: true }),
-    variant: 'ROUNDED_RECTANGLE'
+  node('product-slice', 'CARD', 'Backend slice\nAPI + DB + cache + tests', 820, 650, 230, 96, '#7c3aed', {
+    textStyle: textStyle('center', 'center', 16, { bold: true })
   }),
   node(
     'product-output',
@@ -374,9 +373,8 @@ const seedNodes: CanvasNode[] = [
     ]),
     textStyle: textStyle('left', 'top', 15, { bold: true })
   }),
-  node('ops-observe', 'SHAPE', 'Observe\nmetrics + logs + traces', 2170, 650, 210, 92, '#16a34a', {
-    textStyle: textStyle('center', 'center', 15, { bold: true }),
-    variant: 'HEXAGON'
+  node('ops-observe', 'CARD', 'Observe\nmetrics + logs + traces', 2170, 650, 230, 96, '#16a34a', {
+    textStyle: textStyle('center', 'center', 15, { bold: true })
   }),
   node(
     'delivery-output',

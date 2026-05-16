@@ -1,7 +1,7 @@
-import { Component, input, output, signal } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import type { CanvasEdgeLineStyle, CanvasEdgeType, CanvasNodeKind, CanvasShapeVariant, CanvasTextAlign, CanvasTextVerticalAlign } from '@pdi/contracts';
 import { LucideAngularModule } from 'lucide-angular';
-import { nodeKindMeta, nodeKindOrder, shapeVariantMeta, shapeVariantOrder } from '../canvas.constants';
+import { nodeKindMeta, nodeKindOrder } from '../canvas.constants';
 import type { CanvasEdgeDirection, CanvasEdgePatch, CanvasEdgeView, CanvasNodeStylePatch, CanvasNodeView, CanvasTextStyle } from '../canvas.models';
 
 const inputValue = (event: Event) => (event.target as HTMLInputElement | HTMLSelectElement).value;
@@ -24,18 +24,11 @@ export class CanvasToolbarComponent {
   readonly edgeChange = output<CanvasEdgePatch>();
   readonly toggleConnectorMode = output<void>();
 
-  protected readonly isShapeToolOpen = signal(false);
   protected readonly nodeKindMeta = nodeKindMeta;
   protected readonly nodeKindOrder = nodeKindOrder;
-  protected readonly shapeVariantMeta = shapeVariantMeta;
-  protected readonly shapeVariantOrder = shapeVariantOrder;
 
   protected readonly handleCreateNode = (kind: CanvasNodeKind, variant?: CanvasShapeVariant) => {
     this.createNode.emit({ kind, variant });
-
-    if (kind === 'SHAPE') {
-      this.isShapeToolOpen.set(false);
-    }
   };
 
   protected readonly handleNodeColor = (event: Event) => {

@@ -14,7 +14,6 @@
       [attr.aria-label]="node().checked ? 'Mark task as open' : 'Mark task as done'"
       [attr.aria-pressed]="node().checked ?? false"
       (click)="handleTaskToggle($event)"
-      (dblclick)="handleTaskEditStart($event)"
     >
       {{ node().checked ? '✓' : '' }}
     </button>
@@ -34,7 +33,7 @@
         [rows]="textRows()"
         [value]="textValue()"
         autofocus
-        (blur)="isEditing.set(false)"
+        (blur)="handleTextEditorBlur()"
         (input)="handleTextInput($event)"
         (keydown)="handleEditableKeydown($event)"
       ></textarea>
@@ -44,13 +43,16 @@
   } @else if (node().kind === 'TASK_LIST') {
     <div class="pdi-task-list">
       @for (item of node().taskItems ?? []; track item.id) {
-        <button
-          type="button"
-          [attr.aria-pressed]="item.checked"
-          (click)="handleChecklistToggle($event, item.id)"
-          (dblclick)="handleChecklistEditStart($event, item.id)"
-        >
-          <span>{{ item.checked ? '✓' : '' }}</span>
+        <div class="pdi-task-list-item">
+          <button
+            type="button"
+            class="pdi-task-list-check"
+            [attr.aria-label]="item.checked ? 'Mark step as open' : 'Mark step as done'"
+            [attr.aria-pressed]="item.checked"
+            (click)="handleChecklistToggle($event, item.id)"
+          >
+            {{ item.checked ? '✓' : '' }}
+          </button>
           @if (editingChecklistItemId() === item.id) {
             <textarea
               class="pdi-editable-control pdi-task-list-input"
@@ -65,9 +67,10 @@
               (pointerdown)="stopCanvasInteraction($event)"
             ></textarea>
           } @else {
-            <strong>{{ item.label }}</strong>
+            <strong class="pdi-task-list-label" (click)="handleChecklistEditStart($event, item.id)">{{ item.label }}</strong>
           }
-        </button>
+          <span aria-hidden="true"></span>
+        </div>
       }
     </div>
   } @else {
