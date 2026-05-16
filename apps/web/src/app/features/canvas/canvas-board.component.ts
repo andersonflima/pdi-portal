@@ -1840,10 +1840,10 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     stroke-width: 2.6;
   }
   .edge-line-live-solid {
-    stroke-dasharray: 36 16;
+    stroke-dasharray: 30 10;
   }
   .edge-line-live-dashed {
-    stroke-dasharray: 56 24;
+    stroke-dasharray: 10 24;
   }
   .edge-line-live-export-reverse {
     animation-name: edge-dash-flow-reverse;
@@ -2113,7 +2113,7 @@ svg[data-pdi-panning="true"] { cursor: grabbing; }
   stroke-width: 2;
 }
 .edge-line-dashed {
-  stroke-dasharray: 8 6;
+  stroke-dasharray: 6 12;
 }
 .edge-line-live {
   animation: edge-dash-flow 0.45s linear infinite !important;
@@ -2122,13 +2122,13 @@ svg[data-pdi-panning="true"] { cursor: grabbing; }
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 2.6;
-  stroke-dasharray: 36 16;
+  stroke-dasharray: 30 10;
 }
 .edge-line-live-solid {
-  stroke-dasharray: 36 16;
+  stroke-dasharray: 30 10;
 }
 .edge-line-live-dashed {
-  stroke-dasharray: 56 24;
+  stroke-dasharray: 10 24;
 }
 .edge-line-live-export {
   animation: edge-dash-flow 0.45s linear infinite !important;
@@ -2359,17 +2359,17 @@ svg[data-pdi-panning="true"] { cursor: grabbing; }
         edgeLine.style.strokeLinejoin = 'round';
 
         if (edgeLine.classList.contains('edge-line-dashed')) {
-          edgeLine.style.strokeDasharray = '8 6';
+          edgeLine.style.strokeDasharray = '6 12';
           return;
         }
 
         if (edgeLine.classList.contains('edge-line-live-dashed')) {
-          edgeLine.style.strokeDasharray = '56 24';
+          edgeLine.style.strokeDasharray = '10 24';
           return;
         }
 
         if (edgeLine.classList.contains('edge-line-live') || edgeLine.classList.contains('edge-line-live-export')) {
-          edgeLine.style.strokeDasharray = '36 16';
+          edgeLine.style.strokeDasharray = '30 10';
         }
       });
 

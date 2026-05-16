@@ -26,7 +26,7 @@
 }
 
 .edge-line-dashed {
-  stroke-dasharray: 8 6;
+  stroke-dasharray: 6 12;
 }
 
 .is-selected .edge-line {
@@ -38,7 +38,7 @@
   fill: none;
   opacity: 0.95;
   pointer-events: none;
-  stroke-dasharray: 36 16;
+  stroke-dasharray: 30 10;
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 2.6;
@@ -57,7 +57,7 @@
 }
 
 .edge-line-live-dashed {
-  stroke-dasharray: 56 24;
+  stroke-dasharray: 10 24;
 }
 
 .is-selected .edge-line-live {
