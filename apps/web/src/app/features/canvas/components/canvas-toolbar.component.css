@@ -24,8 +24,7 @@
   width: max-content;
 }
 
-.canvas-toolbar button,
-.shape-tool summary {
+.canvas-toolbar button {
   background: transparent;
   border-radius: 8px;
   color: #263346;
@@ -38,8 +37,7 @@
   width: 78px;
 }
 
-.canvas-toolbar button:hover,
-.shape-tool summary:hover {
+.canvas-toolbar button:hover {
   background: #eef3f8;
 }
 
@@ -48,14 +46,12 @@
   opacity: 0.42;
 }
 
-.canvas-toolbar button span,
-.shape-tool summary span {
+.canvas-toolbar button span {
   font-size: 12px;
   font-weight: 760;
 }
 
-.canvas-toolbar button small,
-.shape-tool summary small {
+.canvas-toolbar button small {
   color: #748197;
   font-size: 10px;
 }
@@ -64,37 +60,6 @@
 .canvas-toolbar button.is-active {
   background: #172033;
   color: #ffffff;
-}
-
-.shape-tool {
-  position: relative;
-  width: 78px;
-}
-
-.shape-tool summary {
-  cursor: pointer;
-  list-style: none;
-}
-
-.shape-tool summary::-webkit-details-marker {
-  display: none;
-}
-
-.shape-tool-panel {
-  background: #ffffff;
-  border: 1px solid #dfe5ee;
-  border-radius: 10px;
-  box-shadow: 0 18px 48px rgba(23, 32, 51, 0.16);
-  display: grid;
-  gap: 6px;
-  grid-template-columns: repeat(2, minmax(82px, 1fr));
-  left: 50%;
-  padding: 8px;
-  position: absolute;
-  top: calc(100% + 12px);
-  transform: translateX(-50%);
-  width: 210px;
-  z-index: 30;
 }
 
 .node-style-panel,

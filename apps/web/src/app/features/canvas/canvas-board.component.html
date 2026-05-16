@@ -74,7 +74,13 @@
         />
 
         @if (activeConnector(); as activeConnector) {
-          <svg class="edge-layer edge-layer-preview" [attr.viewBox]="'0 0 ' + canvasSize.width + ' ' + canvasSize.height">
+          <svg
+            class="edge-layer edge-layer-preview"
+            [attr.viewBox]="'0 0 ' + canvasSize.width + ' ' + canvasSize.height"
+            [attr.width]="canvasSize.width"
+            [attr.height]="canvasSize.height"
+            preserveAspectRatio="none"
+          >
             <path class="edge-line edge-line-preview" [attr.d]="connectorPreviewPath(activeConnector)" />
           </svg>
         }
@@ -90,12 +96,20 @@
             [style.z-index]="nodeStackLevel(node)"
             (connectorStart)="startConnectorDrag($event, node)"
             (dataChange)="updateNodeData(node.id, $event)"
+            (editSessionEnd)="handleNodeEditSessionEnd()"
+            (editSessionStart)="handleNodeEditSessionStart()"
             (pointerdown)="handleNodePointerDown($event, node)"
             (resizeStart)="startNodeResize($event, node)"
           />
         }
 
-        <svg class="edge-label-overlay" [attr.viewBox]="'0 0 ' + canvasSize.width + ' ' + canvasSize.height">
+        <svg
+          class="edge-label-overlay"
+          [attr.viewBox]="'0 0 ' + canvasSize.width + ' ' + canvasSize.height"
+          [attr.width]="canvasSize.width"
+          [attr.height]="canvasSize.height"
+          preserveAspectRatio="none"
+        >
           @for (edge of edges(); track edge.id) {
             @if (edge.label && shouldRenderEdgeLabel(edge)) {
               <text

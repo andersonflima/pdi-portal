@@ -74,7 +74,7 @@ export type CanvasNodeMeta = {
 };
 
 export type CanvasNodeDataPatch = Partial<
-  Pick<CanvasNodeView, 'checked' | 'description' | 'label' | 'taskItems' | 'textStyle'>
+  Pick<CanvasNodeView, 'checked' | 'description' | 'height' | 'label' | 'taskItems' | 'textStyle'>
 >;
 
 export type CanvasNodeStylePatch = Partial<Pick<CanvasNodeView, 'backgroundColor' | 'color'>>;

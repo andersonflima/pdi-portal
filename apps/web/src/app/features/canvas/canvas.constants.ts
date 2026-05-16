@@ -10,7 +10,7 @@ export const canvasSurfaceColor = { blue: 239, green: 244, red: 246 };
 export const whiteColor = { blue: 255, green: 255, red: 255 };
 export const temporaryPasswordAlphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
 
-export const nodeKindOrder: CanvasNodeKind[] = ['NOTE', 'STICKER', 'CARD', 'SHAPE', 'TEXT', 'TASK', 'TASK_LIST', 'GOAL', 'FRAME'];
+export const nodeKindOrder: CanvasNodeKind[] = ['NOTE', 'STICKER', 'CARD', 'TEXT', 'TASK', 'TASK_LIST', 'GOAL', 'FRAME'];
 
 export const shapeVariantOrder: CanvasShapeVariant[] = [
   'RECTANGLE',
@@ -21,8 +21,7 @@ export const shapeVariantOrder: CanvasShapeVariant[] = [
   'PARALLELOGRAM',
   'HEXAGON',
   'CYLINDER',
-  'DOCUMENT',
-  'CLOUD'
+  'DOCUMENT'
 ];
 
 export const shapeVariantMeta: Record<CanvasShapeVariant, { iconName: string; label: string }> = {
