@@ -15,7 +15,6 @@ import {
   viewChild
 } from '@angular/core';
 import type { CanvasNodeKind, CanvasShapeVariant, PdiPlan, User } from '@pdi/contracts';
-import { toBlob as toDomBlob, toSvg as toDomSvg } from 'html-to-image';
 import { LucideAngularModule } from 'lucide-angular';
 import { ApiService } from '../../core/api/api.service';
 import { CanvasEdgeLayerComponent } from './components/canvas-edge-layer.component';
@@ -23,7 +22,7 @@ import { CanvasHeaderComponent } from './components/canvas-header.component';
 import { CanvasNodeComponent } from './components/canvas-node.component';
 import { CanvasToolbarComponent } from './components/canvas-toolbar.component';
 import { canvasSize } from './canvas.constants';
-import { findContainingFrame, getConnectorEndpoints, getConnectorPath, getNodeCenter, isPointInsideNode } from './canvas.geometry';
+import { findContainingFrame, getConnectorLabelPoint, getConnectorPath, getNodeCenter, isPointInsideNode } from './canvas.geometry';
 import { createCanvasNode, toCanvasEdges, toCanvasNodes, toSaveBoard } from './canvas.mappers';
 import type {
   CanvasEdgeDirection,
@@ -53,7 +52,7 @@ type MarqueeSelectionDraft = {
 type SvgTextAnchor = 'middle' | 'start' | 'end';
 
 const minZoom = 0.4;
-const maxZoom = 1;
+const maxZoom = 1.6;
 const zoomStep = 0.1;
 const wheelLineHeightPx = 16;
 const wheelZoomSensitivity = 0.0022;
@@ -67,6 +66,8 @@ const minimapHeight = Math.round((minimapWidth * canvasSize.height) / canvasSize
 const connectorHandleHitRadius = 14;
 const exportImagePixelRatio = 2;
 const arrowNeckOffset = 18;
+const exportBoundsPadding = 64;
+const historyMaxEntries = 200;
 
 const roundZoom = (value: number) => Math.round(value * 100) / 100;
 
@@ -265,6 +266,94 @@ const toNodeTextLines = (node: CanvasNodeView): string[] => {
   return (node.label || '').split('\n');
 };
 
+const toFiniteNumber = (value: number, fallback: number) => (Number.isFinite(value) ? value : fallback);
+const toSvgSafeId = (prefix: string, rawValue: string) => {
+  const normalized = rawValue
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9_-]/g, '_');
+
+  return `${prefix}-${normalized || 'id'}`;
+};
+
+const estimateTextWidth = (text: string, fontSize: number) => text.length * fontSize * 0.56;
+
+const wrapSvgLineToWidth = (line: string, maxWidth: number, fontSize: number) => {
+  const normalizedLine = line.trim();
+
+  if (!normalizedLine) return [''];
+
+  const maxCharsPerLine = Math.max(1, Math.floor(maxWidth / Math.max(fontSize * 0.56, 1)));
+  const chunks = normalizedLine
+    .split(/\s+/)
+    .flatMap((token) => {
+      if (token.length <= maxCharsPerLine) return [token];
+
+      const tokenChunks: string[] = [];
+
+      for (let index = 0; index < token.length; index += maxCharsPerLine) {
+        tokenChunks.push(token.slice(index, index + maxCharsPerLine));
+      }
+
+      return tokenChunks;
+    });
+
+  const wrapped: string[] = [];
+  let current = '';
+
+  for (const chunk of chunks) {
+    const candidate = current ? `${current} ${chunk}` : chunk;
+
+    if (current && estimateTextWidth(candidate, fontSize) > maxWidth) {
+      wrapped.push(current);
+      current = chunk;
+      continue;
+    }
+
+    current = candidate;
+  }
+
+  if (current) wrapped.push(current);
+
+  return wrapped.length > 0 ? wrapped : [''];
+};
+
+const toExportBounds = (nodes: CanvasNodeView[]) => {
+  const normalizedNodes = nodes
+    .map((node) => ({
+      height: toFiniteNumber(node.height, 0),
+      width: toFiniteNumber(node.width, 0),
+      x: toFiniteNumber(node.position.x, 0),
+      y: toFiniteNumber(node.position.y, 0)
+    }))
+    .filter((node) => node.width > 0 && node.height > 0);
+
+  if (normalizedNodes.length === 0) {
+    return {
+      height: canvasSize.height,
+      minX: 0,
+      minY: 0,
+      width: canvasSize.width
+    };
+  }
+
+  const left = Math.min(...normalizedNodes.map((node) => node.x));
+  const top = Math.min(...normalizedNodes.map((node) => node.y));
+  const right = Math.max(...normalizedNodes.map((node) => node.x + node.width));
+  const bottom = Math.max(...normalizedNodes.map((node) => node.y + node.height));
+  const minX = Math.max(0, left - exportBoundsPadding);
+  const minY = Math.max(0, top - exportBoundsPadding);
+  const maxX = Math.min(canvasSize.width, right + exportBoundsPadding);
+  const maxY = Math.min(canvasSize.height, bottom + exportBoundsPadding);
+
+  return {
+    height: Math.max(1, maxY - minY),
+    minX,
+    minY,
+    width: Math.max(1, maxX - minX)
+  };
+};
+
 const toNodeFillColor = (node: CanvasNodeView) => {
   if (node.kind === 'TEXT') return 'transparent';
   if (node.kind === 'FRAME') return node.backgroundColor ?? '#d8e6f4';
@@ -310,11 +399,17 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   private socket: WebSocket | null = null;
   private loadToken = 0;
   private isApplyingRemoteBoard = false;
+  private isRestoringHistory = false;
   private lastPersistedPlanId: string | null = null;
   private lastPersistedBoardSnapshot: string | null = null;
   private isPersistingBoard = false;
   private queuedAutosaveSnapshot: { board: ReturnType<typeof toSaveBoard>; planId: string; snapshot: string } | null = null;
   private removeStageWheelListener: (() => void) | null = null;
+  private historySnapshot: string | null = null;
+  private historyPast: string[] = [];
+  private historyFuture: string[] = [];
+  private historyBatchDepth = 0;
+  private historyBatchBaseSnapshot: string | null = null;
 
   protected readonly canvasSize = canvasSize;
   protected readonly minimapSize = { height: minimapHeight, width: minimapWidth };
@@ -452,6 +547,42 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
       onCleanup(() => window.cancelAnimationFrame(frameId));
     });
+
+    effect(() => {
+      const planId = this.currentPlanId();
+      const title = this.boardTitle() || this.plan.title;
+      const nodes = this.nodes();
+      const edges = this.edges();
+
+      if (!planId) return;
+
+      const nextSnapshot = JSON.stringify(toSaveBoard(title, nodes, edges));
+
+      if (this.historySnapshot === null) {
+        this.historySnapshot = nextSnapshot;
+        this.historyPast = [];
+        this.historyFuture = [];
+        return;
+      }
+
+      if (nextSnapshot === this.historySnapshot) return;
+
+      if (this.historyBatchDepth > 0) return;
+
+      if (this.isApplyingRemoteBoard || this.isRestoringHistory) {
+        this.historySnapshot = nextSnapshot;
+        return;
+      }
+
+      this.historyPast.push(this.historySnapshot);
+
+      if (this.historyPast.length > historyMaxEntries) {
+        this.historyPast = this.historyPast.slice(this.historyPast.length - historyMaxEntries);
+      }
+
+      this.historyFuture = [];
+      this.historySnapshot = nextSnapshot;
+    });
   }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -484,7 +615,44 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   @HostListener('window:keydown', ['$event'])
   protected readonly handleWindowKeydown = (event: KeyboardEvent) => {
     if (event.defaultPrevented) return;
+    const isUndoShortcut = (event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === 'z';
+    const isRedoShortcut =
+      (event.metaKey || event.ctrlKey) &&
+      !event.altKey &&
+      ((event.key.toLowerCase() === 'z' && event.shiftKey) || (event.ctrlKey && !event.metaKey && event.key.toLowerCase() === 'y'));
+    const isSelectAllShortcut =
+      (event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'a';
+
+    if (isRedoShortcut) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.redoBoardChange();
+      return;
+    }
+
+    if (isUndoShortcut) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.undoBoardChange();
+      return;
+    }
+
     if (isEditableTarget(event.target)) return;
+
+    if (isSelectAllShortcut) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const allNodeIds = this.nodes().map((node) => node.id);
+
+      this.selectedNodeIds.set(allNodeIds);
+      this.selectedNodeId.set(allNodeIds.at(-1) ?? null);
+      this.selectedEdgeId.set(null);
+      this.connectorSourceId.set(null);
+      this.activeConnector.set(null);
+      this.marqueeSelection.set(null);
+      return;
+    }
 
     if (event.key === 'Delete' || event.key === 'Backspace') {
       const hasRemovedEdge = this.removeSelectedEdge();
@@ -727,6 +895,14 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     );
   };
 
+  protected readonly handleNodeEditSessionStart = () => {
+    this.beginHistoryBatch();
+  };
+
+  protected readonly handleNodeEditSessionEnd = () => {
+    this.endHistoryBatch();
+  };
+
   protected readonly updateSelectedNodeStyle = (input: CanvasNodeStylePatch) => {
     const selectedNode = this.selectedNode();
 
@@ -835,13 +1011,12 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     const target = this.nodes().find((node) => node.id === edge.target);
 
     if (!source || !target) return { x: 0, y: 0 };
+    const bidirectional = this.edges().some((candidate) => candidate.source === edge.target && candidate.target === edge.source);
 
-    const { start, end } = getConnectorEndpoints(source, target, edge.sourceHandle, edge.targetHandle);
-
-    return {
-      x: (start.x + end.x) / 2,
-      y: (start.y + end.y) / 2
-    };
+    return getConnectorLabelPoint(source, target, edge.style.type, edge.sourceHandle, edge.targetHandle, {
+      end: arrowNeckOffset,
+      start: bidirectional ? arrowNeckOffset : 0
+    });
   };
 
   protected readonly startNodeResize = (event: PointerEvent, node: CanvasNodeView) => {
@@ -890,54 +1065,29 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   };
 
   protected readonly exportBoardToSvg = async () => {
-    const exportNode = this.createBoardExportNode();
-
-    if (!exportNode) return;
-
     const title = this.boardTitle() || this.plan.title;
-
-    try {
-      const dataUrl = await toDomSvg(exportNode, {
-        cacheBust: true,
-        height: canvasSize.height,
-        width: canvasSize.width
-      });
-      const blob = await this.dataUrlToBlob(dataUrl);
-      this.downloadBlob(blob, toFileName(title, 'svg'));
-    } finally {
-      document.body.removeChild(exportNode);
-    }
+    const { markup } = this.buildBoardSvgMarkup();
+    const finalMarkup = this.injectSvgInteractivity(this.sanitizeExportedSvgMarkup(markup));
+    const svgBlob = new Blob([finalMarkup], { type: 'image/svg+xml;charset=utf-8' });
+    this.downloadBlob(svgBlob, toFileName(title, 'svg'));
   };
 
   protected readonly exportBoardToPng = async () => {
-    const exportNode = this.createBoardExportNode();
-
-    if (!exportNode) return;
-
     const title = this.boardTitle() || this.plan.title;
-
-    try {
-      const pngBlob = await toDomBlob(exportNode, {
-        cacheBust: true,
-        canvasHeight: canvasSize.height,
-        canvasWidth: canvasSize.width,
-        height: canvasSize.height,
-        pixelRatio: exportImagePixelRatio,
-        width: canvasSize.width
-      });
-
-      if (!pngBlob) throw new Error('Failed to encode board PNG');
-
-      this.downloadBlob(pngBlob, toFileName(title, 'png'));
-    } finally {
-      document.body.removeChild(exportNode);
-    }
+    const { height, markup, width } = this.buildBoardSvgMarkup();
+    const finalMarkup = this.sanitizeExportedSvgMarkup(markup);
+    const svgBlob = new Blob([finalMarkup], { type: 'image/svg+xml;charset=utf-8' });
+    const pngBlob = await this.svgBlobToPngBlob(svgBlob, width, height, exportImagePixelRatio);
+    this.downloadBlob(pngBlob, toFileName(title, 'png'));
   };
 
   private readonly loadBoard = async (planId: string) => {
     const token = ++this.loadToken;
     this.closeLiveConnection();
     this.isApplyingRemoteBoard = true;
+    this.historySnapshot = null;
+    this.historyPast = [];
+    this.historyFuture = [];
     this.boardTitle.set('');
     this.currentPlanId.set(planId);
     this.nodes.set([]);
@@ -1489,21 +1639,37 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   };
 
   private readonly buildBoardSvgMarkup = () => {
+    const bounds = toExportBounds(this.renderedNodes());
+    const width = Math.max(1, toFiniteNumber(bounds.width, canvasSize.width));
+    const height = Math.max(1, toFiniteNumber(bounds.height, canvasSize.height));
+    const minX = toFiniteNumber(bounds.minX, 0);
+    const minY = toFiniteNumber(bounds.minY, 0);
     const boardEdges = this.renderEdgesToSvg();
     const boardNodes = this.renderNodesToSvg();
+    const translateX = -minX;
+    const translateY = -minY;
 
-    return `
-<svg xmlns="http://www.w3.org/2000/svg" width="${canvasSize.width}" height="${canvasSize.height}" viewBox="0 0 ${canvasSize.width} ${canvasSize.height}">
+    const markup = `
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
   <defs>
     <pattern id="grid-pattern" width="24" height="24" patternUnits="userSpaceOnUse">
       <circle cx="1" cy="1" r="1" fill="#d8dee8" />
     </pattern>
   </defs>
-  <rect x="0" y="0" width="${canvasSize.width}" height="${canvasSize.height}" fill="#f6f4ef" />
-  <rect x="0" y="0" width="${canvasSize.width}" height="${canvasSize.height}" fill="url(#grid-pattern)" />
-  ${boardEdges}
-  ${boardNodes}
+  <rect x="0" y="0" width="${width}" height="${height}" fill="#f6f4ef" />
+  <rect x="0" y="0" width="${width}" height="${height}" fill="url(#grid-pattern)" />
+  <g transform="translate(${translateX} ${translateY})">
+    ${boardEdges}
+    ${boardNodes}
+  </g>
 </svg>`.trim();
+
+    return {
+      height,
+      markup,
+      width
+    };
   };
 
   private readonly renderEdgesToSvg = () => {
@@ -1568,25 +1734,28 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
           end: arrowNeckOffset,
           start: isBidirectional(edge) ? arrowNeckOffset : 0
         });
-        const lineStyle = edge.style.lineStyle === 'dashed' ? ' stroke-dasharray="8 6"' : '';
         const color = escapeXml(edge.style.color);
         const label = edge.label?.trim() ?? '';
-        const sourceCenter = getNodeCenter(source);
-        const targetCenter = getNodeCenter(target);
-        const labelX = (sourceCenter.x + targetCenter.x) / 2;
-        const labelY = (sourceCenter.y + targetCenter.y) / 2 - 10;
+        const labelPoint = getConnectorLabelPoint(source, target, edge.style.type, edge.sourceHandle, edge.targetHandle, {
+          end: arrowNeckOffset,
+          start: isBidirectional(edge) ? arrowNeckOffset : 0
+        });
+        const labelX = labelPoint.x;
+        const labelY = labelPoint.y - 10;
         const targetHandle = toHandleSide(edge.targetHandle) ?? inferTargetHandle(source, target);
         const sourceHandle = toHandleSide(edge.sourceHandle) ?? inferSourceHandle(source, target);
         const endMarkerId = markerIdForColorAndAngle(edge.style.color, toInboundAngle(targetHandle));
         const startMarkerId = markerIdForColorAndAngle(edge.style.color, toInboundAngle(sourceHandle));
-        const markerStart = isBidirectional(edge) ? ` marker-start="url(#${startMarkerId})"` : '';
+        const bidirectional = isBidirectional(edge);
+        const markerStart = bidirectional ? ` marker-start="url(#${startMarkerId})"` : '';
+        const liveLineStyleClass = edge.style.lineStyle === 'dashed' ? 'edge-line-live-dashed' : 'edge-line-live-solid';
 
         return `
 <g>
-  <path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"${lineStyle}${markerStart} marker-end="url(#${endMarkerId})" />
+  <path d="${path}" fill="none" stroke="${color}" class="edge-line-live-export edge-line-live-export-forward ${liveLineStyleClass}"${markerStart} marker-end="url(#${endMarkerId})" />
   ${
     label
-      ? `<text x="${labelX}" y="${labelY}" fill="${color}" font-size="13" font-weight="700" text-anchor="middle">${escapeXml(label)}</text>`
+      ? `<text x="${labelX}" y="${labelY}" fill="${color}" font-size="13" font-weight="700" paint-order="stroke" stroke="#ffffff" stroke-opacity="0.92" stroke-linejoin="round" stroke-width="8" text-anchor="middle">${escapeXml(label)}</text>`
       : ''
   }
 </g>`.trim();
@@ -1607,12 +1776,43 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       })
       .join('');
 
+    const edgeAnimationStyles = `
+<style>
+  .edge-line-live-export {
+    animation: edge-dash-flow 0.95s linear infinite;
+    opacity: 0.95;
+    pointer-events: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2.6;
+  }
+  .edge-line-live-solid {
+    stroke-dasharray: 30 16;
+  }
+  .edge-line-live-dashed {
+    stroke-dasharray: 24 12;
+  }
+  .edge-line-live-export-reverse {
+    animation-name: edge-dash-flow-reverse;
+  }
+  @keyframes edge-dash-flow {
+    to {
+      stroke-dashoffset: -46;
+    }
+  }
+  @keyframes edge-dash-flow-reverse {
+    to {
+      stroke-dashoffset: 46;
+    }
+  }
+</style>`.trim();
+
     const markerDefs = `
 <defs>
   ${markerDefsByColor}
 </defs>`.trim();
 
-    return `${markerDefs}\n${edgeGroups}`;
+    return `${edgeAnimationStyles}\n${markerDefs}\n${edgeGroups}`;
   };
 
   private readonly renderNodesToSvg = () =>
@@ -1626,13 +1826,25 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     const borderWidth = node.kind === 'TEXT' ? 0 : node.kind === 'FRAME' ? 2 : 1.6;
     const shapeMarkup = this.renderNodeShapeSvg(node, fillColor, borderColor, borderWidth);
     const iconMarkup = node.kind === 'GOAL' ? this.renderGoalIconSvg(node, borderColor) : '';
+    const textClipId = toSvgSafeId('export-node-text-clip', node.id);
+    const textClipX = node.kind === 'TASK' ? 16 : node.kind === 'GOAL' ? 24 : 8;
+    const textClipY = node.kind === 'GOAL' ? 12 : 8;
+    const textClipWidth = Math.max(1, node.width - textClipX - 8);
+    const textClipHeight = Math.max(1, node.height - textClipY - 8);
     const textMarkup = this.renderNodeTextSvg(node);
 
     return `
 <g transform="translate(${node.position.x} ${node.position.y})">
   ${shapeMarkup}
   ${iconMarkup}
-  ${textMarkup}
+  <defs>
+    <clipPath id="${textClipId}">
+      <rect x="${textClipX}" y="${textClipY}" width="${textClipWidth}" height="${textClipHeight}" />
+    </clipPath>
+  </defs>
+  <g clip-path="url(#${textClipId})">
+    ${textMarkup}
+  </g>
 </g>`.trim();
   };
 
@@ -1698,21 +1910,6 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
         return `<polygon points="0,0 ${node.width - cut},0 ${node.width},${cut} ${node.width},${node.height} 0,${node.height}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
       }
 
-      if (variant === 'CLOUD') {
-        const path = [
-          `M ${node.width * 0.12} ${node.height * 0.72}`,
-          `C ${node.width * 0.04} ${node.height * 0.72}, ${node.width * 0.02} ${node.height * 0.58}, ${node.width * 0.09} ${node.height * 0.52}`,
-          `C ${node.width * 0.09} ${node.height * 0.36}, ${node.width * 0.23} ${node.height * 0.25}, ${node.width * 0.36} ${node.height * 0.3}`,
-          `C ${node.width * 0.43} ${node.height * 0.14}, ${node.width * 0.64} ${node.height * 0.12}, ${node.width * 0.74} ${node.height * 0.28}`,
-          `C ${node.width * 0.87} ${node.height * 0.24}, ${node.width * 0.97} ${node.height * 0.35}, ${node.width * 0.92} ${node.height * 0.5}`,
-          `C ${node.width * 0.98} ${node.height * 0.56}, ${node.width * 0.98} ${node.height * 0.67}, ${node.width * 0.9} ${node.height * 0.72}`,
-          `L ${node.width * 0.1} ${node.height * 0.72}`,
-          'Z'
-        ].join(' ');
-
-        return `<path d="${path}" fill="${fill}" stroke="none" />`;
-      }
-
       if (variant === 'CIRCLE') {
         const radius = Math.min(node.width, node.height) / 2;
         return `<circle cx="${node.width / 2}" cy="${node.height / 2}" r="${radius}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
@@ -1741,14 +1938,15 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   };
 
   private readonly renderNodeTextSvg = (node: CanvasNodeView) => {
-    const lines = toNodeTextLines(node);
+    const fontSize = node.textStyle?.fontSize ?? (node.kind === 'TEXT' ? 22 : 14);
+    const horizontalPadding = node.kind === 'TASK' ? 36 : node.kind === 'GOAL' ? 36 : 12;
+    const maxTextWidth = Math.max(24, node.width - horizontalPadding - 12);
+    const lines = toNodeTextLines(node).flatMap((line) => wrapSvgLineToWidth(line, maxTextWidth, fontSize));
 
     if (lines.length === 0) return '';
 
-    const fontSize = node.textStyle?.fontSize ?? (node.kind === 'TEXT' ? 22 : 14);
     const lineHeight = Math.max(14, Math.round(fontSize * 1.22));
     const anchor = toTextAnchor(node.textStyle?.align);
-    const horizontalPadding = node.kind === 'TASK' ? 36 : node.kind === 'GOAL' ? 36 : 12;
     const x = toTextX(anchor, node.width, horizontalPadding);
     const yOffset = getVerticalOffset(node.textStyle?.verticalAlign, node.height, lines.length * lineHeight, 12);
     const firstLineY = yOffset + fontSize;
@@ -1784,36 +1982,443 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     return response.blob();
   };
 
-  private readonly createBoardExportNode = () => {
+  private readonly svgDataUrlToMarkup = (dataUrl: string): string | null => {
+    const separatorIndex = dataUrl.indexOf(',');
+
+    if (separatorIndex < 0) return null;
+
+    const metadata = dataUrl.slice(0, separatorIndex);
+    const payload = dataUrl.slice(separatorIndex + 1);
+
+    try {
+      if (metadata.includes(';base64')) {
+        return atob(payload);
+      }
+
+      return decodeURIComponent(payload);
+    } catch {
+      return null;
+    }
+  };
+
+  private readonly sanitizeExportedSvgMarkup = (svgMarkup: string) => {
+    const parser = new DOMParser();
+    const parsedDocument = parser.parseFromString(svgMarkup, 'image/svg+xml');
+    const root = parsedDocument.documentElement;
+
+    if (!root || root.nodeName.toLowerCase() !== 'svg') return svgMarkup;
+
+    parsedDocument
+      .querySelectorAll<SVGPathElement>(
+        'path.edge-line, path.edge-line-live, path.edge-line-preview, path.edge-line-live-export, path.edge-hit-area'
+      )
+      .forEach((path) => {
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke-linecap', 'round');
+        path.setAttribute('stroke-linejoin', 'round');
+        path.removeAttribute('filter');
+
+        const style = path.getAttribute('style');
+
+        if (!style) return;
+
+        const sanitizedStyle = style
+          .replace(/(^|;)\s*filter\s*:[^;]*/gi, '$1')
+          .replace(/(^|;)\s*-webkit-filter\s*:[^;]*/gi, '$1')
+          .replace(/;;+/g, ';')
+          .trim()
+          .replace(/^;|;$/g, '');
+
+        if (!sanitizedStyle) {
+          path.removeAttribute('style');
+          return;
+        }
+
+        path.setAttribute('style', sanitizedStyle);
+      });
+
+    return new XMLSerializer().serializeToString(parsedDocument);
+  };
+
+  private readonly injectSvgInteractivity = (svgMarkup: string) => {
+    if (!svgMarkup.includes('<svg') || svgMarkup.includes('id="pdi-svg-interactive-runtime"')) {
+      return svgMarkup;
+    }
+
+    const runtimeStyle = `<style id="pdi-svg-interactive-style"><![CDATA[
+svg[data-pdi-interactive="true"] { cursor: grab; }
+svg[data-pdi-panning="true"] { cursor: grabbing; }
+@keyframes edge-dash-flow {
+  to {
+    stroke-dashoffset: -46;
+  }
+}
+@keyframes edge-dash-flow-reverse {
+  to {
+    stroke-dashoffset: 46;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .edge-line-live {
+    animation: edge-dash-flow 0.95s linear infinite !important;
+  }
+}
+]]></style>`;
+
+    const runtimeScript = `<script id="pdi-svg-interactive-runtime" type="application/ecmascript"><![CDATA[
+(function () {
+  var svg = document.documentElement;
+  if (!svg || svg.nodeName.toLowerCase() !== 'svg') return;
+  if (svg.getAttribute('data-pdi-interactive') === 'true') return;
+  var ns = 'http://www.w3.org/2000/svg';
+  var contentGroup = svg.querySelector('#pdi-svg-panzoom-content');
+
+  if (!contentGroup) {
+    contentGroup = document.createElementNS(ns, 'g');
+    contentGroup.setAttribute('id', 'pdi-svg-panzoom-content');
+
+    var toMove = [];
+    Array.from(svg.childNodes).forEach(function (node) {
+      if (node.nodeType !== Node.ELEMENT_NODE) return;
+      var tag = node.nodeName.toLowerCase();
+      if (tag === 'defs' || tag === 'style' || tag === 'script' || tag === 'title' || tag === 'desc') return;
+      toMove.push(node);
+    });
+
+    toMove.forEach(function (node) {
+      contentGroup.appendChild(node);
+    });
+
+    svg.appendChild(contentGroup);
+  }
+
+  var state = { scale: 1, tx: 0, ty: 0 };
+  var minScale = 1;
+  var maxScale = 4;
+  var panState = null;
+
+  var applyTransform = function () {
+    contentGroup.setAttribute('transform', 'translate(' + state.tx + ' ' + state.ty + ') scale(' + state.scale + ')');
+  };
+
+  var toSvgPoint = function (event) {
+    if (!svg.createSVGPoint || !svg.getScreenCTM) return null;
+    var ctm = svg.getScreenCTM();
+    if (!ctm || !ctm.inverse) return null;
+    var point = svg.createSVGPoint();
+    point.x = event.clientX;
+    point.y = event.clientY;
+    return point.matrixTransform(ctm.inverse());
+  };
+
+  var startPan = function (event) {
+    if (event.button !== 0) return;
+    var point = toSvgPoint(event);
+    if (!point) return;
+
+    panState = { pointerId: event.pointerId, x: point.x, y: point.y };
+    svg.setAttribute('data-pdi-panning', 'true');
+    if (svg.setPointerCapture) {
+      try {
+        svg.setPointerCapture(event.pointerId);
+      } catch (_) {}
+    }
+  };
+
+  var movePan = function (event) {
+    if (!panState || event.pointerId !== panState.pointerId) return;
+    var point = toSvgPoint(event);
+    if (!point) return;
+
+    state.tx += point.x - panState.x;
+    state.ty += point.y - panState.y;
+    panState.x = point.x;
+    panState.y = point.y;
+    applyTransform();
+  };
+
+  var endPan = function (event) {
+    if (!panState || event.pointerId !== panState.pointerId) return;
+    panState = null;
+    svg.removeAttribute('data-pdi-panning');
+    if (svg.releasePointerCapture) {
+      try {
+        svg.releasePointerCapture(event.pointerId);
+      } catch (_) {}
+    }
+  };
+
+  var zoomAtPoint = function (event) {
+    if (event.cancelable) event.preventDefault();
+    var point = toSvgPoint(event);
+    if (!point) return;
+
+    var factor = Math.exp(-event.deltaY * 0.0018);
+    var nextScale = Math.min(maxScale, Math.max(minScale, state.scale * factor));
+    if (nextScale === state.scale) return;
+
+    var appliedFactor = nextScale / state.scale;
+    state.tx = point.x - appliedFactor * (point.x - state.tx);
+    state.ty = point.y - appliedFactor * (point.y - state.ty);
+    state.scale = nextScale;
+    applyTransform();
+  };
+
+  var resetView = function () {
+    state = { scale: 1, tx: 0, ty: 0 };
+    applyTransform();
+  };
+
+  svg.setAttribute('data-pdi-interactive', 'true');
+  applyTransform();
+  svg.addEventListener('pointerdown', startPan);
+  svg.addEventListener('pointermove', movePan);
+  svg.addEventListener('pointerup', endPan);
+  svg.addEventListener('pointercancel', endPan);
+  svg.addEventListener('wheel', zoomAtPoint, { passive: false });
+  svg.addEventListener('dblclick', function (event) {
+    if (event.cancelable) event.preventDefault();
+    resetView();
+  });
+})();
+]]></script>`;
+
+    return svgMarkup.replace(/<\/svg>\s*$/i, `${runtimeStyle}${runtimeScript}</svg>`);
+  };
+
+  private readonly createVisualExportNode = (zoomScale: number) => {
     const plane = this.planeElement()?.nativeElement;
 
     if (!plane) return null;
 
+    const bounds = toExportBounds(this.renderedNodes());
+    const width = Math.max(1, toFiniteNumber(bounds.width, canvasSize.width));
+    const height = Math.max(1, toFiniteNumber(bounds.height, canvasSize.height));
+    const minX = toFiniteNumber(bounds.minX, 0);
+    const minY = toFiniteNumber(bounds.minY, 0);
     const exportNode = document.createElement('div');
+
     exportNode.style.background = 'radial-gradient(circle at 1px 1px, #d8dee8 1px, transparent 0), #f6f4ef';
     exportNode.style.backgroundSize = '24px 24px';
-    exportNode.style.height = `${canvasSize.height}px`;
-    exportNode.style.left = '-100000px';
+    exportNode.style.height = `${height}px`;
+    exportNode.style.left = '0';
     exportNode.style.overflow = 'hidden';
     exportNode.style.pointerEvents = 'none';
     exportNode.style.position = 'fixed';
     exportNode.style.top = '0';
-    exportNode.style.width = `${canvasSize.width}px`;
+    exportNode.style.width = `${width}px`;
     exportNode.style.zIndex = '-1';
 
     const planeClone = plane.cloneNode(true);
 
     if (!(planeClone instanceof HTMLDivElement)) return null;
 
-    planeClone.style.height = `${canvasSize.height}px`;
-    planeClone.style.transform = 'scale(1)';
+    const safeZoomScale = Number.isFinite(zoomScale) && zoomScale > 0 ? zoomScale : 1;
+
+    planeClone.style.height = `${canvasSize.height * safeZoomScale}px`;
+    planeClone.style.left = `${-minX}px`;
+    planeClone.style.position = 'absolute';
+    planeClone.style.top = `${-minY}px`;
+    planeClone.style.transform = `scale(${safeZoomScale})`;
     planeClone.style.transformOrigin = 'left top';
-    planeClone.style.width = `${canvasSize.width}px`;
+    planeClone.style.width = `${canvasSize.width * safeZoomScale}px`;
+
+    planeClone.querySelectorAll<HTMLElement>('.edge-line, .edge-line-live, .edge-line-preview').forEach((edgeLine) => {
+      edgeLine.style.filter = 'none';
+      edgeLine.style.webkitFilter = 'none';
+      edgeLine.style.fill = 'none';
+      edgeLine.style.strokeLinecap = 'round';
+      edgeLine.style.strokeLinejoin = 'round';
+    });
+
     exportNode.appendChild(planeClone);
     document.body.appendChild(exportNode);
 
-    return exportNode;
+    return {
+      cleanup: () => {
+        if (exportNode.parentNode) {
+          exportNode.parentNode.removeChild(exportNode);
+        }
+      },
+      height,
+      node: exportNode,
+      width
+    };
   };
+
+  private readonly undoBoardChange = () => {
+    this.finalizeHistoryBatch();
+
+    if (this.historyPast.length === 0) return false;
+
+    const previousSnapshot = this.historyPast.pop();
+
+    if (!previousSnapshot) return false;
+
+    const currentSnapshot = JSON.stringify(toSaveBoard(this.boardTitle() || this.plan.title, this.nodes(), this.edges()));
+    this.historyFuture.push(currentSnapshot);
+
+    if (this.historyFuture.length > historyMaxEntries) {
+      this.historyFuture = this.historyFuture.slice(this.historyFuture.length - historyMaxEntries);
+    }
+
+    this.applyHistorySnapshot(previousSnapshot);
+    return true;
+  };
+
+  private readonly redoBoardChange = () => {
+    this.finalizeHistoryBatch();
+
+    if (this.historyFuture.length === 0) return false;
+
+    const nextSnapshot = this.historyFuture.pop();
+
+    if (!nextSnapshot) return false;
+
+    const currentSnapshot = JSON.stringify(toSaveBoard(this.boardTitle() || this.plan.title, this.nodes(), this.edges()));
+    this.historyPast.push(currentSnapshot);
+
+    if (this.historyPast.length > historyMaxEntries) {
+      this.historyPast = this.historyPast.slice(this.historyPast.length - historyMaxEntries);
+    }
+
+    this.applyHistorySnapshot(nextSnapshot);
+    return true;
+  };
+
+  private readonly applyHistorySnapshot = (snapshot: string) => {
+    const planId = this.currentPlanId() ?? this.plan.id;
+    const parsed = JSON.parse(snapshot) as ReturnType<typeof toSaveBoard>;
+    const boardPayload = {
+      edges: parsed.edges,
+      id: this.lastPersistedPlanId ?? `local-history-${planId}`,
+      nodes: parsed.nodes,
+      pdiPlanId: planId,
+      title: parsed.title,
+      updatedAt: new Date().toISOString()
+    } as Parameters<typeof toCanvasNodes>[0];
+
+    this.isRestoringHistory = true;
+    this.boardTitle.set(parsed.title);
+    this.nodes.set(toCanvasNodes(boardPayload));
+    this.edges.set(toCanvasEdges(boardPayload));
+    this.selectedNodeIds.set([]);
+    this.selectedNodeId.set(null);
+    this.selectedEdgeId.set(null);
+    this.connectorSourceId.set(null);
+    this.activeConnector.set(null);
+    this.historySnapshot = snapshot;
+    this.isRestoringHistory = false;
+
+    window.requestAnimationFrame(() => {
+      this.syncStageViewport();
+    });
+  };
+
+  private readonly withHistoryBatch = (operation: () => void) => {
+    this.beginHistoryBatch();
+
+    try {
+      operation();
+    } finally {
+      this.endHistoryBatch();
+    }
+  };
+
+  private readonly beginHistoryBatch = () => {
+    if (this.historyBatchDepth === 0) {
+      this.historyBatchBaseSnapshot = JSON.stringify(toSaveBoard(this.boardTitle() || this.plan.title, this.nodes(), this.edges()));
+    }
+
+    this.historyBatchDepth += 1;
+  };
+
+  private readonly endHistoryBatch = () => {
+    if (this.historyBatchDepth === 0) return;
+
+    this.historyBatchDepth -= 1;
+
+    if (this.historyBatchDepth > 0) return;
+
+    this.commitHistoryBatch();
+  };
+
+  private readonly finalizeHistoryBatch = () => {
+    if (this.historyBatchDepth === 0) return;
+
+    this.historyBatchDepth = 0;
+    this.commitHistoryBatch();
+  };
+
+  private readonly commitHistoryBatch = () => {
+    const baseSnapshot = this.historyBatchBaseSnapshot;
+    this.historyBatchBaseSnapshot = null;
+    const nextSnapshot = JSON.stringify(toSaveBoard(this.boardTitle() || this.plan.title, this.nodes(), this.edges()));
+
+    if (this.historySnapshot === null) {
+      this.historySnapshot = nextSnapshot;
+      this.historyPast = [];
+      this.historyFuture = [];
+      return;
+    }
+
+    if (!baseSnapshot || nextSnapshot === baseSnapshot) {
+      this.historySnapshot = nextSnapshot;
+      return;
+    }
+
+    if (this.isApplyingRemoteBoard || this.isRestoringHistory) {
+      this.historySnapshot = nextSnapshot;
+      return;
+    }
+
+    this.historyPast.push(baseSnapshot);
+
+    if (this.historyPast.length > historyMaxEntries) {
+      this.historyPast = this.historyPast.slice(this.historyPast.length - historyMaxEntries);
+    }
+
+    this.historyFuture = [];
+    this.historySnapshot = nextSnapshot;
+  };
+
+  private readonly svgBlobToPngBlob = async (svgBlob: Blob, width: number, height: number, pixelRatio: number) => {
+    const objectUrl = URL.createObjectURL(svgBlob);
+
+    try {
+      const image = await this.loadImageFromUrl(objectUrl);
+      const canvas = document.createElement('canvas');
+
+      canvas.width = Math.round(width * pixelRatio);
+      canvas.height = Math.round(height * pixelRatio);
+
+      const context = canvas.getContext('2d');
+
+      if (!context) throw new Error('Failed to create canvas 2D context');
+
+      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      context.drawImage(image, 0, 0, width, height);
+
+      const pngBlob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob((blob) => resolve(blob), 'image/png');
+      });
+
+      if (!pngBlob) throw new Error('Failed to encode board PNG');
+
+      return pngBlob;
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
+  };
+
+  private readonly loadImageFromUrl = (url: string) =>
+    new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image();
+
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error('Failed to load board SVG image'));
+      image.src = url;
+    });
 
   private readonly edgeHorizontalDirection = (edge: CanvasEdgeView): Exclude<CanvasEdgeDirection, 'both'> => {
     const source = this.nodes().find((node) => node.id === edge.source);
@@ -1878,18 +2483,20 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       return accumulator;
     }, new Set<string>());
 
-    this.nodes.update((nodes) => nodes.filter((node) => !nodeIdsToDelete.has(node.id)));
-    this.edges.update((edges) =>
-      edges.filter((edge) => !nodeIdsToDelete.has(edge.source) && !nodeIdsToDelete.has(edge.target))
-    );
+    this.withHistoryBatch(() => {
+      this.nodes.update((nodes) => nodes.filter((node) => !nodeIdsToDelete.has(node.id)));
+      this.edges.update((edges) =>
+        edges.filter((edge) => !nodeIdsToDelete.has(edge.source) && !nodeIdsToDelete.has(edge.target))
+      );
 
-    if (this.connectorSourceId() && nodeIdsToDelete.has(this.connectorSourceId()!)) {
-      this.connectorSourceId.set(null);
-    }
+      if (this.connectorSourceId() && nodeIdsToDelete.has(this.connectorSourceId()!)) {
+        this.connectorSourceId.set(null);
+      }
 
-    this.selectedNodeIds.set([]);
-    this.selectedNodeId.set(null);
-    this.selectedEdgeId.set(null);
+      this.selectedNodeIds.set([]);
+      this.selectedNodeId.set(null);
+      this.selectedEdgeId.set(null);
+    });
 
     return true;
   };
