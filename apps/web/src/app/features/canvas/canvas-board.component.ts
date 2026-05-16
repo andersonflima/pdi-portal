@@ -1832,7 +1832,7 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     const edgeAnimationStyles = `
 <style>
   .edge-line-live-export {
-    animation: edge-dash-flow 0.95s linear infinite;
+    animation: edge-dash-flow 0.45s linear infinite;
     opacity: 0.95;
     pointer-events: none;
     stroke-linecap: round;
@@ -1840,22 +1840,22 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     stroke-width: 2.6;
   }
   .edge-line-live-solid {
-    stroke-dasharray: 30 16;
+    stroke-dasharray: 36 16;
   }
   .edge-line-live-dashed {
-    stroke-dasharray: 24 12;
+    stroke-dasharray: 56 24;
   }
   .edge-line-live-export-reverse {
     animation-name: edge-dash-flow-reverse;
   }
   @keyframes edge-dash-flow {
     to {
-      stroke-dashoffset: -46;
+      stroke-dashoffset: -72;
     }
   }
   @keyframes edge-dash-flow-reverse {
     to {
-      stroke-dashoffset: 46;
+      stroke-dashoffset: 72;
     }
   }
 </style>`.trim();
@@ -2116,22 +2116,22 @@ svg[data-pdi-panning="true"] { cursor: grabbing; }
   stroke-dasharray: 8 6;
 }
 .edge-line-live {
-  animation: edge-dash-flow 0.95s linear infinite !important;
+  animation: edge-dash-flow 0.45s linear infinite !important;
   fill: none;
   opacity: 0.95;
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 2.6;
-  stroke-dasharray: 30 16;
+  stroke-dasharray: 36 16;
 }
 .edge-line-live-solid {
-  stroke-dasharray: 30 16;
+  stroke-dasharray: 36 16;
 }
 .edge-line-live-dashed {
-  stroke-dasharray: 24 12;
+  stroke-dasharray: 56 24;
 }
 .edge-line-live-export {
-  animation: edge-dash-flow 0.95s linear infinite !important;
+  animation: edge-dash-flow 0.45s linear infinite !important;
   fill: none;
   opacity: 0.95;
   stroke-linecap: round;
@@ -2142,27 +2142,27 @@ svg[data-pdi-panning="true"] { cursor: grabbing; }
   animation: none !important;
 }
 .edge-line-live-bidirectional-forward {
-  animation: edge-dash-flow 0.95s linear infinite !important;
+  animation: edge-dash-flow 0.45s linear infinite !important;
 }
 .edge-line-live-bidirectional-reverse {
-  animation: edge-dash-flow-reverse 0.95s linear infinite !important;
+  animation: edge-dash-flow-reverse 0.45s linear infinite !important;
 }
 .edge-line-live-export-reverse {
-  animation: edge-dash-flow-reverse 0.95s linear infinite !important;
+  animation: edge-dash-flow-reverse 0.45s linear infinite !important;
 }
 @keyframes edge-dash-flow {
   to {
-    stroke-dashoffset: -46;
+    stroke-dashoffset: -72;
   }
 }
 @keyframes edge-dash-flow-reverse {
   to {
-    stroke-dashoffset: 46;
+    stroke-dashoffset: 72;
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .edge-line-live {
-    animation: edge-dash-flow 0.95s linear infinite !important;
+    animation: edge-dash-flow 0.45s linear infinite !important;
   }
 }
 ]]></style>`;
@@ -2364,12 +2364,12 @@ svg[data-pdi-panning="true"] { cursor: grabbing; }
         }
 
         if (edgeLine.classList.contains('edge-line-live-dashed')) {
-          edgeLine.style.strokeDasharray = '24 12';
+          edgeLine.style.strokeDasharray = '56 24';
           return;
         }
 
         if (edgeLine.classList.contains('edge-line-live') || edgeLine.classList.contains('edge-line-live-export')) {
-          edgeLine.style.strokeDasharray = '30 16';
+          edgeLine.style.strokeDasharray = '36 16';
         }
       });
 

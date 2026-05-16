@@ -1,14 +1,13 @@
 :host {
-  inset: 0;
+  left: 0;
   pointer-events: none;
   position: absolute;
+  top: 0;
   z-index: 200000;
 }
 
 .edge-layer {
   display: block;
-  height: 100%;
-  width: 100%;
 }
 
 .edge-hit-area {
@@ -20,7 +19,6 @@
 
 .edge-line {
   fill: none;
-  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.8));
   pointer-events: none;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -36,11 +34,11 @@
 }
 
 .edge-line-live {
-  animation: edge-dash-flow 0.95s linear infinite;
+  animation: edge-dash-flow 0.45s linear infinite;
   fill: none;
   opacity: 0.95;
   pointer-events: none;
-  stroke-dasharray: 30 16;
+  stroke-dasharray: 36 16;
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 2.6;
@@ -51,19 +49,19 @@
 }
 
 .edge-line-live-bidirectional-forward {
-  animation: edge-dash-flow 0.95s linear infinite;
+  animation: edge-dash-flow 0.45s linear infinite;
 }
 
 .edge-line-live-bidirectional-reverse {
-  animation: edge-dash-flow-reverse 0.95s linear infinite;
+  animation: edge-dash-flow-reverse 0.45s linear infinite;
 }
 
 .edge-line-live-dashed {
-  stroke-dasharray: 24 12;
+  stroke-dasharray: 56 24;
 }
 
 .is-selected .edge-line-live {
-  animation-duration: 0.65s;
+  animation-duration: 0.32s;
   stroke-width: 3.2;
 }
 
@@ -81,13 +79,13 @@
 
 @keyframes edge-dash-flow {
   to {
-    stroke-dashoffset: -46;
+    stroke-dashoffset: -72;
   }
 }
 
 @keyframes edge-dash-flow-reverse {
   to {
-    stroke-dashoffset: 46;
+    stroke-dashoffset: 72;
   }
 }
 
