@@ -2106,13 +2106,37 @@ svg[data-pdi-interactive="true"] {
   width: 100vw;
 }
 svg[data-pdi-panning="true"] { cursor: grabbing; }
+.edge-line {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+.edge-line-dashed {
+  stroke-dasharray: 8 6;
+}
 .edge-line-live {
   animation: edge-dash-flow 0.95s linear infinite !important;
+  fill: none;
   opacity: 0.95;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.6;
+  stroke-dasharray: 30 16;
+}
+.edge-line-live-solid {
   stroke-dasharray: 30 16;
 }
 .edge-line-live-dashed {
   stroke-dasharray: 24 12;
+}
+.edge-line-live-export {
+  animation: edge-dash-flow 0.95s linear infinite !important;
+  fill: none;
+  opacity: 0.95;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.6;
 }
 .edge-line-live-bidirectional {
   animation: none !important;
@@ -2121,6 +2145,9 @@ svg[data-pdi-panning="true"] { cursor: grabbing; }
   animation: edge-dash-flow 0.95s linear infinite !important;
 }
 .edge-line-live-bidirectional-reverse {
+  animation: edge-dash-flow-reverse 0.95s linear infinite !important;
+}
+.edge-line-live-export-reverse {
   animation: edge-dash-flow-reverse 0.95s linear infinite !important;
 }
 @keyframes edge-dash-flow {
