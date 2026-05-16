@@ -15,6 +15,7 @@ import {
   viewChild
 } from '@angular/core';
 import type { CanvasNodeKind, CanvasShapeVariant, PdiPlan, User } from '@pdi/contracts';
+import { toBlob as toDomBlob, toSvg as toDomSvg } from 'html-to-image';
 import { LucideAngularModule } from 'lucide-angular';
 import { ApiService } from '../../core/api/api.service';
 import { CanvasEdgeLayerComponent } from './components/canvas-edge-layer.component';
@@ -65,6 +66,7 @@ const minimapWidth = 240;
 const minimapHeight = Math.round((minimapWidth * canvasSize.height) / canvasSize.width);
 const connectorHandleHitRadius = 14;
 const exportImagePixelRatio = 2;
+const exportZoomScale = 1;
 const arrowNeckOffset = 18;
 const exportBoundsPadding = 64;
 const historyMaxEntries = 200;
@@ -1066,18 +1068,69 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
   protected readonly exportBoardToSvg = async () => {
     const title = this.boardTitle() || this.plan.title;
-    const { markup } = this.buildBoardSvgMarkup();
-    const finalMarkup = this.injectSvgInteractivity(this.sanitizeExportedSvgMarkup(markup));
-    const svgBlob = new Blob([finalMarkup], { type: 'image/svg+xml;charset=utf-8' });
-    this.downloadBlob(svgBlob, toFileName(title, 'svg'));
+    const visualExportNode = this.createVisualExportNode(exportZoomScale);
+
+    if (visualExportNode) {
+      try {
+        if ('fonts' in document) {
+          await (document as Document & { fonts?: { ready?: Promise<unknown> } }).fonts?.ready;
+        }
+
+        const dataUrl = await toDomSvg(visualExportNode.node, {
+          cacheBust: true,
+          height: visualExportNode.height,
+          width: visualExportNode.width
+        });
+        const svgMarkup = this.svgDataUrlToMarkup(dataUrl);
+        const svgBlob = svgMarkup
+          ? new Blob([this.injectSvgInteractivity(this.sanitizeExportedSvgMarkup(svgMarkup))], {
+              type: 'image/svg+xml;charset=utf-8'
+            })
+          : await this.dataUrlToBlob(dataUrl);
+        this.downloadBlob(svgBlob, toFileName(title, 'svg'));
+        return;
+      } finally {
+        visualExportNode.cleanup();
+      }
+    }
+
+    const { markup: fallbackMarkup } = this.buildBoardSvgMarkup();
+    const finalMarkup = this.injectSvgInteractivity(this.sanitizeExportedSvgMarkup(fallbackMarkup));
+    const fallbackBlob = new Blob([finalMarkup], { type: 'image/svg+xml;charset=utf-8' });
+    this.downloadBlob(fallbackBlob, toFileName(title, 'svg'));
   };
 
   protected readonly exportBoardToPng = async () => {
     const title = this.boardTitle() || this.plan.title;
-    const { height, markup, width } = this.buildBoardSvgMarkup();
-    const finalMarkup = this.sanitizeExportedSvgMarkup(markup);
-    const svgBlob = new Blob([finalMarkup], { type: 'image/svg+xml;charset=utf-8' });
-    const pngBlob = await this.svgBlobToPngBlob(svgBlob, width, height, exportImagePixelRatio);
+    const visualExportNode = this.createVisualExportNode(exportZoomScale);
+
+    if (visualExportNode) {
+      try {
+        if ('fonts' in document) {
+          await (document as Document & { fonts?: { ready?: Promise<unknown> } }).fonts?.ready;
+        }
+
+        const pngBlob = await toDomBlob(visualExportNode.node, {
+          cacheBust: true,
+          canvasHeight: visualExportNode.height,
+          canvasWidth: visualExportNode.width,
+          height: visualExportNode.height,
+          pixelRatio: exportImagePixelRatio,
+          width: visualExportNode.width
+        });
+
+        if (pngBlob) {
+          this.downloadBlob(pngBlob, toFileName(title, 'png'));
+          return;
+        }
+      } finally {
+        visualExportNode.cleanup();
+      }
+    }
+
+    const { height, markup: fallbackMarkup, width } = this.buildBoardSvgMarkup();
+    const fallbackSvg = new Blob([this.sanitizeExportedSvgMarkup(fallbackMarkup)], { type: 'image/svg+xml;charset=utf-8' });
+    const pngBlob = await this.svgBlobToPngBlob(fallbackSvg, width, height, exportImagePixelRatio);
     this.downloadBlob(pngBlob, toFileName(title, 'png'));
   };
 
@@ -2046,7 +2099,12 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     }
 
     const runtimeStyle = `<style id="pdi-svg-interactive-style"><![CDATA[
-svg[data-pdi-interactive="true"] { cursor: grab; }
+svg[data-pdi-interactive="true"] {
+  cursor: grab;
+  display: block;
+  height: 100vh;
+  width: 100vw;
+}
 svg[data-pdi-panning="true"] { cursor: grabbing; }
 @keyframes edge-dash-flow {
   to {
@@ -2070,6 +2128,13 @@ svg[data-pdi-panning="true"] { cursor: grabbing; }
   var svg = document.documentElement;
   if (!svg || svg.nodeName.toLowerCase() !== 'svg') return;
   if (svg.getAttribute('data-pdi-interactive') === 'true') return;
+  svg.setAttribute('width', '100vw');
+  svg.setAttribute('height', '100vh');
+  svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+  svg.style.width = '100vw';
+  svg.style.height = '100vh';
+  svg.style.display = 'block';
+  svg.style.margin = '0';
   var ns = 'http://www.w3.org/2000/svg';
   var contentGroup = svg.querySelector('#pdi-svg-panzoom-content');
 
@@ -2092,9 +2157,22 @@ svg[data-pdi-panning="true"] { cursor: grabbing; }
     svg.appendChild(contentGroup);
   }
 
-  var state = { scale: 1, tx: 0, ty: 0 };
-  var minScale = 1;
-  var maxScale = 4;
+  var viewBoxValues = (svg.getAttribute('viewBox') || '')
+    .trim()
+    .split(/[\\s,]+/)
+    .map(function (value) {
+      return Number(value);
+    });
+  var viewBoxWidth = viewBoxValues.length >= 4 && Number.isFinite(viewBoxValues[2]) ? viewBoxValues[2] : 0;
+  var viewBoxHeight = viewBoxValues.length >= 4 && Number.isFinite(viewBoxValues[3]) ? viewBoxValues[3] : 0;
+  var initialScale = 0.8;
+  var state = {
+    scale: initialScale,
+    tx: viewBoxWidth > 0 ? ((1 - initialScale) * viewBoxWidth) / 2 : 0,
+    ty: viewBoxHeight > 0 ? ((1 - initialScale) * viewBoxHeight) / 2 : 0
+  };
+  var minScale = 0.8;
+  var maxScale = 1.6;
   var panState = null;
 
   var applyTransform = function () {
@@ -2165,7 +2243,11 @@ svg[data-pdi-panning="true"] { cursor: grabbing; }
   };
 
   var resetView = function () {
-    state = { scale: 1, tx: 0, ty: 0 };
+    state = {
+      scale: initialScale,
+      tx: viewBoxWidth > 0 ? ((1 - initialScale) * viewBoxWidth) / 2 : 0,
+      ty: viewBoxHeight > 0 ? ((1 - initialScale) * viewBoxHeight) / 2 : 0
+    };
     applyTransform();
   };
 
@@ -2215,13 +2297,13 @@ svg[data-pdi-panning="true"] { cursor: grabbing; }
 
     const safeZoomScale = Number.isFinite(zoomScale) && zoomScale > 0 ? zoomScale : 1;
 
-    planeClone.style.height = `${canvasSize.height * safeZoomScale}px`;
-    planeClone.style.left = `${-minX}px`;
-    planeClone.style.position = 'absolute';
-    planeClone.style.top = `${-minY}px`;
-    planeClone.style.transform = `scale(${safeZoomScale})`;
+    planeClone.style.height = `${canvasSize.height}px`;
+    planeClone.style.left = '0';
+    planeClone.style.position = 'relative';
+    planeClone.style.top = '0';
+    planeClone.style.transform = `translate(${-minX}px, ${-minY}px) scale(${safeZoomScale})`;
     planeClone.style.transformOrigin = 'left top';
-    planeClone.style.width = `${canvasSize.width * safeZoomScale}px`;
+    planeClone.style.width = `${canvasSize.width}px`;
 
     planeClone.querySelectorAll<HTMLElement>('.edge-line, .edge-line-live, .edge-line-preview').forEach((edgeLine) => {
       edgeLine.style.filter = 'none';
