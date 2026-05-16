@@ -1,8 +1,9 @@
 import { NgStyle } from '@angular/common';
-import { Component, ElementRef, computed, inject, input, output, signal } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, computed, effect, inject, input, output, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import type { CanvasHandlePosition, CanvasNodeDataPatch, CanvasNodeView } from '../canvas.models';
 import { getNodeTextColor } from '../canvas.colors';
+import { nodeKindMeta } from '../canvas.constants';
 import { toTaskItemsFromText } from '../canvas.mappers';
 
 const toContentAlignment = (verticalAlign?: string) => {
@@ -30,18 +31,20 @@ const toNodeClassName = (node: CanvasNodeView, selected: boolean) =>
   templateUrl: './canvas-node.component.html',
   styleUrl: './canvas-node.component.css'
 })
-export class CanvasNodeComponent {
+export class CanvasNodeComponent implements AfterViewInit, OnDestroy {
   readonly node = input.required<CanvasNodeView>();
   readonly selected = input(false);
   readonly dataChange = output<CanvasNodeDataPatch>();
   readonly connectorStart = output<{ event: PointerEvent; handle: CanvasHandlePosition }>();
+  readonly editSessionEnd = output<void>();
+  readonly editSessionStart = output<void>();
   readonly resizeStart = output<PointerEvent>();
 
   private readonly hostElement = inject(ElementRef<HTMLElement>);
+  private autoResizeFrameId: number | null = null;
+  private isManualResizing = false;
   protected readonly isEditing = signal(false);
   protected readonly editingChecklistItemId = signal<string | null>(null);
-  private taskToggleTimeoutId: number | null = null;
-  private readonly checklistToggleTimeoutById = new Map<string, number>();
   protected readonly nodeClasses = computed(() => toNodeClassName(this.node(), this.selected()));
   protected readonly textValue = computed(() =>
     this.node().kind === 'TASK_LIST' ? (this.node().taskItems ?? []).map((item) => item.label).join('\n') : this.node().label
@@ -85,15 +88,38 @@ export class CanvasNodeComponent {
     event.stopPropagation();
   };
 
+  constructor() {
+    effect(() => {
+      const node = this.node();
+
+      node.height;
+      node.width;
+      node.label;
+      node.kind;
+      node.textStyle?.fontSize;
+      node.textStyle?.bold;
+      node.textStyle?.italic;
+      node.textStyle?.underline;
+      node.textStyle?.align;
+      node.textStyle?.verticalAlign;
+      node.taskItems?.length;
+
+      this.scheduleAutoHeight();
+    });
+  }
+
   protected readonly handleNodeDoubleClick = (event: Event) => {
     event.stopPropagation();
 
+    this.emitEditSessionStart();
     this.isEditing.set(true);
     this.focusEditableControl();
   };
 
   protected readonly handleResizeStart = (event: PointerEvent) => {
     event.stopPropagation();
+    this.isManualResizing = true;
+    window.addEventListener('pointerup', this.handleManualResizeEnd, { once: true });
     this.resizeStart.emit(event);
   };
 
@@ -105,31 +131,7 @@ export class CanvasNodeComponent {
 
   protected readonly handleTaskToggle = (event: MouseEvent) => {
     event.stopPropagation();
-
-    if (event.detail > 1) {
-      if (this.taskToggleTimeoutId !== null) {
-        window.clearTimeout(this.taskToggleTimeoutId);
-        this.taskToggleTimeoutId = null;
-      }
-      return;
-    }
-
-    this.taskToggleTimeoutId = window.setTimeout(() => {
-      this.dataChange.emit({ checked: !this.node().checked });
-      this.taskToggleTimeoutId = null;
-    }, 200);
-  };
-
-  protected readonly handleTaskEditStart = (event: Event) => {
-    event.stopPropagation();
-
-    if (this.taskToggleTimeoutId !== null) {
-      window.clearTimeout(this.taskToggleTimeoutId);
-      this.taskToggleTimeoutId = null;
-    }
-
-    this.isEditing.set(true);
-    this.focusEditableControl();
+    this.dataChange.emit({ checked: !this.node().checked });
   };
 
   protected readonly handleTaskLabelInput = (event: Event) => {
@@ -140,6 +142,7 @@ export class CanvasNodeComponent {
 
   protected readonly handleTaskLabelBlur = () => {
     this.isEditing.set(false);
+    this.emitEditSessionEnd();
   };
 
   protected readonly handleTaskLabelKeydown = (event: KeyboardEvent) => {
@@ -151,41 +154,21 @@ export class CanvasNodeComponent {
 
   protected readonly handleChecklistToggle = (event: MouseEvent, itemId: string) => {
     event.stopPropagation();
-
-    if (event.detail > 1) {
-      const timeoutId = this.checklistToggleTimeoutById.get(itemId);
-      if (timeoutId !== undefined) {
-        window.clearTimeout(timeoutId);
-        this.checklistToggleTimeoutById.delete(itemId);
-      }
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      this.dataChange.emit({
-        taskItems: (this.node().taskItems ?? []).map((item) =>
-          item.id === itemId ? { ...item, checked: !item.checked } : item
-        )
-      });
-      this.checklistToggleTimeoutById.delete(itemId);
-    }, 200);
-
-    this.checklistToggleTimeoutById.set(itemId, timeoutId);
+    this.dataChange.emit({
+      taskItems: (this.node().taskItems ?? []).map((item) =>
+        item.id === itemId ? { ...item, checked: !item.checked } : item
+      )
+    });
   };
 
   protected readonly handleChecklistEditStart = (event: Event, itemId: string) => {
     event.stopPropagation();
 
-    const timeoutId = this.checklistToggleTimeoutById.get(itemId);
-    if (timeoutId !== undefined) {
-      window.clearTimeout(timeoutId);
-      this.checklistToggleTimeoutById.delete(itemId);
-    }
-
     const item = (this.node().taskItems ?? []).find((candidate) => candidate.id === itemId);
 
     if (!item) return;
 
+    this.emitEditSessionStart();
     this.isEditing.set(true);
     this.editingChecklistItemId.set(itemId);
     this.focusEditableControl();
@@ -203,6 +186,7 @@ export class CanvasNodeComponent {
   protected readonly handleChecklistLabelBlur = () => {
     this.editingChecklistItemId.set(null);
     this.isEditing.set(false);
+    this.emitEditSessionEnd();
   };
 
   protected readonly handleChecklistLabelKeydown = (event: KeyboardEvent) => {
@@ -257,20 +241,87 @@ export class CanvasNodeComponent {
         control.setSelectionRange(length, length);
       }
 
-      this.resizeEditableTextarea(control);
+      this.resizeEditableTextarea(control, false);
     });
   };
 
-  private readonly resizeEditableTextarea = (target: EventTarget | null) => {
+  private readonly resizeEditableTextarea = (target: EventTarget | null, shouldResizeNode = true) => {
     if (!(target instanceof HTMLTextAreaElement)) return;
 
-    const editor = target.closest('.pdi-node-editor') as HTMLElement | null;
-    const maxHeight = editor?.clientHeight ?? 0;
     target.style.height = '0px';
     const fullHeight = target.scrollHeight;
-    const nextHeight = maxHeight > 0 ? Math.min(fullHeight, maxHeight) : fullHeight;
 
-    target.style.height = `${Math.max(nextHeight, 20)}px`;
-    target.style.overflowY = maxHeight > 0 && fullHeight > maxHeight ? 'auto' : 'hidden';
+    target.style.height = `${Math.max(fullHeight, 20)}px`;
+    target.style.overflowY = 'hidden';
+
+    if (shouldResizeNode) {
+      this.scheduleAutoHeight();
+    }
+  };
+
+  ngOnDestroy() {
+    if (this.autoResizeFrameId !== null) {
+      window.cancelAnimationFrame(this.autoResizeFrameId);
+      this.autoResizeFrameId = null;
+    }
+
+    window.removeEventListener('pointerup', this.handleManualResizeEnd);
+  }
+
+  ngAfterViewInit() {
+    this.scheduleAutoHeight();
+  }
+
+  private readonly scheduleAutoHeight = () => {
+    if (this.isManualResizing) return;
+
+    if (this.autoResizeFrameId !== null) {
+      window.cancelAnimationFrame(this.autoResizeFrameId);
+    }
+
+    this.autoResizeFrameId = window.requestAnimationFrame(() => {
+      this.autoResizeFrameId = null;
+      this.expandNodeToContent();
+    });
+  };
+
+  private readonly expandNodeToContent = () => {
+    const nodeElement = this.hostElement.nativeElement.querySelector('.pdi-node') as HTMLElement | null;
+
+    if (!nodeElement) return;
+
+    const contentElement = nodeElement.querySelector(':scope > strong, :scope > .pdi-node-editor, :scope > .pdi-task-list') as
+      | HTMLElement
+      | null;
+    const nodeStyles = getComputedStyle(nodeElement);
+    const paddingTop = Number.parseFloat(nodeStyles.paddingTop || '0') || 0;
+    const paddingBottom = Number.parseFloat(nodeStyles.paddingBottom || '0') || 0;
+    const contentHeight = Math.ceil(contentElement?.scrollHeight ?? nodeElement.scrollHeight);
+    const node = this.node();
+    const minHeight = nodeKindMeta[node.kind].height;
+    const nextHeight = Math.max(node.height, minHeight, contentHeight + Math.ceil(paddingTop + paddingBottom));
+
+    if (nextHeight <= node.height) return;
+
+    this.dataChange.emit({ height: nextHeight });
+  };
+
+  private readonly handleManualResizeEnd = () => {
+    this.isManualResizing = false;
+    this.scheduleAutoHeight();
+  };
+
+  protected readonly handleTextEditorBlur = () => {
+    this.isEditing.set(false);
+    this.emitEditSessionEnd();
+  };
+
+  private readonly emitEditSessionStart = () => {
+    if (this.isEditing()) return;
+    this.editSessionStart.emit();
+  };
+
+  private readonly emitEditSessionEnd = () => {
+    this.editSessionEnd.emit();
   };
 }
