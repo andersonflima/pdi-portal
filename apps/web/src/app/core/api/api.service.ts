@@ -91,6 +91,11 @@ export class ApiService {
       method: 'POST'
     });
 
+  readonly deleteUser = (userId: string) =>
+    this.request<void>(`/users/${userId}`, {
+      method: 'DELETE'
+    });
+
   readonly pdiPlans = () => this.request<PdiPlan[]>('/pdi-plans');
 
   readonly createPdiPlan = (input: { dueDate?: string; objective: string; ownerId?: string; title: string }) =>

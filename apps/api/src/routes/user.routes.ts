@@ -3,7 +3,15 @@ import { hash } from 'bcryptjs';
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { requireAdmin } from '../auth.js';
-import { createUser, isUniqueUserEmailError, listUsers, withTransaction } from '../database.js';
+import {
+  countAdmins,
+  createUser,
+  deleteUserById,
+  findUserById,
+  isUniqueUserEmailError,
+  listUsers,
+  withTransaction
+} from '../database.js';
 import { upsertDefaultRoadmapForUser } from '../default-roadmap-plan.js';
 
 const createUserSchema = z.object({
@@ -11,6 +19,10 @@ const createUserSchema = z.object({
   name: z.string().min(2),
   password: z.string().min(6),
   role: z.enum(['ADMIN', 'MEMBER']).default('MEMBER')
+});
+
+const userParamsSchema = z.object({
+  id: z.string().min(1)
 });
 
 const toUserDto = (user: {
@@ -54,5 +66,31 @@ export const userRoutes: FastifyPluginAsync = async (app) => {
 
       throw error;
     }
+  });
+
+  app.delete('/users/:id', { preHandler: requireAdmin }, async (request, reply) => {
+    const { id } = userParamsSchema.parse(request.params);
+
+    if (id === request.user.id) {
+      throw app.httpErrors.badRequest('Tech Lead cannot delete own account');
+    }
+
+    const user = findUserById(id);
+
+    if (!user) {
+      throw app.httpErrors.notFound('User not found');
+    }
+
+    if (user.role === 'ADMIN' && countAdmins() <= 1) {
+      throw app.httpErrors.conflict('Cannot delete the last Tech Lead');
+    }
+
+    const deleted = deleteUserById(id);
+
+    if (!deleted) {
+      throw app.httpErrors.notFound('User not found');
+    }
+
+    return reply.code(204).send();
   });
 };

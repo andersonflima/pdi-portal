@@ -211,6 +211,11 @@ FROM users
 ORDER BY name ASC
 `);
 
+const deleteUserByIdStatement = database.prepare(`
+DELETE FROM users
+WHERE id = ?
+`);
+
 const plansByOwnerStatement = database.prepare(`
 SELECT id, owner_id, title, objective, status, due_date, created_at, updated_at
 FROM pdi_plans
@@ -385,6 +390,11 @@ export const upsertUserByEmail = (input: {
 export const listUsers = () => {
   const rows = listUsersStatement.all() as UserRow[];
   return rows.map(toUser);
+};
+
+export const deleteUserById = (id: string) => {
+  const result = deleteUserByIdStatement.run(id);
+  return result.changes > 0;
 };
 
 export const listPdiPlans = (user: { id: string; role: UserRole }) => {
