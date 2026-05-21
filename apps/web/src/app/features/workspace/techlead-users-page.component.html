@@ -1,0 +1,40 @@
+<section class="manage-page">
+  <header>
+    <h2>User Management</h2>
+    <p>{{ usersCount }} users registered</p>
+  </header>
+
+  <div class="page-grid">
+    <article class="card">
+      <h3>Registered users</h3>
+      <div class="user-list">
+        @for (user of users; track user.id) {
+          <div>
+            <div>
+              <strong>{{ user.name }}</strong>
+              <span>{{ user.email }}</span>
+            </div>
+            <small>{{ roleLabel(user.role) }}</small>
+          </div>
+        }
+      </div>
+    </article>
+
+    <article class="card">
+      <h3>Create user</h3>
+      <form (submit)="handleSubmit($event)">
+        <input placeholder="Name" required [(ngModel)]="newUser.name" name="name" />
+        <input placeholder="Email" required type="email" [(ngModel)]="newUser.email" name="email" />
+        <div class="password-row">
+          <input minLength="6" placeholder="Temporary password" required [(ngModel)]="newUser.password" name="password" />
+          <button type="button" (click)="regeneratePassword()">Regenerate</button>
+        </div>
+        <select [(ngModel)]="newUser.role" name="role">
+          <option value="MEMBER">Member</option>
+          <option value="ADMIN">Tech Lead</option>
+        </select>
+        <button [disabled]="isCreatingUser" type="submit">{{ isCreatingUser ? 'Creating user' : 'Create user' }}</button>
+      </form>
+    </article>
+  </div>
+</section>

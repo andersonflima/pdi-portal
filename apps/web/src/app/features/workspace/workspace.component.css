@@ -1,5 +1,46 @@
 .workspace {
+  background: #f5f9ff;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   min-height: 100svh;
+}
+
+.workspace-nav {
+  align-items: center;
+  background: #ffffff;
+  border-bottom: 1px solid #dfe5ee;
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 20px;
+}
+
+.workspace-nav div {
+  display: grid;
+  gap: 2px;
+}
+
+.workspace-nav span {
+  color: #3f5f8b;
+  font-size: 13px;
+}
+
+.workspace-nav nav {
+  display: flex;
+  gap: 8px;
+}
+
+.workspace-nav button {
+  background: #e8f1ff;
+  border: 1px solid #cfe0f8;
+  border-radius: 999px;
+  color: #004aab;
+  min-height: 34px;
+  padding: 0 14px;
+}
+
+.workspace-nav button.is-active {
+  background: #004aab;
+  color: #ffffff;
 }
 
 .work-surface {

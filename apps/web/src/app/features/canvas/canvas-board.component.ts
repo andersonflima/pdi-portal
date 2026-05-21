@@ -374,11 +374,8 @@ const toNodeFillColor = (node: CanvasNodeView) => {
 })
 export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy {
   @Input({ required: true }) isCreatingPlan = false;
-  @Input({ required: true }) isCreatingUser = false;
-  @Input({ required: true }) isDeletingPlan = false;
   @Input({ required: true }) isExportingPlan = false;
   @Input({ required: true }) isImportingPlan = false;
-  @Input({ required: true }) isUpdatingPlan = false;
   @Input({ required: true }) plan!: PdiPlan;
   @Input({ required: true }) plans: PdiPlan[] = [];
   @Input({ required: true }) user!: User;
@@ -386,13 +383,10 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   @Input({ required: true }) usersCount = 0;
 
   readonly createPlan = output<{ objective: string; ownerId?: string; title: string }>();
-  readonly createUser = output<{ email: string; name: string; password: string; role: User['role'] }>();
-  readonly deletePlan = output<string>();
   readonly exportPlan = output<string>();
   readonly importPlan = output<File>();
   readonly logout = output<void>();
   readonly selectPlan = output<string>();
-  readonly updatePlan = output<{ id: string; data: Partial<Pick<PdiPlan, 'objective' | 'ownerId' | 'status' | 'title'>> }>();
 
   private readonly api = inject(ApiService);
   private readonly stageElement = viewChild<ElementRef<HTMLDivElement>>('canvasStage');

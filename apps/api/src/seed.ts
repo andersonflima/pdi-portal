@@ -20,9 +20,9 @@ const createUser = async (input: {
 
 const main = async () => {
   await createUser({
-    email: 'admin@pdi.local',
+    email: 'techlead@pdi.local',
     name: 'Anderson Espindola',
-    password: 'admin123',
+    password: 'techlead123',
     role: 'ADMIN'
   });
 

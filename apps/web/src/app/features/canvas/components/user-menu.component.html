@@ -8,7 +8,7 @@
   <div class="user-menu-panel">
     <strong>{{ user.name }}</strong>
     <span>{{ user.email }}</span>
-    <small>{{ user.role === 'ADMIN' ? usersCount + ' users managed' : 'Personal workspace' }}</small>
+    <small>{{ user.role === 'ADMIN' ? usersCount + ' users managed as Tech Lead' : 'Personal workspace' }}</small>
     <button type="button" (click)="logout.emit()">
       <i-lucide name="log-out" [size]="16" />
       Sign out

@@ -1,20 +1,15 @@
 <div class="canvas-shell">
   <app-canvas-header
     [isCreatingPlan]="isCreatingPlan"
-    [isCreatingUser]="isCreatingUser"
-    [isDeletingPlan]="isDeletingPlan"
     [isExportingPlan]="isExportingPlan"
     [isImportingPlan]="isImportingPlan"
     [isSaving]="isSaving()"
-    [isUpdatingPlan]="isUpdatingPlan"
     [plan]="plan"
     [plans]="plans"
     [user]="user"
     [users]="users"
     [usersCount]="usersCount"
     (createPlan)="createPlan.emit($event)"
-    (createUser)="createUser.emit($event)"
-    (deletePlan)="deletePlan.emit($event)"
     (exportBoardAsPng)="exportBoardToPng()"
     (exportBoardAsSvg)="exportBoardToSvg()"
     (exportPlan)="exportPlan.emit($event)"
@@ -22,7 +17,6 @@
     (logout)="logout.emit()"
     (saveBoard)="saveCurrentBoard()"
     (selectPlan)="selectPlan.emit($event)"
-    (updatePlan)="updatePlan.emit($event)"
   />
 
   <app-canvas-toolbar

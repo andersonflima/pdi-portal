@@ -1,26 +1,54 @@
 <main class="workspace">
+  <header class="workspace-nav">
+    <div>
+      <strong>{{ user.name }}</strong>
+      <span>{{ roleLabel() }}</span>
+    </div>
+    <nav>
+      <button type="button" [class.is-active]="activeView === 'board'" (click)="openView('board')">Board</button>
+      @if (isTechLead()) {
+        <button type="button" [class.is-active]="activeView === 'pdis'" (click)="openView('pdis')">PDIs</button>
+        <button type="button" [class.is-active]="activeView === 'users'" (click)="openView('users')">Users</button>
+      }
+    </nav>
+  </header>
+
   <section class="work-surface">
-    @if (workspace.activePlan(); as activePlan) {
+    @if (activeView === 'board' && workspace.activePlan(); as activePlan) {
       <app-canvas-board
         [isCreatingPlan]="workspace.isCreatingPlan()"
-        [isCreatingUser]="workspace.isCreatingUser()"
-        [isDeletingPlan]="workspace.isDeletingPlan()"
         [isExportingPlan]="workspace.isExportingPlan()"
         [isImportingPlan]="workspace.isImportingPlan()"
-        [isUpdatingPlan]="workspace.isUpdatingPlan()"
         [plan]="activePlan"
         [plans]="workspace.plans()"
         [user]="user"
         [users]="workspace.users()"
         [usersCount]="workspace.users().length"
         (createPlan)="handleCreatePlan($event)"
-        (createUser)="handleCreateUser($event)"
-        (deletePlan)="handleDeletePlan($event)"
         (exportPlan)="handleExportPlan($event)"
         (importPlan)="handleImportPlan($event)"
         (logout)="handleLogout()"
         (selectPlan)="workspace.selectPlan($event)"
+      />
+    } @else if (activeView === 'pdis' && isTechLead() && workspace.activePlan(); as activePlan) {
+      <app-techlead-pdis-page
+        [isCreatingPlan]="workspace.isCreatingPlan()"
+        [isDeletingPlan]="workspace.isDeletingPlan()"
+        [isUpdatingPlan]="workspace.isUpdatingPlan()"
+        [plan]="activePlan"
+        [plans]="workspace.plans()"
+        [users]="workspace.users()"
+        (createPlan)="handleCreatePlan($event)"
+        (deletePlan)="handleDeletePlan($event)"
+        (selectPlan)="workspace.selectPlan($event)"
         (updatePlan)="handleUpdatePlan($event)"
+      />
+    } @else if (activeView === 'users' && isTechLead()) {
+      <app-techlead-users-page
+        [isCreatingUser]="workspace.isCreatingUser()"
+        [users]="workspace.users()"
+        [usersCount]="workspace.users().length"
+        (createUser)="handleCreateUser($event)"
       />
     } @else {
       <div class="empty-state">Create a PDI plan to start.</div>

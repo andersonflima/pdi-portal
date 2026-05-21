@@ -49,28 +49,6 @@
       {{ isSaving ? 'Saving' : 'Save board' }}
     </button>
 
-    @if (user.role === 'ADMIN') {
-      <app-admin-users-menu
-        [isCreatingUser]="isCreatingUser"
-        [users]="users"
-        [usersCount]="usersCount"
-        (createUser)="createUser.emit($event)"
-      />
-
-      <app-admin-pdi-menu
-        [isCreatingPlan]="isCreatingPlan"
-        [isDeletingPlan]="isDeletingPlan"
-        [isUpdatingPlan]="isUpdatingPlan"
-        [plan]="plan"
-        [plans]="plans"
-        [users]="users"
-        (createPlan)="createPlan.emit($event)"
-        (deletePlan)="deletePlan.emit($event)"
-        (selectPlanForCanvas)="selectPlan.emit($event)"
-        (updatePlan)="updatePlan.emit($event)"
-      />
-    }
-
     <app-user-menu [user]="user" [usersCount]="usersCount" (logout)="logout.emit()" />
   </div>
 </header>
