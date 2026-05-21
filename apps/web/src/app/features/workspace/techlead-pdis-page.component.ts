@@ -1,4 +1,4 @@
-import { Component, Input, output } from '@angular/core';
+import { Component, Input, OnChanges, SimpleChanges, output } from '@angular/core';
 import type { PdiPlan, User } from '@pdi/contracts';
 import { FormsModule } from '@angular/forms';
 
@@ -35,7 +35,7 @@ const toEditForm = (plan: PdiPlan): EditPlanForm => ({
   templateUrl: './techlead-pdis-page.component.html',
   styleUrl: './techlead-pdis-page.component.css'
 })
-export class TechleadPdisPageComponent {
+export class TechleadPdisPageComponent implements OnChanges {
   @Input({ required: true }) isCreatingPlan = false;
   @Input({ required: true }) isDeletingPlan = false;
   @Input({ required: true }) isUpdatingPlan = false;
@@ -51,8 +51,13 @@ export class TechleadPdisPageComponent {
   protected editingPlanId = '';
   protected editPlan: EditPlanForm | null = null;
   protected newPlan: NewPlanForm = emptyNewPlan('');
+  protected pendingDeletePlan: { id: string; title: string } | null = null;
 
-  ngOnChanges() {
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['isDeletingPlan'] && !this.isDeletingPlan) {
+      this.pendingDeletePlan = null;
+    }
+
     if (!this.editingPlanId && this.plan?.id) {
       this.editingPlanId = this.plan.id;
       this.editPlan = toEditForm(this.plan);
@@ -96,9 +101,16 @@ export class TechleadPdisPageComponent {
   };
 
   protected readonly handleDeletePlan = (planId: string, title: string) => {
-    if (window.confirm(`Remove "${title}" and its board?`)) {
-      this.deletePlan.emit(planId);
-    }
+    this.pendingDeletePlan = { id: planId, title };
+  };
+
+  protected readonly closeDeleteModal = () => {
+    this.pendingDeletePlan = null;
+  };
+
+  protected readonly confirmDeletePlan = () => {
+    if (!this.pendingDeletePlan) return;
+    this.deletePlan.emit(this.pendingDeletePlan.id);
   };
 
   private readonly defaultOwnerId = () =>
