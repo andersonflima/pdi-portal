@@ -1,57 +1,116 @@
-<section class="manage-page">
-  <header>
-    <h2>PDI Management</h2>
-    <p>{{ plans.length }} plans available</p>
+<section class="manage-page pdi-page">
+  <header class="page-hero">
+    <div>
+      <p class="eyebrow">Tech Lead Console</p>
+      <h2>PDI Portfolio</h2>
+      <span>Create, triage and reassign all development plans from one dashboard.</span>
+    </div>
+    <dl>
+      <div>
+        <dt>Total plans</dt>
+        <dd>{{ plans.length }}</dd>
+      </div>
+      <div>
+        <dt>Active</dt>
+        <dd>{{ plans.filter((item) => item.status === 'ACTIVE').length }}</dd>
+      </div>
+      <div>
+        <dt>Done</dt>
+        <dd>{{ plans.filter((item) => item.status === 'DONE').length }}</dd>
+      </div>
+    </dl>
   </header>
 
   <div class="page-grid">
-    <article class="card">
-      <h3>All plans</h3>
+    <article class="card plan-directory">
+      <div class="card-header">
+        <h3>Plan directory</h3>
+        <small>Click to open and edit</small>
+      </div>
+
       <div class="plan-list">
         @for (item of plans; track item.id) {
           <div [class.is-active]="item.id === editingPlanId">
             <button type="button" (click)="selectPlanForEdit(item.id)">
               <strong>{{ item.title }}</strong>
-              <small>{{ ownerName(item.ownerId) }} - {{ item.status }}</small>
+              <small>{{ ownerName(item.ownerId) }}</small>
             </button>
-            <button class="danger" type="button" [disabled]="isDeletingPlan" (click)="handleDeletePlan(item.id, item.title)">Remove</button>
+            <span class="status-pill" [class.is-active]="item.status === 'ACTIVE'" [class.is-done]="item.status === 'DONE'">
+              {{ item.status }}
+            </span>
+            <button class="danger" type="button" [disabled]="isDeletingPlan" (click)="handleDeletePlan(item.id, item.title)">
+              {{ isDeletingPlan && item.id === editingPlanId ? 'Removing...' : 'Remove' }}
+            </button>
           </div>
         }
       </div>
     </article>
 
     <article class="card">
-      <h3>Create PDI</h3>
+      <div class="card-header">
+        <h3>Create PDI</h3>
+        <small>Assign owner and objective</small>
+      </div>
+
       <form (submit)="handleCreatePlan($event)">
-        <select required [(ngModel)]="newPlan.ownerId" name="new-ownerId">
-          <option value="">Select owner</option>
-          @for (user of users; track user.id) {
-            <option [value]="user.id">{{ user.name }}</option>
-          }
-        </select>
-        <input placeholder="PDI title" required [(ngModel)]="newPlan.title" name="new-title" />
-        <textarea placeholder="Development objective" required [(ngModel)]="newPlan.objective" name="new-objective"></textarea>
-        <button [disabled]="isCreatingPlan" type="submit">{{ isCreatingPlan ? 'Creating PDI' : 'Create PDI' }}</button>
+        <label>
+          Owner
+          <select required [(ngModel)]="newPlan.ownerId" name="new-ownerId">
+            <option value="">Select owner</option>
+            @for (user of users; track user.id) {
+              <option [value]="user.id">{{ user.name }}</option>
+            }
+          </select>
+        </label>
+        <label>
+          Title
+          <input placeholder="PDI title" required [(ngModel)]="newPlan.title" name="new-title" />
+        </label>
+        <label>
+          Objective
+          <textarea placeholder="Development objective" required [(ngModel)]="newPlan.objective" name="new-objective"></textarea>
+        </label>
+        <button class="primary" [disabled]="isCreatingPlan" type="submit">
+          {{ isCreatingPlan ? 'Creating PDI...' : 'Create PDI' }}
+        </button>
       </form>
     </article>
 
     @if (editPlan; as form) {
       <article class="card">
-        <h3>Edit PDI</h3>
+        <div class="card-header">
+          <h3>Edit selected PDI</h3>
+          <small>Keep status and owner updated</small>
+        </div>
+
         <form (submit)="handleUpdatePlan($event)">
-          <select required [(ngModel)]="form.ownerId" name="edit-ownerId">
-            @for (user of users; track user.id) {
-              <option [value]="user.id">{{ user.name }}</option>
-            }
-          </select>
-          <select [(ngModel)]="form.status" name="edit-status">
-            <option value="DRAFT">Draft</option>
-            <option value="ACTIVE">Active</option>
-            <option value="DONE">Done</option>
-          </select>
-          <input placeholder="PDI title" required [(ngModel)]="form.title" name="edit-title" />
-          <textarea placeholder="Development objective" required [(ngModel)]="form.objective" name="edit-objective"></textarea>
-          <button [disabled]="isUpdatingPlan" type="submit">{{ isUpdatingPlan ? 'Saving PDI' : 'Save changes' }}</button>
+          <label>
+            Owner
+            <select required [(ngModel)]="form.ownerId" name="edit-ownerId">
+              @for (user of users; track user.id) {
+                <option [value]="user.id">{{ user.name }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            Status
+            <select [(ngModel)]="form.status" name="edit-status">
+              <option value="DRAFT">Draft</option>
+              <option value="ACTIVE">Active</option>
+              <option value="DONE">Done</option>
+            </select>
+          </label>
+          <label>
+            Title
+            <input placeholder="PDI title" required [(ngModel)]="form.title" name="edit-title" />
+          </label>
+          <label>
+            Objective
+            <textarea placeholder="Development objective" required [(ngModel)]="form.objective" name="edit-objective"></textarea>
+          </label>
+          <button class="primary" [disabled]="isUpdatingPlan" type="submit">
+            {{ isUpdatingPlan ? 'Saving changes...' : 'Save changes' }}
+          </button>
         </form>
       </article>
     }

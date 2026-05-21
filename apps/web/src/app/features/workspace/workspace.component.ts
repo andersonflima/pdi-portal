@@ -48,6 +48,8 @@ export class WorkspaceComponent implements OnChanges {
   readonly handleCreateUser = (input: { email: string; name: string; password: string; role: User['role'] }) =>
     this.workspace.createUser(input);
 
+  readonly handleDeleteUser = (userId: string) => this.workspace.deleteUser(userId);
+
   readonly handleUpdatePlan = (event: { id: string; data: Partial<Pick<PdiPlan, 'objective' | 'ownerId' | 'status' | 'title'>> }) =>
     this.workspace.updatePlan(event.id, event.data);
 

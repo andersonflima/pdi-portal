@@ -1,39 +1,92 @@
-<section class="manage-page">
-  <header>
-    <h2>User Management</h2>
-    <p>{{ usersCount }} users registered</p>
+<section class="manage-page users-page">
+  <header class="page-hero">
+    <div>
+      <p class="eyebrow">Tech Lead Console</p>
+      <h2>People and Access</h2>
+      <span>Manage collaborators and leadership access in one place.</span>
+    </div>
+    <dl>
+      <div>
+        <dt>Total users</dt>
+        <dd>{{ usersCount }}</dd>
+      </div>
+      <div>
+        <dt>Tech Leads</dt>
+        <dd>{{ users.filter((user) => user.role === 'ADMIN').length }}</dd>
+      </div>
+      <div>
+        <dt>Members</dt>
+        <dd>{{ users.filter((user) => user.role === 'MEMBER').length }}</dd>
+      </div>
+    </dl>
   </header>
 
   <div class="page-grid">
-    <article class="card">
-      <h3>Registered users</h3>
+    <article class="card user-directory">
+      <div class="card-header">
+        <h3>Directory</h3>
+        <small>Delete users when needed</small>
+      </div>
+
       <div class="user-list">
         @for (user of users; track user.id) {
           <div>
-            <div>
+            <div class="identity">
               <strong>{{ user.name }}</strong>
               <span>{{ user.email }}</span>
             </div>
-            <small>{{ roleLabel(user.role) }}</small>
+            <small class="role-badge" [class.is-techlead]="user.role === 'ADMIN'">{{ roleLabel(user.role) }}</small>
+            <button
+              class="delete-button"
+              type="button"
+              [disabled]="isDeletingUser || !canDeleteUser(user)"
+              (click)="handleDeleteUser(user)"
+            >
+              {{
+                isDeletingUser && deletingUserId === user.id
+                  ? 'Removing...'
+                  : canDeleteUser(user)
+                    ? 'Delete'
+                    : 'Current user'
+              }}
+            </button>
           </div>
         }
       </div>
     </article>
 
-    <article class="card">
-      <h3>Create user</h3>
+    <article class="card create-user">
+      <div class="card-header">
+        <h3>Create user</h3>
+        <small>Generate access credentials</small>
+      </div>
+
       <form (submit)="handleSubmit($event)">
-        <input placeholder="Name" required [(ngModel)]="newUser.name" name="name" />
-        <input placeholder="Email" required type="email" [(ngModel)]="newUser.email" name="email" />
-        <div class="password-row">
-          <input minLength="6" placeholder="Temporary password" required [(ngModel)]="newUser.password" name="password" />
-          <button type="button" (click)="regeneratePassword()">Regenerate</button>
-        </div>
-        <select [(ngModel)]="newUser.role" name="role">
-          <option value="MEMBER">Member</option>
-          <option value="ADMIN">Tech Lead</option>
-        </select>
-        <button [disabled]="isCreatingUser" type="submit">{{ isCreatingUser ? 'Creating user' : 'Create user' }}</button>
+        <label>
+          Name
+          <input placeholder="Full name" required [(ngModel)]="newUser.name" name="name" />
+        </label>
+        <label>
+          Email
+          <input placeholder="company@domain.com" required type="email" [(ngModel)]="newUser.email" name="email" />
+        </label>
+        <label>
+          Temporary password
+          <div class="password-row">
+            <input minLength="6" required [(ngModel)]="newUser.password" name="password" />
+            <button type="button" (click)="regeneratePassword()">Regenerate</button>
+          </div>
+        </label>
+        <label>
+          Access profile
+          <select [(ngModel)]="newUser.role" name="role">
+            <option value="MEMBER">Member</option>
+            <option value="ADMIN">Tech Lead</option>
+          </select>
+        </label>
+        <button class="primary" [disabled]="isCreatingUser" type="submit">
+          {{ isCreatingUser ? 'Creating user...' : 'Create user' }}
+        </button>
       </form>
     </article>
   </div>

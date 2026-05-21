@@ -53,9 +53,12 @@
     } @else if (activeView === 'users' && isTechLead()) {
       <app-techlead-users-page
         [isCreatingUser]="workspace.isCreatingUser()"
+        [isDeletingUser]="workspace.isDeletingUser()"
+        [currentUserId]="user.id"
         [users]="workspace.users()"
         [usersCount]="workspace.users().length"
         (createUser)="handleCreateUser($event)"
+        (deleteUser)="handleDeleteUser($event)"
       />
     } @else {
       <div class="empty-state">Create a PDI plan to start.</div>
