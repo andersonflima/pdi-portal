@@ -43,6 +43,7 @@ export class WorkspaceService {
   readonly isCreatingPlan = signal(false);
   readonly isCreatingUser = signal(false);
   readonly isDeletingPlan = signal(false);
+  readonly isDeletingUser = signal(false);
   readonly isExportingPlan = signal(false);
   readonly isImportingPlan = signal(false);
   readonly isUpdatingPlan = signal(false);
@@ -148,6 +149,22 @@ export class WorkspaceService {
       this.users.set(await this.api.users());
     } finally {
       this.isCreatingUser.set(false);
+    }
+  };
+
+  readonly deleteUser = async (userId: string) => {
+    this.isDeletingUser.set(true);
+
+    try {
+      await this.api.deleteUser(userId);
+      const [users, plans] = await Promise.all([this.api.users(), this.api.pdiPlans()]);
+      this.users.set(users);
+      this.plans.set(plans);
+      this.activePlanId.set(plans.some((plan) => plan.id === this.activePlanId()) ? this.activePlanId() : (plans[0]?.id ?? null));
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Could not remove user');
+    } finally {
+      this.isDeletingUser.set(false);
     }
   };
 }

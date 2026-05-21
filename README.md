@@ -38,6 +38,8 @@ infra/
 - Criacao automatica do roadmap padrao para cada novo usuario colaborador (`MEMBER`)
 - Board visual por PDI
 - Navegacao por paginas no workspace (Board, PDIs e Users para Tech Lead)
+- Tela dedicada de usuarios para Tech Lead (criacao e exclusao de usuarios)
+- Tela dedicada de PDIs para Tech Lead (criacao, edicao e remocao de planos)
 - Importacao e exportacao de PDI em JSON
 - Colaboracao em tempo real via WebSocket
 - Elementos de canvas: texto, post-it, sticker, task, lista de tasks, goal, card, frame e shapes
