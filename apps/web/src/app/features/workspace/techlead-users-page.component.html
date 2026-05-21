@@ -90,4 +90,21 @@
       </form>
     </article>
   </div>
+
+  @if (pendingDeleteUser; as targetUser) {
+    <div class="confirm-overlay" (click)="closeDeleteModal()">
+      <article class="confirm-dialog" (click)="$event.stopPropagation()">
+        <h3>Confirm user deletion</h3>
+        <p>
+          Delete <strong>{{ targetUser.name }}</strong> and all PDIs owned by this user?
+        </p>
+        <div class="confirm-actions">
+          <button class="ghost" type="button" [disabled]="isDeletingUser" (click)="closeDeleteModal()">Cancel</button>
+          <button class="danger" type="button" [disabled]="isDeletingUser" (click)="confirmDeleteUser()">
+            {{ isDeletingUser ? 'Removing...' : 'Delete user' }}
+          </button>
+        </div>
+      </article>
+    </div>
+  }
 </section>

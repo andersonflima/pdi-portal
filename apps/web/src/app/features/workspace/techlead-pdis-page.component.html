@@ -115,4 +115,21 @@
       </article>
     }
   </div>
+
+  @if (pendingDeletePlan; as targetPlan) {
+    <div class="confirm-overlay" (click)="closeDeleteModal()">
+      <article class="confirm-dialog" (click)="$event.stopPropagation()">
+        <h3>Confirm PDI deletion</h3>
+        <p>
+          Remove <strong>{{ targetPlan.title }}</strong> and its board content?
+        </p>
+        <div class="confirm-actions">
+          <button class="ghost" type="button" [disabled]="isDeletingPlan" (click)="closeDeleteModal()">Cancel</button>
+          <button class="danger" type="button" [disabled]="isDeletingPlan" (click)="confirmDeletePlan()">
+            {{ isDeletingPlan ? 'Removing...' : 'Delete PDI' }}
+          </button>
+        </div>
+      </article>
+    </div>
+  }
 </section>

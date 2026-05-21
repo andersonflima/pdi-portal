@@ -38,10 +38,12 @@ export class TechleadUsersPageComponent implements OnChanges {
   protected newUser: NewUserForm = emptyNewUser();
   protected readonly roleLabel = toRoleLabel;
   protected deletingUserId = '';
+  protected pendingDeleteUser: User | null = null;
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['isDeletingUser'] && !this.isDeletingUser) {
       this.deletingUserId = '';
+      this.pendingDeleteUser = null;
     }
   }
 
@@ -59,10 +61,16 @@ export class TechleadUsersPageComponent implements OnChanges {
 
   protected readonly handleDeleteUser = (user: User) => {
     if (!this.canDeleteUser(user)) return;
+    this.pendingDeleteUser = user;
+  };
 
-    if (!window.confirm(`Delete user "${user.name}" and all owned PDIs?`)) return;
+  protected readonly closeDeleteModal = () => {
+    this.pendingDeleteUser = null;
+  };
 
-    this.deletingUserId = user.id;
-    this.deleteUser.emit(user.id);
+  protected readonly confirmDeleteUser = () => {
+    if (!this.pendingDeleteUser) return;
+    this.deletingUserId = this.pendingDeleteUser.id;
+    this.deleteUser.emit(this.pendingDeleteUser.id);
   };
 }
