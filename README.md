@@ -37,6 +37,7 @@ infra/
 - Vinculo de PDI com usuario responsavel
 - Criacao automatica do roadmap padrao para cada novo usuario colaborador (`MEMBER`)
 - Board visual por PDI
+- Navegacao por paginas no workspace (Board, PDIs e Users para Tech Lead)
 - Importacao e exportacao de PDI em JSON
 - Colaboracao em tempo real via WebSocket
 - Elementos de canvas: texto, post-it, sticker, task, lista de tasks, goal, card, frame e shapes

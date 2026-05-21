@@ -31,6 +31,13 @@ export class WorkspaceComponent implements OnChanges {
   protected readonly isTechLead = () => this.user.role === 'ADMIN';
   protected readonly roleLabel = () => (this.isTechLead() ? 'Tech Lead' : 'Member');
   protected readonly canAccessView = (view: 'board' | 'pdis' | 'users') => view === 'board' || this.isTechLead();
+  protected readonly menuItems = () =>
+    [
+      { description: 'Canvas colaborativo', label: 'Board', view: 'board' as const },
+      { description: 'Controle de planos', label: 'PDIs', view: 'pdis' as const },
+      { description: 'Gestao de pessoas', label: 'Users', view: 'users' as const }
+    ].filter((item) => this.canAccessView(item.view));
+  protected readonly isActiveView = (view: 'board' | 'pdis' | 'users') => this.activeView === view;
   protected readonly openView = (view: 'board' | 'pdis' | 'users') => {
     if (this.canAccessView(view)) this.activeView = view;
   };
