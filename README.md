@@ -44,6 +44,7 @@ infra/
 - Redimensionamento de elementos com ajuste automatico de fonte
 - Formatacao de texto com alinhamento horizontal e vertical
 - Alteracao de cor e background
+- Tema visual principal em azul e branco
 - Conectores entre elementos com handles visiveis no item selecionado
 - Edges com texto, cor, linha continua ou tracejada
 - Seed padrao com o board `Software Developer Skills Roadmap`
@@ -107,19 +108,19 @@ O seed cria dois usuarios:
 
 | Perfil | Email | Senha |
 | --- | --- | --- |
-| Admin | `admin@pdi.local` | `admin123` |
+| Tech Lead | `techlead@pdi.local` | `techlead123` |
 | Colaborador | `member@pdi.local` | `member123` |
 
 ## Primeiro Acesso
 
-Em um banco sem administrador cadastrado, a tela de login muda automaticamente para o cadastro do primeiro admin.
+Em um banco sem lider tecnico cadastrado, a tela de login muda automaticamente para o cadastro do primeiro Tech Lead.
 
 A API expoe duas rotas publicas para esse bootstrap:
 
 - `GET /api/auth/bootstrap-status`
 - `POST /api/auth/bootstrap-admin`
 
-Depois que um usuario `ADMIN` existe, o bootstrap fica bloqueado e novos usuarios devem ser criados por um administrador autenticado.
+Depois que um usuario `ADMIN` existe, o bootstrap fica bloqueado e novos usuarios devem ser criados por um Tech Lead autenticado.
 
 ## Board Padrao
 

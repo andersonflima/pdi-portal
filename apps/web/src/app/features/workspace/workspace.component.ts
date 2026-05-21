@@ -2,18 +2,21 @@ import { Component, Input, OnChanges, SimpleChanges, inject } from '@angular/cor
 import type { PdiPlan, User } from '@pdi/contracts';
 import { AuthService } from '../../core/auth/auth.service';
 import { CanvasBoardComponent } from '../canvas/canvas-board.component';
+import { TechleadPdisPageComponent } from './techlead-pdis-page.component';
+import { TechleadUsersPageComponent } from './techlead-users-page.component';
 import { WorkspaceService } from './workspace.service';
 
 @Component({
   selector: 'app-workspace',
   standalone: true,
-  imports: [CanvasBoardComponent],
+  imports: [CanvasBoardComponent, TechleadPdisPageComponent, TechleadUsersPageComponent],
   providers: [WorkspaceService],
   templateUrl: './workspace.component.html',
   styleUrl: './workspace.component.css'
 })
 export class WorkspaceComponent implements OnChanges {
   @Input({ required: true }) user!: User;
+  protected activeView: 'board' | 'pdis' | 'users' = 'board';
 
   private readonly auth = inject(AuthService);
   protected readonly workspace = inject(WorkspaceService);
@@ -21,8 +24,16 @@ export class WorkspaceComponent implements OnChanges {
   ngOnChanges(changes: SimpleChanges) {
     if (changes['user']?.currentValue) {
       void this.workspace.load(this.user);
+      this.activeView = 'board';
     }
   }
+
+  protected readonly isTechLead = () => this.user.role === 'ADMIN';
+  protected readonly roleLabel = () => (this.isTechLead() ? 'Tech Lead' : 'Member');
+  protected readonly canAccessView = (view: 'board' | 'pdis' | 'users') => view === 'board' || this.isTechLead();
+  protected readonly openView = (view: 'board' | 'pdis' | 'users') => {
+    if (this.canAccessView(view)) this.activeView = view;
+  };
 
   readonly handleCreatePlan = (input: { objective: string; ownerId?: string; title: string }) =>
     this.workspace.createPlan(input);

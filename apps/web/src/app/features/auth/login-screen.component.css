@@ -7,7 +7,7 @@
 .login-visual {
   align-items: end;
   background:
-    linear-gradient(120deg, rgba(18, 28, 45, 0.88), rgba(18, 28, 45, 0.38)),
+    linear-gradient(120deg, rgba(0, 59, 143, 0.9), rgba(0, 95, 204, 0.58)),
     url("https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1800&q=80");
   background-position: center;
   background-size: cover;
@@ -48,7 +48,7 @@
 }
 
 .login-panel i-lucide {
-  color: #2563eb;
+  color: #004aab;
 }
 
 .login-panel h2 {
@@ -57,7 +57,7 @@
 }
 
 .login-panel label {
-  color: #48556a;
+  color: #3f5f8b;
   display: grid;
   font-size: 14px;
   font-weight: 650;
@@ -65,15 +65,15 @@
 }
 
 .login-panel input {
-  border: 1px solid #d8dde7;
+  border: 1px solid #c8d9f2;
   border-radius: 8px;
-  color: #172033;
+  color: #0f2a52;
   min-height: 46px;
   padding: 0 14px;
 }
 
 .login-panel button {
-  background: #172033;
+  background: #004aab;
   border-radius: 8px;
   color: #ffffff;
   justify-content: center;
@@ -82,7 +82,7 @@
 }
 
 .form-error {
-  color: #b42318;
+  color: #bb2a1f;
   font-size: 14px;
   margin: 0;
 }

@@ -9,7 +9,7 @@
 
   <form class="login-panel" (ngSubmit)="handleSubmit()">
     <i-lucide name="lock-keyhole" aria-hidden="true" />
-    <h2>{{ canCreateAdmin() ? 'Create first admin' : 'Sign in' }}</h2>
+    <h2>{{ canCreateAdmin() ? 'Create first Tech Lead' : 'Sign in' }}</h2>
 
     @if (canCreateAdmin()) {
       <label>
@@ -50,11 +50,11 @@
       <i-lucide [name]="canCreateAdmin() ? 'user-plus' : 'log-in'" [size]="18" />
       {{
         isSubmitting()
-          ? canCreateAdmin()
-            ? 'Creating admin'
+            ? canCreateAdmin()
+            ? 'Creating Tech Lead'
             : 'Signing in'
           : canCreateAdmin()
-            ? 'Create admin'
+            ? 'Create Tech Lead'
             : 'Enter platform'
       }}
     </button>

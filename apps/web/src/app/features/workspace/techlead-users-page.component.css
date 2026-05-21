@@ -1,0 +1,108 @@
+.manage-page {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+}
+
+.manage-page header h2 {
+  margin: 0;
+}
+
+.manage-page header p {
+  color: #3f5f8b;
+  margin: 6px 0 0;
+}
+
+.page-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.card {
+  background: #ffffff;
+  border: 1px solid #dfe5ee;
+  border-radius: 10px;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.card h3 {
+  margin: 0;
+}
+
+.user-list {
+  border: 1px solid #e7ebf2;
+  border-radius: 8px;
+  display: grid;
+}
+
+.user-list > div {
+  align-items: center;
+  column-gap: 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  padding: 10px 12px;
+}
+
+.user-list > div + div {
+  border-top: 1px solid #edf1f6;
+}
+
+.user-list strong,
+.user-list span {
+  display: block;
+}
+
+.user-list span {
+  color: #3f5f8b;
+  font-size: 13px;
+}
+
+.user-list small {
+  background: #e8f1ff;
+  border-radius: 999px;
+  color: #004aab;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 8px;
+}
+
+form {
+  display: grid;
+  gap: 10px;
+}
+
+input,
+select,
+button {
+  border-radius: 8px;
+  min-height: 40px;
+}
+
+input,
+select {
+  border: 1px solid #d8dee8;
+  color: #0f2a52;
+  padding: 0 10px;
+}
+
+.password-row {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.password-row button {
+  background: #e8f1ff;
+  border: 1px solid #d8e4f8;
+  color: #004aab;
+  padding: 0 12px;
+}
+
+form > button {
+  background: #004aab;
+  border: 0;
+  color: #ffffff;
+}

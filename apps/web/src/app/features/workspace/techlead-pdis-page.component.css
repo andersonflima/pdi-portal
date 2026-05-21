@@ -1,0 +1,113 @@
+.manage-page {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+}
+
+.manage-page header h2 {
+  margin: 0;
+}
+
+.manage-page header p {
+  color: #3f5f8b;
+  margin: 6px 0 0;
+}
+
+.page-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.card {
+  background: #ffffff;
+  border: 1px solid #dfe5ee;
+  border-radius: 10px;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.card h3 {
+  margin: 0;
+}
+
+.plan-list {
+  border: 1px solid #e7ebf2;
+  border-radius: 8px;
+  display: grid;
+}
+
+.plan-list > div {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 10px;
+}
+
+.plan-list > div + div {
+  border-top: 1px solid #edf1f6;
+}
+
+.plan-list > div.is-active {
+  background: #f5f9ff;
+}
+
+.plan-list button {
+  border: 0;
+  text-align: left;
+}
+
+.plan-list button:first-child {
+  background: transparent;
+  color: #0f2a52;
+  display: grid;
+  gap: 2px;
+}
+
+.plan-list small {
+  color: #3f5f8b;
+}
+
+.danger {
+  background: #c13221;
+  border-radius: 8px;
+  color: #ffffff;
+  min-height: 34px;
+  padding: 0 12px;
+}
+
+form {
+  display: grid;
+  gap: 10px;
+}
+
+input,
+select,
+textarea,
+form button {
+  border-radius: 8px;
+}
+
+input,
+select,
+textarea {
+  border: 1px solid #d8dee8;
+  color: #0f2a52;
+  min-height: 40px;
+  padding: 0 10px;
+}
+
+textarea {
+  min-height: 92px;
+  padding: 10px;
+  resize: vertical;
+}
+
+form button {
+  background: #004aab;
+  border: 0;
+  color: #ffffff;
+  min-height: 40px;
+}

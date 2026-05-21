@@ -17,7 +17,7 @@
 }
 
 .canvas-title > span {
-  color: #2563eb;
+  color: #005fcc;
   font-size: 12px;
   font-weight: 800;
 }
@@ -35,7 +35,7 @@
   background: #ffffff;
   border: 1px solid #dfe5ee;
   border-radius: 8px;
-  color: #172033;
+  color: #004aab;
   cursor: pointer;
   font-size: 22px;
   font-weight: 820;
@@ -47,13 +47,13 @@
 
 .plan-picker select option {
   background: #ffffff;
-  color: #172033;
+  color: #004aab;
 }
 
 .plan-picker button {
-  background: #eef3f8;
+  background: #e8f1ff;
   border-radius: 8px;
-  color: #172033;
+  color: #004aab;
   justify-content: center;
   min-height: 34px;
   padding: 0;
@@ -61,7 +61,7 @@
 }
 
 .canvas-header p {
-  color: #627086;
+  color: #3f5f8b;
   font-size: 14px;
   line-height: 1.35;
   margin: 0;
@@ -84,9 +84,9 @@
 }
 
 .secondary-action {
-  background: #eef3f8;
+  background: #e8f1ff;
   border-radius: 8px;
-  color: #172033;
+  color: #004aab;
   flex: 0 0 auto;
   justify-content: center;
   min-height: 42px;
@@ -96,7 +96,7 @@
 }
 
 .save-board {
-  background: #172033;
+  background: #004aab;
   border-radius: 8px;
   color: #ffffff;
   flex: 0 0 auto;
