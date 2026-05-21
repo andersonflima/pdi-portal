@@ -1,14 +1,21 @@
 <main class="workspace">
   <header class="workspace-nav">
-    <div>
+    <div class="workspace-identity">
       <strong>{{ user.name }}</strong>
       <span>{{ roleLabel() }}</span>
     </div>
-    <nav>
-      <button type="button" [class.is-active]="activeView === 'board'" (click)="openView('board')">Board</button>
-      @if (isTechLead()) {
-        <button type="button" [class.is-active]="activeView === 'pdis'" (click)="openView('pdis')">PDIs</button>
-        <button type="button" [class.is-active]="activeView === 'users'" (click)="openView('users')">Users</button>
+
+    <nav class="workspace-menu" aria-label="Workspace pages">
+      @for (item of menuItems(); track item.view) {
+        <button
+          type="button"
+          [class.is-active]="isActiveView(item.view)"
+          [attr.aria-current]="isActiveView(item.view) ? 'page' : null"
+          (click)="openView(item.view)"
+        >
+          <strong>{{ item.label }}</strong>
+          <small>{{ item.description }}</small>
+        </button>
       }
     </nav>
   </header>
