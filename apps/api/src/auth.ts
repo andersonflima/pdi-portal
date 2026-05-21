@@ -20,7 +20,7 @@ export const requireAdmin = async (request: FastifyRequest) => {
   await request.jwtVerify();
 
   if (request.user.role !== 'ADMIN') {
-    throw request.server.httpErrors.forbidden('Admin access required');
+    throw request.server.httpErrors.forbidden('Tech Lead access required');
   }
 };
 

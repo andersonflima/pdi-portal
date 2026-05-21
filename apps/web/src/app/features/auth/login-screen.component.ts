@@ -8,7 +8,7 @@ const toAuthErrorMessage = (error: unknown, canCreateAdmin: boolean) => {
   if (error instanceof ApiRequestError && error.status === null) return error.message;
   if (error instanceof ApiRequestError && error.status !== 401) return error.message;
 
-  return canCreateAdmin ? 'Could not create admin user' : 'Invalid email or password';
+  return canCreateAdmin ? 'Could not create Tech Lead user' : 'Invalid email or password';
 };
 
 @Component({
@@ -23,8 +23,8 @@ export class LoginScreenComponent implements OnInit {
   private readonly auth = inject(AuthService);
 
   readonly adminName = signal('');
-  readonly email = signal('admin@pdi.local');
-  readonly password = signal('admin123');
+  readonly email = signal('techlead@pdi.local');
+  readonly password = signal('techlead123');
   readonly canCreateAdmin = signal(false);
   readonly error = signal<string | null>(null);
   readonly isSubmitting = signal(false);

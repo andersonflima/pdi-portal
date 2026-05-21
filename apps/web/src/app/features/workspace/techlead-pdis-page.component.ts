@@ -1,0 +1,106 @@
+import { Component, Input, output } from '@angular/core';
+import type { PdiPlan, User } from '@pdi/contracts';
+import { FormsModule } from '@angular/forms';
+
+type NewPlanForm = {
+  objective: string;
+  ownerId: string;
+  title: string;
+};
+
+type EditPlanForm = {
+  objective: string;
+  ownerId: string;
+  status: PdiPlan['status'];
+  title: string;
+};
+
+const emptyNewPlan = (ownerId: string): NewPlanForm => ({
+  objective: '',
+  ownerId,
+  title: ''
+});
+
+const toEditForm = (plan: PdiPlan): EditPlanForm => ({
+  objective: plan.objective,
+  ownerId: plan.ownerId,
+  status: plan.status,
+  title: plan.title
+});
+
+@Component({
+  selector: 'app-techlead-pdis-page',
+  standalone: true,
+  imports: [FormsModule],
+  templateUrl: './techlead-pdis-page.component.html',
+  styleUrl: './techlead-pdis-page.component.css'
+})
+export class TechleadPdisPageComponent {
+  @Input({ required: true }) isCreatingPlan = false;
+  @Input({ required: true }) isDeletingPlan = false;
+  @Input({ required: true }) isUpdatingPlan = false;
+  @Input({ required: true }) plan!: PdiPlan;
+  @Input({ required: true }) plans: PdiPlan[] = [];
+  @Input({ required: true }) users: User[] = [];
+
+  readonly createPlan = output<{ objective: string; ownerId?: string; title: string }>();
+  readonly deletePlan = output<string>();
+  readonly selectPlan = output<string>();
+  readonly updatePlan = output<{ id: string; data: Partial<Pick<PdiPlan, 'objective' | 'ownerId' | 'status' | 'title'>> }>();
+
+  protected editingPlanId = '';
+  protected editPlan: EditPlanForm | null = null;
+  protected newPlan: NewPlanForm = emptyNewPlan('');
+
+  ngOnChanges() {
+    if (!this.editingPlanId && this.plan?.id) {
+      this.editingPlanId = this.plan.id;
+      this.editPlan = toEditForm(this.plan);
+    }
+
+    if (!this.newPlan.ownerId) {
+      this.newPlan = { ...this.newPlan, ownerId: this.defaultOwnerId() };
+    }
+  }
+
+  protected readonly ownerName = (ownerId: string) => this.users.find((user) => user.id === ownerId)?.name ?? 'No owner';
+
+  protected readonly handleCreatePlan = (event: Event) => {
+    event.preventDefault();
+    const ownerId = this.newPlan.ownerId || this.defaultOwnerId();
+
+    if (!ownerId) return;
+
+    this.createPlan.emit({
+      objective: this.newPlan.objective,
+      ownerId,
+      title: this.newPlan.title
+    });
+    this.newPlan = emptyNewPlan(ownerId);
+  };
+
+  protected readonly selectPlanForEdit = (planId: string) => {
+    const selected = this.plans.find((candidate) => candidate.id === planId);
+
+    if (!selected) return;
+
+    this.editingPlanId = selected.id;
+    this.editPlan = toEditForm(selected);
+    this.selectPlan.emit(selected.id);
+  };
+
+  protected readonly handleUpdatePlan = (event: Event) => {
+    event.preventDefault();
+    if (!this.editPlan) return;
+    this.updatePlan.emit({ data: this.editPlan, id: this.editingPlanId });
+  };
+
+  protected readonly handleDeletePlan = (planId: string, title: string) => {
+    if (window.confirm(`Remove "${title}" and its board?`)) {
+      this.deletePlan.emit(planId);
+    }
+  };
+
+  private readonly defaultOwnerId = () =>
+    this.users.find((user) => user.role === 'MEMBER')?.id ?? this.users[0]?.id ?? '';
+}
