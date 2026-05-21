@@ -44,6 +44,7 @@ infra/
 - Redimensionamento de elementos com ajuste automatico de fonte
 - Formatacao de texto com alinhamento horizontal e vertical
 - Alteracao de cor e background
+- Tema visual principal em azul e branco
 - Conectores entre elementos com handles visiveis no item selecionado
 - Edges com texto, cor, linha continua ou tracejada
 - Seed padrao com o board `Software Developer Skills Roadmap`
