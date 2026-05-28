@@ -1,5 +1,6 @@
 import {
   AfterViewInit,
+  ChangeDetectionStrategy,
   Component,
   ElementRef,
   HostListener,
@@ -11,19 +12,23 @@ import {
   effect,
   inject,
   output,
-  signal,
   viewChild
 } from '@angular/core';
 import type { CanvasNodeKind, CanvasShapeVariant, PdiPlan, User } from '@pdi/contracts';
 import { toBlob as toDomBlob, toSvg as toDomSvg } from 'html-to-image';
 import { LucideAngularModule } from 'lucide-angular';
+import { FeatureFlagsService } from '../../core/platform/feature-flags.service';
+import { CanvasEdgeOperationsService } from './application/canvas-edge-operations.service';
+import { CanvasFacade } from './application/canvas.facade';
+import { CanvasHistoryService } from './application/canvas-history.service';
+import { CanvasInteractionControllerService } from './application/canvas-interaction-controller.service';
 import { ApiService } from '../../core/api/api.service';
 import { CanvasEdgeLayerComponent } from './components/canvas-edge-layer.component';
 import { CanvasHeaderComponent } from './components/canvas-header.component';
 import { CanvasNodeComponent } from './components/canvas-node.component';
 import { CanvasToolbarComponent } from './components/canvas-toolbar.component';
 import { canvasSize } from './canvas.constants';
-import { findContainingFrame, getConnectorLabelPoint, getConnectorPath, getNodeCenter, isPointInsideNode } from './canvas.geometry';
+import { getConnectorLabelPoint, getConnectorPath, getNodeCenter, isPointInsideNode } from './canvas.geometry';
 import { createCanvasNode, toCanvasEdges, toCanvasNodes, toSaveBoard } from './canvas.mappers';
 import type {
   CanvasEdgeDirection,
@@ -69,7 +74,6 @@ const exportImagePixelRatio = 2;
 const exportZoomScale = 1;
 const arrowNeckOffset = 18;
 const exportBoundsPadding = 64;
-const historyMaxEntries = 200;
 
 const roundZoom = (value: number) => Math.round(value * 100) / 100;
 
@@ -370,7 +374,9 @@ const toNodeFillColor = (node: CanvasNodeView) => {
   standalone: true,
   imports: [CanvasEdgeLayerComponent, CanvasHeaderComponent, CanvasNodeComponent, CanvasToolbarComponent, LucideAngularModule],
   templateUrl: './canvas-board.component.html',
-  styleUrl: './canvas-board.component.css'
+  styleUrl: './canvas-board.component.css',
+  providers: [CanvasFacade, CanvasHistoryService, CanvasEdgeOperationsService, CanvasInteractionControllerService],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy {
   @Input({ required: true }) isCreatingPlan = false;
@@ -389,6 +395,11 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   readonly selectPlan = output<string>();
 
   private readonly api = inject(ApiService);
+  private readonly edgeOperations = inject(CanvasEdgeOperationsService);
+  private readonly interactionController = inject(CanvasInteractionControllerService);
+  private readonly canvasFacade = inject(CanvasFacade);
+  private readonly historyService = inject(CanvasHistoryService);
+  private readonly featureFlags = inject(FeatureFlagsService);
   private readonly stageElement = viewChild<ElementRef<HTMLDivElement>>('canvasStage');
   private readonly planeElement = viewChild<ElementRef<HTMLDivElement>>('canvasPlane');
   private readonly clientId = crypto.randomUUID();
@@ -401,31 +412,27 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   private isPersistingBoard = false;
   private queuedAutosaveSnapshot: { board: ReturnType<typeof toSaveBoard>; planId: string; snapshot: string } | null = null;
   private removeStageWheelListener: (() => void) | null = null;
-  private historySnapshot: string | null = null;
-  private historyPast: string[] = [];
-  private historyFuture: string[] = [];
-  private historyBatchDepth = 0;
-  private historyBatchBaseSnapshot: string | null = null;
 
   protected readonly canvasSize = canvasSize;
+  protected readonly canvasEngineMode = this.featureFlags.canvasEngineMode;
   protected readonly minimapSize = { height: minimapHeight, width: minimapWidth };
-  protected readonly activeConnector = signal<ConnectorDraft | null>(null);
-  protected readonly boardTitle = signal('');
-  protected readonly connectorSourceId = signal<string | null>(null);
-  protected readonly currentPlanId = signal<string | null>(null);
-  protected readonly edges = signal<CanvasEdgeView[]>([]);
-  protected readonly isPanning = signal(false);
-  protected readonly isSaving = signal(false);
-  protected readonly marqueeSelection = signal<MarqueeSelectionDraft | null>(null);
-  protected readonly nodes = signal<CanvasNodeView[]>([]);
-  protected readonly selectedEdgeId = signal<string | null>(null);
-  protected readonly selectedNodeIds = signal<string[]>([]);
-  protected readonly selectedNodeId = signal<string | null>(null);
-  protected readonly stageViewport = signal({ height: 0, left: 0, top: 0, width: 0 });
-  protected readonly zoom = signal(1);
+  protected readonly activeConnector = this.canvasFacade.activeConnector;
+  protected readonly boardTitle = this.canvasFacade.boardTitle;
+  protected readonly connectorSourceId = this.canvasFacade.connectorSourceId;
+  protected readonly currentPlanId = this.canvasFacade.currentPlanId;
+  protected readonly edges = this.canvasFacade.edges;
+  protected readonly isPanning = this.canvasFacade.isPanning;
+  protected readonly isSaving = this.canvasFacade.isSaving;
+  protected readonly marqueeSelection = this.canvasFacade.marqueeSelection;
+  protected readonly nodes = this.canvasFacade.nodes;
+  protected readonly selectedEdgeId = this.canvasFacade.selectedEdgeId;
+  protected readonly selectedNodeIds = this.canvasFacade.selectedNodeIds;
+  protected readonly selectedNodeId = this.canvasFacade.selectedNodeId;
+  protected readonly stageViewport = this.canvasFacade.stageViewport;
+  protected readonly zoom = this.canvasFacade.zoom;
 
-  protected readonly selectedNode = computed(() => this.nodes().find((node) => node.id === this.selectedNodeId()) ?? null);
-  protected readonly selectedEdge = computed(() => this.edges().find((edge) => edge.id === this.selectedEdgeId()) ?? null);
+  protected readonly selectedNode = this.canvasFacade.selectedNode;
+  protected readonly selectedEdge = this.canvasFacade.selectedEdge;
   protected readonly selectedEdgeDirection = computed<CanvasEdgeDirection>(() => {
     const selectedEdge = this.selectedEdge();
 
@@ -435,7 +442,7 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
     if (reverseEdge) return 'both';
 
-    return this.edgeHorizontalDirection(selectedEdge);
+    return this.edgeOperations.edgeHorizontalDirection(selectedEdge, this.nodes());
   });
   protected readonly selectedNodeIdSet = computed(() => new Set(this.selectedNodeIds()));
   protected readonly nodeStackLevel = (node: CanvasNodeView) =>
@@ -553,31 +560,10 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       if (!planId) return;
 
       const nextSnapshot = JSON.stringify(toSaveBoard(title, nodes, edges));
-
-      if (this.historySnapshot === null) {
-        this.historySnapshot = nextSnapshot;
-        this.historyPast = [];
-        this.historyFuture = [];
-        return;
-      }
-
-      if (nextSnapshot === this.historySnapshot) return;
-
-      if (this.historyBatchDepth > 0) return;
-
-      if (this.isApplyingRemoteBoard || this.isRestoringHistory) {
-        this.historySnapshot = nextSnapshot;
-        return;
-      }
-
-      this.historyPast.push(this.historySnapshot);
-
-      if (this.historyPast.length > historyMaxEntries) {
-        this.historyPast = this.historyPast.slice(this.historyPast.length - historyMaxEntries);
-      }
-
-      this.historyFuture = [];
-      this.historySnapshot = nextSnapshot;
+      this.historyService.observeSnapshot(nextSnapshot, {
+        isApplyingRemoteBoard: this.isApplyingRemoteBoard,
+        isRestoringHistory: this.isRestoringHistory
+      });
     });
   }
 
@@ -641,9 +627,7 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
       const allNodeIds = this.nodes().map((node) => node.id);
 
-      this.selectedNodeIds.set(allNodeIds);
-      this.selectedNodeId.set(allNodeIds.at(-1) ?? null);
-      this.selectedEdgeId.set(null);
+      this.canvasFacade.setNodeSelection(allNodeIds, true);
       this.connectorSourceId.set(null);
       this.activeConnector.set(null);
       this.marqueeSelection.set(null);
@@ -677,12 +661,7 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   };
 
   protected readonly clearSelection = () => {
-    this.selectedNodeIds.set([]);
-    this.selectedNodeId.set(null);
-    this.selectedEdgeId.set(null);
-    this.connectorSourceId.set(null);
-    this.activeConnector.set(null);
-    this.marqueeSelection.set(null);
+    this.canvasFacade.clearSelection();
   };
 
   protected readonly handleCreateNode = (event: { kind: CanvasNodeKind; variant?: CanvasShapeVariant }) => {
@@ -734,15 +713,14 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     if (connectorSourceId && connectorSourceId !== node.id) {
       this.createConnector(connectorSourceId, node.id);
       this.connectorSourceId.set(null);
-      this.selectedNodeIds.set([]);
-      this.selectedNodeId.set(null);
+      this.canvasFacade.setNodeSelection([]);
       return;
     }
 
     const isAdditiveSelection = event.shiftKey || event.metaKey || event.ctrlKey;
 
     if (isAdditiveSelection) {
-      this.toggleNodeSelection(node.id);
+      this.canvasFacade.toggleNodeSelection(node.id);
       this.selectedEdgeId.set(null);
       return;
     }
@@ -750,10 +728,10 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     const selectedNodeIdSet = this.selectedNodeIdSet();
 
     if (!selectedNodeIdSet.has(node.id) || selectedNodeIdSet.size <= 1) {
-      this.selectedNodeIds.set([node.id]);
+      this.canvasFacade.selectSingleNode(node.id);
     }
 
-    this.selectedNodeId.set(node.id);
+    this.canvasFacade.setActiveNode(node.id);
     this.selectedEdgeId.set(null);
     this.bringSelectedNodeToFront();
     this.startNodeDrag(event, node);
@@ -766,9 +744,7 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     const sourcePoint = toConnectorHandlePoint(node, payload.handle);
     const initialTargetPoint = this.toCanvasPoint(payload.event.clientX, payload.event.clientY) ?? sourcePoint;
 
-    this.selectedNodeIds.set([node.id]);
-    this.selectedNodeId.set(node.id);
-    this.selectedEdgeId.set(null);
+    this.canvasFacade.selectSingleNode(node.id);
     this.connectorSourceId.set(null);
     this.activeConnector.set({
       sourceHandle: payload.handle,
@@ -827,10 +803,7 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     toConnectorPath(connector.sourcePoint, connector.targetPoint);
 
   protected readonly handleSelectEdge = (edgeId: string) => {
-    this.selectedEdgeId.set(edgeId);
-    this.selectedNodeIds.set([]);
-    this.selectedNodeId.set(null);
-    this.connectorSourceId.set(null);
+    this.canvasFacade.selectEdge(edgeId);
   };
 
   protected readonly handleToggleConnectorMode = () => {
@@ -942,55 +915,10 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
     if (!selectedEdge) return;
 
-    const { direction, ...edgePatch } = input;
-
     this.edges.update((edges) => {
-      const currentEdge = edges.find((edge) => edge.id === selectedEdge.id) ?? selectedEdge;
-      const reverseEdge =
-        edges.find((edge) => edge.source === currentEdge.target && edge.target === currentEdge.source) ?? null;
-
-      const applyPatch = (edge: CanvasEdgeView): CanvasEdgeView => ({
-        ...edge,
-        label: edgePatch.label ?? edge.label,
-        style: {
-          color: edgePatch.color ?? edge.style.color,
-          lineStyle: edgePatch.lineStyle ?? edge.style.lineStyle,
-          type: edgePatch.type ?? edge.style.type
-        }
-      });
-
-      const patchedCurrent = applyPatch(currentEdge);
-      const patchedReverse = reverseEdge ? applyPatch(reverseEdge) : null;
-      const leftToRightEdge =
-        this.edgeHorizontalDirection(patchedCurrent) === 'left-to-right'
-          ? patchedCurrent
-          : patchedReverse ?? this.createReverseEdge(patchedCurrent);
-      const rightToLeftEdge =
-        this.edgeHorizontalDirection(patchedCurrent) === 'right-to-left'
-          ? patchedCurrent
-          : patchedReverse ?? this.createReverseEdge(patchedCurrent);
-
-      const pairlessEdges = edges.filter((edge) => edge.id !== patchedCurrent.id && edge.id !== patchedReverse?.id);
-
-      if (direction === 'both') {
-        return pairlessEdges.concat(leftToRightEdge, rightToLeftEdge);
-      }
-
-      if (direction === 'left-to-right') {
-        this.selectedEdgeId.set(leftToRightEdge.id);
-        return pairlessEdges.concat(leftToRightEdge);
-      }
-
-      if (direction === 'right-to-left') {
-        this.selectedEdgeId.set(rightToLeftEdge.id);
-        return pairlessEdges.concat(rightToLeftEdge);
-      }
-
-      if (patchedReverse) {
-        return pairlessEdges.concat(patchedCurrent, patchedReverse);
-      }
-
-      return pairlessEdges.concat(patchedCurrent);
+      const mutationResult = this.edgeOperations.mutateSelectedEdge(edges, this.nodes(), selectedEdge, input);
+      this.selectedEdgeId.set(mutationResult.selectedEdgeId);
+      return mutationResult.edges;
     });
   };
 
@@ -1132,16 +1060,12 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     const token = ++this.loadToken;
     this.closeLiveConnection();
     this.isApplyingRemoteBoard = true;
-    this.historySnapshot = null;
-    this.historyPast = [];
-    this.historyFuture = [];
+    this.historyService.reset();
     this.boardTitle.set('');
     this.currentPlanId.set(planId);
     this.nodes.set([]);
     this.edges.set([]);
-    this.selectedNodeIds.set([]);
-    this.selectedNodeId.set(null);
-    this.selectedEdgeId.set(null);
+    this.canvasFacade.setNodeSelection([], true);
     this.activeConnector.set(null);
 
     try {
@@ -1312,7 +1236,12 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   };
 
   private readonly startNodeDrag = (event: PointerEvent, node: CanvasNodeView) => {
-    const nodeIdsToMove = this.resolveNodeIdsToMove(node);
+    const nodeIdsToMove = this.interactionController.resolveNodeIdsToMove(
+      node,
+      this.nodes(),
+      this.selectedNodeIdSet(),
+      findDescendantNodeIds
+    );
     const initialPositions = new Map(
       this.nodes()
         .filter((candidate) => nodeIdsToMove.has(candidate.id))
@@ -1369,38 +1298,12 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
           return candidate !== undefined && candidate.kind !== 'FRAME';
         });
 
-        this.updateNodeParents(movedNonFrameNodeIds);
+        this.nodes.update((nodes) => this.interactionController.updateNodeParents(nodes, movedNonFrameNodeIds));
       }
     };
 
     window.addEventListener('pointermove', handleMove);
     window.addEventListener('pointerup', handleEnd, { once: true });
-  };
-
-  private readonly updateNodeParents = (nodeIds: string[]) => {
-    if (nodeIds.length === 0) return;
-
-    const nodeIdSet = new Set(nodeIds);
-
-    this.nodes.update((nodes) => {
-      return nodes.map((node) =>
-        nodeIdSet.has(node.id) && node.kind !== 'FRAME'
-          ? {
-              ...node,
-              parentId: findContainingFrame(node, nodes)?.id
-            }
-          : node
-      );
-    });
-  };
-
-  private readonly toggleNodeSelection = (nodeId: string) => {
-    const selectedIds = this.selectedNodeIds();
-    const hasNode = selectedIds.includes(nodeId);
-    const nextSelection = hasNode ? selectedIds.filter((id) => id !== nodeId) : [...selectedIds, nodeId];
-
-    this.selectedNodeIds.set(nextSelection);
-    this.selectedNodeId.set(nextSelection[nextSelection.length - 1] ?? null);
   };
 
   private readonly startMarqueeSelection = (event: PointerEvent) => {
@@ -1446,7 +1349,14 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
       if (!isSelecting) return;
 
-      this.applyMarqueeSelection(origin, currentPoint, initialSelection, append);
+      const nextSelection = this.interactionController.computeMarqueeSelection(
+        this.nodes(),
+        origin,
+        currentPoint,
+        initialSelection,
+        append
+      );
+      this.canvasFacade.setNodeSelection(nextSelection);
     };
 
     const handleEnd = (endEvent: PointerEvent) => {
@@ -1461,63 +1371,19 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
         return;
       }
 
-      this.applyMarqueeSelection(origin, releasePoint, initialSelection, append);
+      const nextSelection = this.interactionController.computeMarqueeSelection(
+        this.nodes(),
+        origin,
+        releasePoint,
+        initialSelection,
+        append
+      );
+      this.canvasFacade.setNodeSelection(nextSelection);
       this.marqueeSelection.set(null);
     };
 
     window.addEventListener('pointermove', handleMove);
     window.addEventListener('pointerup', handleEnd, { once: true });
-  };
-
-  private readonly applyMarqueeSelection = (
-    origin: XYPosition,
-    current: XYPosition,
-    initialSelection: string[],
-    append: boolean
-  ) => {
-    const bounds = toSelectionBounds(origin, current);
-    const selectedByBounds = this.nodes()
-      .filter((node) => {
-        const nodeLeft = node.position.x;
-        const nodeTop = node.position.y;
-        const nodeRight = node.position.x + node.width;
-        const nodeBottom = node.position.y + node.height;
-
-        return !(
-          nodeRight < bounds.left ||
-          nodeLeft > bounds.right ||
-          nodeBottom < bounds.top ||
-          nodeTop > bounds.bottom
-        );
-      })
-      .map((node) => node.id);
-
-    const nextSelection = append
-      ? Array.from(new Set([...initialSelection, ...selectedByBounds]))
-      : selectedByBounds;
-
-    this.selectedNodeIds.set(nextSelection);
-    this.selectedNodeId.set(nextSelection[nextSelection.length - 1] ?? null);
-  };
-
-  private readonly resolveNodeIdsToMove = (draggedNode: CanvasNodeView) => {
-    const selectedSet = this.selectedNodeIdSet();
-    const nodes = this.nodes();
-    const canMoveSelection = selectedSet.size > 1 && selectedSet.has(draggedNode.id);
-
-    if (!canMoveSelection) {
-      return new Set(draggedNode.kind === 'FRAME' ? findDescendantNodeIds(draggedNode.id, nodes) : [draggedNode.id]);
-    }
-
-    return nodes.reduce((accumulator, node) => {
-      if (!selectedSet.has(node.id)) return accumulator;
-
-      const ids = node.kind === 'FRAME' ? findDescendantNodeIds(node.id, nodes) : [node.id];
-
-      for (const id of ids) accumulator.add(id);
-
-      return accumulator;
-    }, new Set<string>());
   };
 
   private readonly syncStageViewport = () => {
@@ -2384,40 +2250,16 @@ svg[data-pdi-panning="true"] { cursor: grabbing; }
 
   private readonly undoBoardChange = () => {
     this.finalizeHistoryBatch();
-
-    if (this.historyPast.length === 0) return false;
-
-    const previousSnapshot = this.historyPast.pop();
-
+    const previousSnapshot = this.historyService.undo(this.currentBoardSnapshot());
     if (!previousSnapshot) return false;
-
-    const currentSnapshot = JSON.stringify(toSaveBoard(this.boardTitle() || this.plan.title, this.nodes(), this.edges()));
-    this.historyFuture.push(currentSnapshot);
-
-    if (this.historyFuture.length > historyMaxEntries) {
-      this.historyFuture = this.historyFuture.slice(this.historyFuture.length - historyMaxEntries);
-    }
-
     this.applyHistorySnapshot(previousSnapshot);
     return true;
   };
 
   private readonly redoBoardChange = () => {
     this.finalizeHistoryBatch();
-
-    if (this.historyFuture.length === 0) return false;
-
-    const nextSnapshot = this.historyFuture.pop();
-
+    const nextSnapshot = this.historyService.redo(this.currentBoardSnapshot());
     if (!nextSnapshot) return false;
-
-    const currentSnapshot = JSON.stringify(toSaveBoard(this.boardTitle() || this.plan.title, this.nodes(), this.edges()));
-    this.historyPast.push(currentSnapshot);
-
-    if (this.historyPast.length > historyMaxEntries) {
-      this.historyPast = this.historyPast.slice(this.historyPast.length - historyMaxEntries);
-    }
-
     this.applyHistorySnapshot(nextSnapshot);
     return true;
   };
@@ -2438,12 +2280,8 @@ svg[data-pdi-panning="true"] { cursor: grabbing; }
     this.boardTitle.set(parsed.title);
     this.nodes.set(toCanvasNodes(boardPayload));
     this.edges.set(toCanvasEdges(boardPayload));
-    this.selectedNodeIds.set([]);
-    this.selectedNodeId.set(null);
-    this.selectedEdgeId.set(null);
-    this.connectorSourceId.set(null);
-    this.activeConnector.set(null);
-    this.historySnapshot = snapshot;
+    this.canvasFacade.clearSelection();
+    this.historyService.setSnapshot(snapshot);
     this.isRestoringHistory = false;
 
     window.requestAnimationFrame(() => {
@@ -2462,61 +2300,24 @@ svg[data-pdi-panning="true"] { cursor: grabbing; }
   };
 
   private readonly beginHistoryBatch = () => {
-    if (this.historyBatchDepth === 0) {
-      this.historyBatchBaseSnapshot = JSON.stringify(toSaveBoard(this.boardTitle() || this.plan.title, this.nodes(), this.edges()));
-    }
-
-    this.historyBatchDepth += 1;
+    this.historyService.beginBatch(this.currentBoardSnapshot());
   };
 
   private readonly endHistoryBatch = () => {
-    if (this.historyBatchDepth === 0) return;
-
-    this.historyBatchDepth -= 1;
-
-    if (this.historyBatchDepth > 0) return;
-
-    this.commitHistoryBatch();
+    this.historyService.endBatch(this.currentBoardSnapshot(), this.historyCommitOptions());
   };
 
   private readonly finalizeHistoryBatch = () => {
-    if (this.historyBatchDepth === 0) return;
-
-    this.historyBatchDepth = 0;
-    this.commitHistoryBatch();
+    this.historyService.finalizeBatch(this.currentBoardSnapshot(), this.historyCommitOptions());
   };
 
-  private readonly commitHistoryBatch = () => {
-    const baseSnapshot = this.historyBatchBaseSnapshot;
-    this.historyBatchBaseSnapshot = null;
-    const nextSnapshot = JSON.stringify(toSaveBoard(this.boardTitle() || this.plan.title, this.nodes(), this.edges()));
+  private readonly currentBoardSnapshot = () =>
+    JSON.stringify(toSaveBoard(this.boardTitle() || this.plan.title, this.nodes(), this.edges()));
 
-    if (this.historySnapshot === null) {
-      this.historySnapshot = nextSnapshot;
-      this.historyPast = [];
-      this.historyFuture = [];
-      return;
-    }
-
-    if (!baseSnapshot || nextSnapshot === baseSnapshot) {
-      this.historySnapshot = nextSnapshot;
-      return;
-    }
-
-    if (this.isApplyingRemoteBoard || this.isRestoringHistory) {
-      this.historySnapshot = nextSnapshot;
-      return;
-    }
-
-    this.historyPast.push(baseSnapshot);
-
-    if (this.historyPast.length > historyMaxEntries) {
-      this.historyPast = this.historyPast.slice(this.historyPast.length - historyMaxEntries);
-    }
-
-    this.historyFuture = [];
-    this.historySnapshot = nextSnapshot;
-  };
+  private readonly historyCommitOptions = () => ({
+    isApplyingRemoteBoard: this.isApplyingRemoteBoard,
+    isRestoringHistory: this.isRestoringHistory
+  });
 
   private readonly svgBlobToPngBlob = async (svgBlob: Blob, width: number, height: number, pixelRatio: number) => {
     const objectUrl = URL.createObjectURL(svgBlob);
@@ -2556,32 +2357,6 @@ svg[data-pdi-panning="true"] { cursor: grabbing; }
       image.src = url;
     });
 
-  private readonly edgeHorizontalDirection = (edge: CanvasEdgeView): Exclude<CanvasEdgeDirection, 'both'> => {
-    const source = this.nodes().find((node) => node.id === edge.source);
-    const target = this.nodes().find((node) => node.id === edge.target);
-
-    if (!source || !target) return 'left-to-right';
-
-    return getNodeCenter(source).x <= getNodeCenter(target).x ? 'left-to-right' : 'right-to-left';
-  };
-
-  private readonly flipHandleRole = (handle?: string) => {
-    if (!handle) return undefined;
-    if (handle.includes('-source')) return handle.replace('-source', '-target');
-    if (handle.includes('-target')) return handle.replace('-target', '-source');
-
-    return handle;
-  };
-
-  private readonly createReverseEdge = (edge: CanvasEdgeView): CanvasEdgeView => ({
-    ...edge,
-    id: crypto.randomUUID(),
-    source: edge.target,
-    sourceHandle: this.flipHandleRole(edge.targetHandle),
-    target: edge.source,
-    targetHandle: this.flipHandleRole(edge.sourceHandle)
-  });
-
   private readonly removeSelectedEdge = () => {
     const selectedEdgeId = this.selectedEdgeId();
 
@@ -2596,7 +2371,7 @@ svg[data-pdi-panning="true"] { cursor: grabbing; }
     this.edges.update((edges) =>
       edges.filter((edge) => edge.id !== selectedEdgeId && edge.id !== reverseEdgeId)
     );
-    this.selectedEdgeId.set(null);
+    this.canvasFacade.selectEdge(null);
 
     return true;
   };
@@ -2629,9 +2404,7 @@ svg[data-pdi-panning="true"] { cursor: grabbing; }
         this.connectorSourceId.set(null);
       }
 
-      this.selectedNodeIds.set([]);
-      this.selectedNodeId.set(null);
-      this.selectedEdgeId.set(null);
+      this.canvasFacade.clearSelection();
     });
 
     return true;
@@ -2643,27 +2416,6 @@ svg[data-pdi-panning="true"] { cursor: grabbing; }
     sourceHandle?: string,
     targetHandle?: string
   ) => {
-    const createEdge = (reverseEdge?: CanvasEdgeView): CanvasEdgeView => ({
-      id: crypto.randomUUID(),
-      label: reverseEdge?.label ?? '',
-      source,
-      sourceHandle,
-      style: reverseEdge?.style ?? {
-        color: '#64748b',
-        lineStyle: 'solid' as const,
-        type: 'smoothstep' as const
-      },
-      target,
-      targetHandle
-    });
-
-    this.edges.update((edges) => {
-      const hasSameDirection = edges.some((edge) => edge.source === source && edge.target === target);
-      const reverseEdge = edges.find((edge) => edge.source === target && edge.target === source);
-
-      if (hasSameDirection) return edges;
-
-      return edges.concat(createEdge(reverseEdge));
-    });
+    this.edges.update((edges) => this.edgeOperations.createConnector(edges, source, target, sourceHandle, targetHandle));
   };
 }

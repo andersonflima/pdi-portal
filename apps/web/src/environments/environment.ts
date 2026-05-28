@@ -8,5 +8,8 @@ const locationConfig = globalThis.location;
 export const environment = {
   apiUrl:
     runtimeConfig.__PDI_API_URL__ ??
-    (locationConfig?.port === '5173' ? 'http://localhost:3333/api' : `${locationConfig?.origin ?? ''}/api`)
+    (locationConfig?.port === '5173' ? 'http://localhost:3333/api' : `${locationConfig?.origin ?? ''}/api`),
+  flags: {
+    canvasEngineMode: 'dom' as 'dom' | 'hybrid'
+  }
 };

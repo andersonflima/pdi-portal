@@ -1,35 +1,37 @@
 .users-page {
   display: grid;
-  gap: 18px;
-  padding: 24px;
+  gap: 14px;
+  padding: 16px 18px 18px;
 }
 
 .page-hero {
   background: linear-gradient(120deg, #003b8f 0%, #005fcc 100%);
-  border-radius: 14px;
+  border-radius: 12px;
   color: #ffffff;
   display: grid;
-  gap: 18px;
+  gap: 14px;
   grid-template-columns: minmax(0, 1fr) auto;
-  padding: 18px 20px;
+  padding: 14px 16px;
 }
 
 .eyebrow {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.08em;
-  margin: 0 0 6px;
+  margin: 0 0 4px;
   text-transform: uppercase;
 }
 
 .page-hero h2 {
+  font-size: 1.15rem;
   margin: 0;
 }
 
 .page-hero span {
   color: rgba(255, 255, 255, 0.9);
   display: block;
-  margin-top: 6px;
+  font-size: 0.84rem;
+  margin-top: 4px;
 }
 
 .page-hero dl {
@@ -41,8 +43,8 @@
 
 .page-hero dl div {
   background: rgba(255, 255, 255, 0.14);
-  border-radius: 10px;
-  padding: 10px 12px;
+  border-radius: 8px;
+  padding: 8px 10px;
 }
 
 .page-hero dt {
@@ -51,24 +53,24 @@
 }
 
 .page-hero dd {
-  font-size: 24px;
+  font-size: 19px;
   font-weight: 800;
-  margin: 4px 0 0;
+  margin: 2px 0 0;
 }
 
 .page-grid {
   display: grid;
-  gap: 16px;
-  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  gap: 12px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
 }
 
 .card {
   background: #ffffff;
   border: 1px solid #d7e3f7;
-  border-radius: 12px;
+  border-radius: 10px;
   display: grid;
-  gap: 12px;
-  padding: 14px;
+  gap: 10px;
+  padding: 12px;
 }
 
 .card-header {
@@ -83,21 +85,22 @@
 
 .card-header small {
   color: #3f5f8b;
+  font-size: 0.75rem;
 }
 
 .user-list {
   border: 1px solid #e2ebf9;
-  border-radius: 10px;
+  border-radius: 8px;
   display: grid;
   overflow: hidden;
 }
 
 .user-list > div {
   align-items: center;
-  column-gap: 10px;
+  column-gap: 8px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
-  padding: 12px;
+  padding: 9px 10px;
 }
 
 .user-list > div + div {
@@ -111,16 +114,21 @@
 
 .identity span {
   color: #3f5f8b;
-  font-size: 13px;
+  font-size: 12px;
+}
+
+.identity strong {
+  font-size: 0.86rem;
+  font-weight: 700;
 }
 
 .role-badge {
   background: #e8f1ff;
   border-radius: 999px;
   color: #004aab;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
-  padding: 4px 8px;
+  padding: 3px 7px;
 }
 
 .role-badge.is-techlead {
@@ -132,16 +140,18 @@
   align-items: center;
   background: #fee2e2;
   border: 1px solid #fecaca;
-  border-radius: 8px;
+  border-radius: 7px;
   color: #b42318;
   display: inline-flex;
+  font-size: 0.78rem;
   font-weight: 700;
   justify-content: center;
   line-height: 1;
-  min-height: 34px;
-  min-width: 92px;
-  padding: 0 10px;
+  min-height: 30px;
+  min-width: 74px;
+  padding: 0 9px;
   text-align: center;
+  white-space: nowrap;
 }
 
 .delete-button:disabled {
@@ -153,14 +163,14 @@
 
 form {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 label {
   color: #3f5f8b;
   display: grid;
-  font-size: 13px;
-  gap: 6px;
+  font-size: 12px;
+  gap: 5px;
 }
 
 input,
@@ -181,18 +191,23 @@ select {
 .password-row button {
   background: #e8f1ff;
   border: 1px solid #cfe0f8;
-  border-radius: 8px;
+  border-radius: 7px;
   color: #004aab;
-  min-height: 40px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  min-height: 36px;
   padding: 0 10px;
 }
 
 .primary {
   background: #004aab;
   border: 0;
-  border-radius: 8px;
+  border-radius: 7px;
   color: #ffffff;
-  min-height: 42px;
+  font-size: 0.83rem;
+  font-weight: 700;
+  min-height: 36px;
+  padding: 0 12px;
 }
 
 .primary:disabled {
@@ -214,12 +229,12 @@ select {
 .confirm-dialog {
   background: #ffffff;
   border: 1px solid #d7e3f7;
-  border-radius: 12px;
+  border-radius: 10px;
   box-shadow: 0 22px 60px rgba(6, 28, 66, 0.24);
   display: grid;
-  gap: 12px;
+  gap: 10px;
   max-width: 420px;
-  padding: 18px;
+  padding: 14px;
   width: 100%;
 }
 
@@ -240,12 +255,14 @@ select {
 
 .confirm-actions button {
   align-items: center;
-  border-radius: 8px;
+  border-radius: 7px;
   display: inline-flex;
+  font-size: 0.82rem;
+  font-weight: 700;
   justify-content: center;
-  min-height: 38px;
-  min-width: 96px;
-  padding: 0 12px;
+  min-height: 33px;
+  min-width: 82px;
+  padding: 0 10px;
 }
 
 .ghost {

@@ -1,0 +1,24 @@
+@if (isOpen) {
+  <div class="command-palette-backdrop" (click)="close()">
+    <section class="command-palette" role="dialog" aria-modal="true" aria-label="Command palette" (click)="$event.stopPropagation()">
+      <header>
+        <h2>Command Palette</h2>
+        <p>Use quick actions to navigate faster.</p>
+      </header>
+
+      <div class="command-list">
+        @for (command of commands; track command.id) {
+          <button type="button" (click)="runCommand(command.id)">
+            <strong>{{ command.label }}</strong>
+            <small>{{ command.description }}</small>
+          </button>
+        }
+      </div>
+
+      <footer>
+        <span><kbd>Esc</kbd> close</span>
+        <span><kbd>Cmd/Ctrl</kbd> + <kbd>K</kbd> toggle</span>
+      </footer>
+    </section>
+  </div>
+}

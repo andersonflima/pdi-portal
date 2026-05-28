@@ -1,0 +1,90 @@
+.command-palette-backdrop {
+  align-items: start;
+  backdrop-filter: blur(8px);
+  background: color-mix(in srgb, var(--color-overlay) 74%, transparent);
+  display: grid;
+  inset: 0;
+  justify-items: center;
+  padding: 8svh 20px 20px;
+  position: fixed;
+  z-index: 220;
+}
+
+.command-palette {
+  background: var(--color-surface-floating);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  color: var(--color-content-primary);
+  display: grid;
+  gap: 16px;
+  max-width: 680px;
+  padding: 18px;
+  width: min(680px, 100%);
+}
+
+.command-palette header {
+  display: grid;
+  gap: 4px;
+}
+
+.command-palette h2 {
+  font: var(--font-title-md);
+  margin: 0;
+}
+
+.command-palette p {
+  color: var(--color-content-muted);
+  font: var(--font-body-sm);
+  margin: 0;
+}
+
+.command-list {
+  display: grid;
+  gap: 8px;
+}
+
+.command-list button {
+  align-items: start;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  color: inherit;
+  display: grid;
+  gap: 2px;
+  justify-items: start;
+  min-height: 52px;
+  padding: 10px 12px;
+  text-align: left;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.command-list button:hover {
+  background: color-mix(in srgb, var(--color-action-primary) 8%, var(--color-surface-raised));
+  border-color: var(--color-action-primary);
+}
+
+.command-list button strong {
+  font: var(--font-label-md);
+}
+
+.command-list button small {
+  color: var(--color-content-muted);
+  font: var(--font-body-xs);
+}
+
+.command-palette footer {
+  color: var(--color-content-muted);
+  display: flex;
+  font: var(--font-body-xs);
+  gap: 12px;
+}
+
+.command-palette kbd {
+  background: var(--color-surface-base);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+  color: var(--color-content-primary);
+  font: var(--font-mono-xs);
+  padding: 2px 5px;
+}

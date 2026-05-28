@@ -1,7 +1,7 @@
 .canvas-header {
   align-items: start;
-  background: rgba(255, 255, 255, 0.86);
-  border-bottom: 1px solid #e3e7ef;
+  background: color-mix(in srgb, var(--color-surface-raised) 86%, transparent);
+  border-bottom: 1px solid var(--color-border-subtle);
   display: grid;
   gap: 18px;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -17,9 +17,8 @@
 }
 
 .canvas-title > span {
-  color: #005fcc;
-  font-size: 12px;
-  font-weight: 800;
+  color: var(--color-action-primary);
+  font: var(--font-label-md);
 }
 
 .plan-picker {
@@ -32,10 +31,10 @@
 
 .plan-picker select {
   appearance: none;
-  background: #ffffff;
-  border: 1px solid #dfe5ee;
-  border-radius: 8px;
-  color: #004aab;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--color-content-primary);
   cursor: pointer;
   font-size: 22px;
   font-weight: 820;
@@ -46,14 +45,14 @@
 }
 
 .plan-picker select option {
-  background: #ffffff;
-  color: #004aab;
+  background: var(--color-surface-raised);
+  color: var(--color-content-primary);
 }
 
 .plan-picker button {
-  background: #e8f1ff;
-  border-radius: 8px;
-  color: #004aab;
+  background: color-mix(in srgb, var(--color-action-primary) 10%, var(--color-surface-raised));
+  border-radius: var(--radius-sm);
+  color: var(--color-action-primary);
   justify-content: center;
   min-height: 34px;
   padding: 0;
@@ -61,7 +60,7 @@
 }
 
 .canvas-header p {
-  color: #3f5f8b;
+  color: var(--color-content-muted);
   font-size: 14px;
   line-height: 1.35;
   margin: 0;
@@ -84,9 +83,9 @@
 }
 
 .secondary-action {
-  background: #e8f1ff;
-  border-radius: 8px;
-  color: #004aab;
+  background: color-mix(in srgb, var(--color-action-primary) 10%, var(--color-surface-raised));
+  border-radius: var(--radius-sm);
+  color: var(--color-action-primary);
   flex: 0 0 auto;
   justify-content: center;
   min-height: 42px;
@@ -96,9 +95,9 @@
 }
 
 .save-board {
-  background: #004aab;
-  border-radius: 8px;
-  color: #ffffff;
+  background: var(--color-action-primary);
+  border-radius: var(--radius-sm);
+  color: var(--color-content-on-primary);
   flex: 0 0 auto;
   justify-content: center;
   min-height: 42px;

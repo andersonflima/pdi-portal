@@ -7,10 +7,14 @@
     "build": "node scripts/build-all.mjs",
     "db:setup": "node scripts/setup-local-db.mjs",
     "dev": "node scripts/dev.mjs",
+    "e2e": "playwright test",
     "install:all": "node scripts/install-all.mjs",
     "lint": "node scripts/run-package-script.mjs lint",
     "postinstall": "node scripts/install-all.mjs",
     "typecheck": "node scripts/run-package-script.mjs typecheck",
     "test": "node scripts/run-package-script.mjs test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.2"
   }
 }

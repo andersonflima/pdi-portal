@@ -1,4 +1,4 @@
-import { Component, Input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, output } from '@angular/core';
 import type { PdiPlan, User } from '@pdi/contracts';
 import { LucideAngularModule } from 'lucide-angular';
 import { UserMenuComponent } from './user-menu.component';
@@ -8,7 +8,8 @@ import { UserMenuComponent } from './user-menu.component';
   standalone: true,
   imports: [LucideAngularModule, UserMenuComponent],
   templateUrl: './canvas-header.component.html',
-  styleUrl: './canvas-header.component.css'
+  styleUrl: './canvas-header.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CanvasHeaderComponent {
   @Input({ required: true }) isCreatingPlan = false;

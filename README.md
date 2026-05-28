@@ -37,6 +37,7 @@ infra/
 - Vinculo de PDI com usuario responsavel
 - Criacao automatica do roadmap padrao para cada novo usuario colaborador (`MEMBER`)
 - Board visual por PDI
+- Command Palette (`Cmd/Ctrl + K`) para navegacao rapida entre views
 - Navegacao por paginas no workspace (Board, PDIs e Users para Tech Lead)
 - Tela dedicada de usuarios para Tech Lead (criacao e exclusao de usuarios)
 - Tela dedicada de PDIs para Tech Lead (criacao, edicao e remocao de planos)
@@ -175,7 +176,19 @@ Execute a validacao completa:
 npm run build
 npm run lint
 npm run test
+npm run e2e
 ```
+
+Para baseline de frontend/canvas e regressao inicial, consulte:
+
+- `docs/frontend-phase-0-baseline.md`
+
+## Feature Flag de Engine do Canvas
+
+O frontend suporta modo de engine configuravel por query string:
+
+- `?canvasEngine=dom` (padrao atual)
+- `?canvasEngine=hybrid` (modo de compatibilidade para rollout incremental)
 
 O `npm run build` gera o frontend Angular, compila a API e copia o resultado para `apps/api/public`, permitindo servir tudo por um unico processo Node.js.
 

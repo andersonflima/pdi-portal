@@ -1,5 +1,5 @@
 .workspace {
-  background: #f5f9ff;
+  background: var(--color-surface-base);
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   min-height: 100svh;
@@ -7,12 +7,12 @@
 
 .workspace-nav {
   align-items: end;
-  background: #ffffff;
-  border-bottom: 1px solid #dfe5ee;
+  background: var(--color-surface-raised);
+  border-bottom: 1px solid var(--color-border-subtle);
   display: flex;
   gap: 16px;
   justify-content: space-between;
-  padding: 12px 20px;
+  padding: 14px 20px;
 }
 
 .workspace-identity {
@@ -20,9 +20,14 @@
   gap: 2px;
 }
 
+.workspace-identity strong {
+  color: var(--color-content-primary);
+  font: var(--font-title-sm);
+}
+
 .workspace-identity span {
-  color: #3f5f8b;
-  font-size: 13px;
+  color: var(--color-content-muted);
+  font: var(--font-body-xs);
 }
 
 .workspace-menu {
@@ -32,41 +37,69 @@
 
 .workspace-menu button {
   align-items: flex-start;
-  background: #e8f1ff;
-  border: 1px solid #cfe0f8;
-  border-radius: 10px;
-  color: #004aab;
+  background: var(--color-surface-base);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--color-content-primary);
   display: grid;
   gap: 2px;
   min-height: 52px;
   min-width: 156px;
   padding: 8px 12px;
   text-align: left;
+  transition: border-color 120ms ease, background-color 120ms ease;
 }
 
 .workspace-menu button strong {
-  font-size: 14px;
-  line-height: 1.1;
+  font: var(--font-label-md);
 }
 
 .workspace-menu button small {
-  color: #3f5f8b;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.1;
+  color: var(--color-content-muted);
+  font: var(--font-body-xs);
 }
 
 .workspace-menu button.is-active {
-  background: #004aab;
-  color: #ffffff;
+  background: var(--color-action-primary);
+  border-color: var(--color-action-primary);
+  color: var(--color-content-on-primary);
 }
 
 .workspace-menu button.is-active small {
-  color: rgba(255, 255, 255, 0.88);
+  color: color-mix(in srgb, var(--color-content-on-primary) 86%, transparent);
 }
 
 .workspace-menu button:hover {
-  border-color: #8db3ec;
+  border-color: var(--color-action-primary);
+}
+
+.workspace-command-trigger {
+  align-items: center;
+  background: var(--color-surface-base);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--color-content-primary);
+  display: inline-flex;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.workspace-command-trigger span {
+  color: var(--color-content-muted);
+  display: inline-flex;
+  font: var(--font-body-xs);
+  gap: 4px;
+}
+
+.workspace-command-trigger kbd {
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 4px;
+  color: var(--color-content-primary);
+  font: var(--font-mono-xs);
+  padding: 2px 4px;
 }
 
 .work-surface {
@@ -77,6 +110,10 @@
   .workspace-nav {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .workspace-command-trigger {
+    justify-content: center;
   }
 
   .workspace-menu {

@@ -18,6 +18,11 @@
         </button>
       }
     </nav>
+
+    <button class="workspace-command-trigger" type="button" (click)="toggleCommandPalette()">
+      Command palette
+      <span><kbd>Cmd/Ctrl</kbd> + <kbd>K</kbd></span>
+    </button>
   </header>
 
   <section class="work-surface">
@@ -65,3 +70,10 @@
     }
   </section>
 </main>
+
+<app-command-palette
+  [isOpen]="isCommandPaletteOpen()"
+  [commands]="quickCommands()"
+  (closed)="closeCommandPalette()"
+  (commandTriggered)="executeQuickCommand($event)"
+/>
