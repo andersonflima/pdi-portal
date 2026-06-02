@@ -27,7 +27,7 @@ import { CanvasEdgeLayerComponent } from './components/canvas-edge-layer.compone
 import { CanvasHeaderComponent } from './components/canvas-header.component';
 import { CanvasNodeComponent } from './components/canvas-node.component';
 import { CanvasToolbarComponent } from './components/canvas-toolbar.component';
-import { canvasSize } from './canvas.constants';
+import { canvasSize, nodeKindMeta, nodeKindOrder } from './canvas.constants';
 import { getConnectorLabelPoint, getConnectorPath, getNodeCenter, isPointInsideNode } from './canvas.geometry';
 import { createCanvasNode, toCanvasEdges, toCanvasNodes, toSaveBoard } from './canvas.mappers';
 import type {
@@ -74,6 +74,17 @@ const exportImagePixelRatio = 2;
 const exportZoomScale = 1;
 const arrowNeckOffset = 18;
 const exportBoundsPadding = 64;
+const nodePlacementPadding = 28;
+const nodePlacementStep = 48;
+const nodePlacementSearchRings = Math.ceil(Math.max(canvasSize.width, canvasSize.height) / nodePlacementStep);
+
+const nodeCreationShortcuts = new Map<string, CanvasNodeKind>(
+  nodeKindOrder.flatMap((kind) => {
+    const shortcut = nodeKindMeta[kind].shortcut;
+
+    return shortcut ? [[shortcut.toLowerCase(), kind]] : [];
+  })
+);
 
 const roundZoom = (value: number) => Math.round(value * 100) / 100;
 
@@ -95,6 +106,25 @@ const clampPointToCanvas = (point: XYPosition): XYPosition => ({
   x: Math.min(canvasSize.width, Math.max(0, point.x)),
   y: Math.min(canvasSize.height, Math.max(0, point.y))
 });
+
+const clampNodePositionToCanvas = (node: Pick<CanvasNodeView, 'height' | 'width'>, point: XYPosition): XYPosition => ({
+  x: Math.min(Math.max(0, canvasSize.width - node.width), Math.max(0, point.x)),
+  y: Math.min(Math.max(0, canvasSize.height - node.height), Math.max(0, point.y))
+});
+
+const hasNodeOverlap = (candidate: CanvasNodeView, nodes: CanvasNodeView[]) =>
+  nodes.some((node) => {
+    const candidateLeft = candidate.position.x - nodePlacementPadding;
+    const candidateTop = candidate.position.y - nodePlacementPadding;
+    const candidateRight = candidate.position.x + candidate.width + nodePlacementPadding;
+    const candidateBottom = candidate.position.y + candidate.height + nodePlacementPadding;
+    const nodeLeft = node.position.x;
+    const nodeTop = node.position.y;
+    const nodeRight = node.position.x + node.width;
+    const nodeBottom = node.position.y + node.height;
+
+    return !(candidateRight <= nodeLeft || candidateLeft >= nodeRight || candidateBottom <= nodeTop || candidateTop >= nodeBottom);
+  });
 
 const toSelectionBounds = (first: XYPosition, second: XYPosition) => ({
   bottom: Math.max(first.y, second.y),
@@ -364,7 +394,7 @@ const toNodeFillColor = (node: CanvasNodeView) => {
   if (node.kind === 'TEXT') return 'transparent';
   if (node.kind === 'FRAME') return node.backgroundColor ?? '#d8e6f4';
   if (node.kind === 'NOTE') return node.backgroundColor ?? '#ffe08a';
-  if (node.kind === 'STICKER') return node.backgroundColor ?? '#f4f4f5';
+  if (node.kind === 'STICKER') return node.backgroundColor ?? `${node.color}22`;
   if (node.kind === 'SHAPE') return node.backgroundColor ?? `${node.color}22`;
   return node.backgroundColor ?? '#ffffff';
 };
@@ -621,6 +651,15 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
     if (isEditableTarget(event.target)) return;
 
+    const shortcutKind = !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey ? nodeCreationShortcuts.get(event.key.toLowerCase()) : null;
+
+    if (shortcutKind) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.createNodeOnBoard(shortcutKind);
+      return;
+    }
+
     if (isSelectAllShortcut) {
       event.preventDefault();
       event.stopPropagation();
@@ -665,9 +704,105 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   };
 
   protected readonly handleCreateNode = (event: { kind: CanvasNodeKind; variant?: CanvasShapeVariant }) => {
-    this.nodes.update((currentNodes) =>
-      currentNodes.concat(createCanvasNode(event.kind, currentNodes, currentNodes.length, event.variant))
-    );
+    this.createNodeOnBoard(event.kind, event.variant);
+  };
+
+  private readonly createNodeOnBoard = (kind: CanvasNodeKind, variant?: CanvasShapeVariant) => {
+    const currentNodes = this.nodes();
+    const node = createCanvasNode(kind, currentNodes, currentNodes.length, variant);
+    const positionedNode = {
+      ...node,
+      position: this.findAvailableNodePosition(node, currentNodes)
+    };
+
+    this.nodes.set(currentNodes.concat(positionedNode));
+    this.canvasFacade.selectSingleNode(positionedNode.id);
+    this.connectorSourceId.set(null);
+    this.activeConnector.set(null);
+  };
+
+  private readonly findAvailableNodePosition = (node: CanvasNodeView, nodes: CanvasNodeView[]) => {
+    const viewport = this.stageViewport();
+    const fallbackViewport = {
+      height: Math.min(canvasSize.height, 720),
+      left: Math.max(0, (canvasSize.width - 960) / 2),
+      top: Math.max(0, (canvasSize.height - 720) / 2),
+      width: Math.min(canvasSize.width, 960)
+    };
+    const placementViewport = viewport.width > 0 && viewport.height > 0 ? viewport : fallbackViewport;
+    const origin = clampNodePositionToCanvas(node, {
+      x: placementViewport.left + placementViewport.width / 2 - node.width / 2,
+      y: placementViewport.top + placementViewport.height / 2 - node.height / 2
+    });
+    const candidates = [
+      origin,
+      ...this.nodePlacementGridPositions(node, placementViewport),
+      ...this.nodePlacementGridPositions(node, {
+        height: canvasSize.height,
+        left: 0,
+        top: 0,
+        width: canvasSize.width
+      })
+    ];
+
+    for (const position of candidates) {
+      const candidate = { ...node, position };
+
+      if (!hasNodeOverlap(candidate, nodes)) return position;
+    }
+
+    for (let ring = 0; ring <= nodePlacementSearchRings; ring += 1) {
+      const offsets = ring === 0 ? [{ x: 0, y: 0 }] : this.nodePlacementRingOffsets(ring);
+
+      for (const offset of offsets) {
+        const position = clampNodePositionToCanvas(node, {
+          x: origin.x + offset.x,
+          y: origin.y + offset.y
+        });
+        const candidate = { ...node, position };
+
+        if (!hasNodeOverlap(candidate, nodes)) return position;
+      }
+    }
+
+    return origin;
+  };
+
+  private readonly nodePlacementGridPositions = (
+    node: Pick<CanvasNodeView, 'height' | 'width'>,
+    area: { height: number; left: number; top: number; width: number }
+  ): XYPosition[] => {
+    const left = Math.max(0, Math.floor(area.left) + nodePlacementPadding);
+    const top = Math.max(0, Math.floor(area.top) + nodePlacementPadding);
+    const right = Math.min(canvasSize.width - node.width, Math.ceil(area.left + area.width) - node.width - nodePlacementPadding);
+    const bottom = Math.min(canvasSize.height - node.height, Math.ceil(area.top + area.height) - node.height - nodePlacementPadding);
+
+    if (right < left || bottom < top) return [];
+
+    const positions: XYPosition[] = [];
+
+    for (let y = top; y <= bottom; y += nodePlacementStep) {
+      for (let x = left; x <= right; x += nodePlacementStep) {
+        positions.push({ x, y });
+      }
+    }
+
+    return positions;
+  };
+
+  private readonly nodePlacementRingOffsets = (ring: number): XYPosition[] => {
+    const distance = ring * nodePlacementStep;
+    const offsets: XYPosition[] = [];
+
+    for (let x = -distance; x <= distance; x += nodePlacementStep) {
+      offsets.push({ x, y: -distance }, { x, y: distance });
+    }
+
+    for (let y = -distance + nodePlacementStep; y <= distance - nodePlacementStep; y += nodePlacementStep) {
+      offsets.push({ x: -distance, y }, { x: distance, y });
+    }
+
+    return offsets;
   };
 
   protected readonly handlePlanePointerDown = (event: PointerEvent) => {
@@ -1836,7 +1971,17 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     }
 
     if (node.kind === 'STICKER') {
-      return `<rect x="0" y="0" width="${node.width}" height="${node.height}" rx="18" ry="18" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+      return `
+<rect x="0" y="0" width="${node.width}" height="${node.height}" rx="${Math.min(node.width, node.height) / 2}" ry="${Math.min(node.width, node.height) / 2}" fill="${fill}" stroke="${stroke}" stroke-width="2.4" stroke-dasharray="5 5" />
+<circle cx="${Math.max(14, node.width - 20)}" cy="18" r="5" fill="${stroke}" />`.trim();
+    }
+
+    if (node.kind === 'CARD') {
+      return `
+<rect x="0" y="0" width="${node.width}" height="${node.height}" rx="6" ry="6" fill="${fill}" stroke="#d9e1ec" stroke-width="${strokeWidth}" />
+<rect x="0" y="0" width="6" height="${node.height}" rx="3" ry="3" fill="${stroke}" />
+<rect x="0" y="0" width="${node.width}" height="34" rx="6" ry="6" fill="${stroke}" fill-opacity="0.12" />
+<rect x="18" y="${Math.max(18, node.height - 18)}" width="42" height="5" rx="2.5" ry="2.5" fill="${stroke}" fill-opacity="0.54" />`.trim();
     }
 
     if (node.kind === 'GOAL') {

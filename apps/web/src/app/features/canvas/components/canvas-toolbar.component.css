@@ -52,14 +52,38 @@
 }
 
 .canvas-toolbar button small {
+  align-items: center;
   color: #3f5f8b;
+  display: inline-flex;
   font-size: 10px;
+  gap: 4px;
+}
+
+.canvas-toolbar button kbd {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #c9d6e8;
+  border-radius: 4px;
+  color: #0f2a52;
+  display: inline-flex;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 850;
+  height: 16px;
+  justify-content: center;
+  min-width: 16px;
+  padding: 0 4px;
 }
 
 .canvas-toolbar button.is-passive,
 .canvas-toolbar button.is-active {
   background: #004aab;
   color: #ffffff;
+}
+
+.canvas-toolbar button.is-passive small,
+.canvas-toolbar button.is-active small {
+  color: #e8f1ff;
 }
 
 .node-style-panel,

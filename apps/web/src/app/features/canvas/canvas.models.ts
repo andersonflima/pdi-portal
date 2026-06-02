@@ -70,6 +70,7 @@ export type CanvasNodeMeta = {
   height: number;
   iconName: string;
   label: string;
+  shortcut?: string;
   width: number;
 };
 

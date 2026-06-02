@@ -45,6 +45,7 @@ export const nodeKindMeta: Record<CanvasNodeKind, CanvasNodeMeta> = {
     height: 150,
     iconName: 'trello',
     label: 'Card',
+    shortcut: '3',
     width: 280
   },
   FRAME: {
@@ -54,6 +55,7 @@ export const nodeKindMeta: Record<CanvasNodeKind, CanvasNodeMeta> = {
     height: 260,
     iconName: 'frame',
     label: 'Frame',
+    shortcut: '8',
     width: 420
   },
   GOAL: {
@@ -63,6 +65,7 @@ export const nodeKindMeta: Record<CanvasNodeKind, CanvasNodeMeta> = {
     height: 168,
     iconName: 'goal',
     label: 'Goal',
+    shortcut: '7',
     width: 168
   },
   NOTE: {
@@ -72,6 +75,7 @@ export const nodeKindMeta: Record<CanvasNodeKind, CanvasNodeMeta> = {
     height: 170,
     iconName: 'sticky-note',
     label: 'Post-it',
+    shortcut: '1',
     width: 190
   },
   SHAPE: {
@@ -90,6 +94,7 @@ export const nodeKindMeta: Record<CanvasNodeKind, CanvasNodeMeta> = {
     height: 128,
     iconName: 'sparkles',
     label: 'Sticker',
+    shortcut: '2',
     width: 128
   },
   TASK: {
@@ -99,6 +104,7 @@ export const nodeKindMeta: Record<CanvasNodeKind, CanvasNodeMeta> = {
     height: 128,
     iconName: 'check',
     label: 'Task',
+    shortcut: '5',
     width: 260
   },
   TASK_LIST: {
@@ -108,6 +114,7 @@ export const nodeKindMeta: Record<CanvasNodeKind, CanvasNodeMeta> = {
     height: 190,
     iconName: 'list-checks',
     label: 'Checklist',
+    shortcut: '6',
     width: 300
   },
   TEXT: {
@@ -117,6 +124,7 @@ export const nodeKindMeta: Record<CanvasNodeKind, CanvasNodeMeta> = {
     height: 96,
     iconName: 'square-pen',
     label: 'Text',
+    shortcut: '4',
     width: 300
   }
 };

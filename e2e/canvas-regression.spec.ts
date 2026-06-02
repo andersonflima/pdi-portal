@@ -32,12 +32,44 @@ test.describe('Canvas critical regression', () => {
     await login(page);
 
     const nodesBefore = await page.locator('app-canvas-node').count();
-    await page.locator('app-canvas-toolbar button[title="Add Text"]').click();
+    await page.getByRole('button', { exact: true, name: 'Text 4 Annotate' }).click();
     await expect.poll(async () => page.locator('app-canvas-node').count()).toBeGreaterThan(nodesBefore);
 
     await page.getByRole('button', { name: /zoom in/i }).click();
     await expect(page.locator('.canvas-zoom-controls span')).not.toHaveText('100%');
     await page.getByRole('button', { name: /reset zoom/i }).click();
     await expect(page.locator('.canvas-zoom-controls span')).toHaveText('100%');
+  });
+
+  test('should create toolbar nodes with shortcuts without stacking them at the same position', async ({ page }) => {
+    await login(page);
+
+    const nodesBefore = await page.locator('app-canvas-node').count();
+
+    await page.keyboard.press('1');
+    await page.keyboard.press('2');
+    await page.keyboard.press('3');
+
+    await expect.poll(async () => page.locator('app-canvas-node').count()).toBe(nodesBefore + 3);
+
+    const nodeRects = await page.locator('app-canvas-node').evaluateAll((nodes) =>
+      nodes.map((node) => {
+        const element = node as HTMLElement;
+
+        return {
+          bottom: Number.parseFloat(element.style.top) + Number.parseFloat(element.style.height),
+          left: Number.parseFloat(element.style.left),
+          right: Number.parseFloat(element.style.left) + Number.parseFloat(element.style.width),
+          top: Number.parseFloat(element.style.top)
+        };
+      })
+    );
+    const createdRects = nodeRects.slice(-3);
+    const existingRects = nodeRects.slice(0, -3);
+    const hasOverlap = (leftRect: (typeof nodeRects)[number], rightRect: (typeof nodeRects)[number]) =>
+      !(leftRect.right <= rightRect.left || leftRect.left >= rightRect.right || leftRect.bottom <= rightRect.top || leftRect.top >= rightRect.bottom);
+
+    expect(new Set(createdRects.map((rect) => `${rect.left}:${rect.top}`)).size).toBe(3);
+    expect(createdRects.some((createdRect) => existingRects.some((existingRect) => hasOverlap(createdRect, existingRect)))).toBe(false);
   });
 });

@@ -5,10 +5,10 @@
   </button>
 
   @for (kind of nodeKindOrder; track kind) {
-    <button type="button" [title]="'Add ' + nodeKindMeta[kind].label" (click)="handleCreateNode(kind)">
+    <button type="button" [title]="'Add ' + nodeKindMeta[kind].label + ' (' + nodeKindMeta[kind].shortcut + ')'" (click)="handleCreateNode(kind)">
       <i-lucide [name]="nodeKindMeta[kind].iconName" [size]="18" />
       <span>{{ nodeKindMeta[kind].label }}</span>
-      <small>{{ nodeKindMeta[kind].action }}</small>
+      <small><kbd>{{ nodeKindMeta[kind].shortcut }}</kbd>{{ nodeKindMeta[kind].action }}</small>
     </button>
   }
 
