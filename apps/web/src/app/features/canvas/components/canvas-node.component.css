@@ -52,8 +52,10 @@
   min-height: 0;
   min-width: 0;
   overflow: visible;
+  position: relative;
   text-align: var(--node-text-align, left);
   width: 100%;
+  z-index: 1;
 }
 
 .pdi-goal-icon {
@@ -176,25 +178,31 @@
 
 .pdi-node-sticker {
   background:
-    radial-gradient(circle at 28% 20%, rgba(255, 255, 255, 0.78) 0 12%, transparent 13%),
-    color-mix(in srgb, var(--node-color) 22%, #ffffff);
-  border: 2px solid color-mix(in srgb, var(--node-color) 74%, #ffffff);
-  border-radius: 999px;
-  box-shadow: 0 10px 22px color-mix(in srgb, var(--node-color) 20%, transparent);
-  outline: 2px dashed color-mix(in srgb, var(--node-color) 40%, transparent);
-  outline-offset: -7px;
-  padding: 18px;
+    linear-gradient(135deg, rgba(255, 255, 255, 0.62), transparent 42%),
+    color-mix(in srgb, var(--node-color) 20%, #ffffff);
+  border: 2px solid color-mix(in srgb, var(--node-color) 72%, #ffffff);
+  border-radius: 8px;
+  box-shadow: 0 10px 20px color-mix(in srgb, var(--node-color) 18%, transparent);
+  outline: 1px dashed color-mix(in srgb, var(--node-color) 42%, transparent);
+  outline-offset: -8px;
+  padding: 18px 16px;
 }
 
 .pdi-node-sticker::before {
-  background: var(--node-color);
-  border-radius: 999px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--node-color) 26%, #ffffff),
+    color-mix(in srgb, var(--node-color) 46%, #ffffff)
+  );
+  border-bottom-left-radius: 5px;
+  box-shadow: -2px 2px 5px color-mix(in srgb, var(--node-color) 14%, transparent);
   content: "";
-  height: 10px;
+  height: 20px;
   position: absolute;
-  right: 16px;
-  top: 14px;
-  width: 10px;
+  right: -2px;
+  top: -2px;
+  width: 20px;
+  z-index: 0;
 }
 
 .pdi-node-sticker strong,
@@ -210,17 +218,18 @@
   border: 1px solid #d9e1ec;
   border-left: 6px solid color-mix(in srgb, var(--node-color) 82%, #ffffff);
   box-shadow: 0 14px 30px rgba(23, 32, 51, 0.11);
-  padding: 22px 16px 14px 18px;
+  padding: 44px 16px 18px 18px;
 }
 
 .pdi-node-card::before {
-  background: linear-gradient(90deg, color-mix(in srgb, var(--node-color) 20%, #ffffff), transparent);
+  background: color-mix(in srgb, var(--node-color) 82%, #ffffff);
   content: "";
-  height: 34px;
+  height: 28px;
   left: 0;
   position: absolute;
   right: 0;
   top: 0;
+  z-index: 0;
 }
 
 .pdi-node-card::after {
@@ -232,6 +241,7 @@
   left: 18px;
   position: absolute;
   width: 42px;
+  z-index: 0;
 }
 
 .pdi-node-card strong,
