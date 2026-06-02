@@ -214,34 +214,30 @@
 }
 
 .pdi-node-card {
-  background: #ffffff;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--node-color) 5%, #ffffff), #ffffff 42px),
+    #ffffff;
   border: 1px solid #d9e1ec;
-  border-left: 6px solid color-mix(in srgb, var(--node-color) 82%, #ffffff);
-  box-shadow: 0 14px 30px rgba(23, 32, 51, 0.11);
-  padding: 44px 16px 18px 18px;
+  border-left: 5px solid color-mix(in srgb, var(--node-color) 82%, #ffffff);
+  border-radius: 8px;
+  box-shadow: 0 12px 24px rgba(23, 32, 51, 0.1);
+  padding: 28px 18px 20px 20px;
 }
 
 .pdi-node-card::before {
   background: color-mix(in srgb, var(--node-color) 82%, #ffffff);
+  border-radius: 999px;
   content: "";
-  height: 28px;
-  left: 0;
+  height: 4px;
+  left: 20px;
   position: absolute;
-  right: 0;
-  top: 0;
+  top: 14px;
+  width: 54px;
   z-index: 0;
 }
 
 .pdi-node-card::after {
-  background: color-mix(in srgb, var(--node-color) 54%, #ffffff);
-  border-radius: 999px;
-  bottom: 13px;
-  content: "";
-  height: 5px;
-  left: 18px;
-  position: absolute;
-  width: 42px;
-  z-index: 0;
+  content: none;
 }
 
 .pdi-node-card strong,
