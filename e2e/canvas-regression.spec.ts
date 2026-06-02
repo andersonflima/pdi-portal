@@ -72,4 +72,43 @@ test.describe('Canvas critical regression', () => {
     expect(new Set(createdRects.map((rect) => `${rect.left}:${rect.top}`)).size).toBe(3);
     expect(createdRects.some((createdRect) => existingRects.some((existingRect) => hasOverlap(createdRect, existingRect)))).toBe(false);
   });
+
+  test('should drag a node even when an edge crosses over its center point', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await login(page);
+
+    const node = page.locator('app-canvas-node').nth(4);
+    const hitTargetTag = await node.evaluate((element) => {
+      const rect = (element as HTMLElement).getBoundingClientRect();
+      const target = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      return target?.tagName ?? null;
+    });
+    const before = await node.evaluate((element) => ({
+      left: Number.parseFloat((element as HTMLElement).style.left),
+      top: Number.parseFloat((element as HTMLElement).style.top)
+    }));
+    const box = await node.boundingBox();
+
+    expect(box).not.toBeNull();
+    expect(hitTargetTag).not.toBe('path');
+
+    if (!box) return;
+
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 120, box.y + box.height / 2 + 60, { steps: 12 });
+    await page.mouse.up();
+
+    await expect
+      .poll(async () =>
+        node.evaluate((element) => ({
+          left: Number.parseFloat((element as HTMLElement).style.left),
+          top: Number.parseFloat((element as HTMLElement).style.top)
+        }))
+      )
+      .toEqual({
+        left: before.left + 120,
+        top: before.top + 60
+      });
+  });
 });

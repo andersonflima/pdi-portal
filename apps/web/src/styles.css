@@ -1,14 +1,14 @@
 :root {
-  --color-surface-base: #f3f6fb;
-  --color-surface-raised: #ffffff;
-  --color-surface-floating: #fcfdff;
-  --color-content-primary: #10213e;
-  --color-content-muted: #4d6387;
-  --color-content-on-primary: #f9fcff;
-  --color-action-primary: #0f5fce;
-  --color-action-primary-strong: #0b4ea9;
-  --color-border-subtle: #d8e1ee;
-  --color-overlay: #091126;
+  --color-surface-base: #08111f;
+  --color-surface-raised: #101a2d;
+  --color-surface-floating: #16243d;
+  --color-content-primary: #e5edf9;
+  --color-content-muted: #96a9c9;
+  --color-content-on-primary: #08111f;
+  --color-action-primary: #67adff;
+  --color-action-primary-strong: #3d8ff4;
+  --color-border-subtle: rgba(143, 170, 214, 0.22);
+  --color-overlay: #020814;
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
@@ -33,8 +33,8 @@
 
 body {
   background:
-    radial-gradient(circle at 14% -20%, rgba(15, 95, 206, 0.1), transparent 40%),
-    radial-gradient(circle at 80% 0%, rgba(20, 111, 173, 0.08), transparent 42%),
+    radial-gradient(circle at 14% -20%, rgba(103, 173, 255, 0.18), transparent 40%),
+    radial-gradient(circle at 80% 0%, rgba(41, 98, 255, 0.12), transparent 42%),
     var(--color-surface-base);
   color: var(--color-content-primary);
   margin: 0;
