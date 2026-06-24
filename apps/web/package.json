@@ -8,7 +8,9 @@
     "dev": "ng serve --host 0.0.0.0 --port 5173",
     "lint": "ng build --configuration development",
     "preview": "ng serve --host 0.0.0.0 --port 5173",
-    "test": "ng build --configuration development",
+    "test": "ng test --no-watch",
+    "test:coverage": "ng test --no-watch --coverage",
+    "test:watch": "ng test",
     "typecheck": "ng build --configuration development"
   },
   "dependencies": {
@@ -28,7 +30,10 @@
     "@angular/build": "^21.2.10",
     "@angular/cli": "^21.2.10",
     "@angular/compiler-cli": "^21.2.12",
-    "typescript": "^5.9.3"
+    "@vitest/coverage-v8": "^4.1.9",
+    "jsdom": "^25.0.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.9"
   },
   "overrides": {
     "esbuild": "0.27.3"

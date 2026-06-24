@@ -14,3 +14,5 @@ apps/api/public/
 apps/api/data/
 *.db
 *.db-journal
+.tmp-test/
+.scannerwork/

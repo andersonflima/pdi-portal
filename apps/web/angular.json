@@ -46,6 +46,25 @@
           },
           "defaultConfiguration": "production"
         },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "tsconfig.spec.json",
+            "buildTarget": "web:build:development",
+            "runner": "vitest",
+            "coverage": true,
+            "coverageReporters": ["text", "text-summary", "html", "lcovonly"],
+            "coverageInclude": ["src/app/**/*.ts"],
+            "coverageExclude": [
+              "src/**/*.spec.ts",
+              "src/**/*.component.ts",
+              "src/main.ts",
+              "src/**/*.models.ts",
+              "src/**/*.constants.ts",
+              "src/app/shared/lucide-icons.ts"
+            ]
+          }
+        },
         "serve": {
           "builder": "@angular/build:dev-server",
           "configurations": {
