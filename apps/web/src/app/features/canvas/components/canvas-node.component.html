@@ -76,4 +76,23 @@
   } @else {
     <strong>{{ node().label }}</strong>
   }
+
+  @if (showProgress()) {
+    <div
+      class="pdi-node-progress"
+      role="progressbar"
+      [attr.aria-valuenow]="progressValue()"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      [attr.aria-label]="'Progress ' + progressValue() + '%'"
+    >
+      <div class="pdi-node-progress-track">
+        <div class="pdi-node-progress-fill" [style.width.%]="progressValue()"></div>
+      </div>
+      <span class="pdi-node-progress-value">{{ progressValue() }}%</span>
+      @if (progressStatus(); as status) {
+        <span class="pdi-node-progress-status" [class]="'is-' + status">{{ progressStatusLabel() }}</span>
+      }
+    </div>
+  }
 </article>

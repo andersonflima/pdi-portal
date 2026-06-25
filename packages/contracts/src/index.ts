@@ -90,6 +90,9 @@ export const canvasNodeSchema = z.object({
   checked: z.boolean().optional(),
   description: z.string().optional(),
   parentId: z.string().optional(),
+  progress: z.number().min(0).max(100).optional(),
+  startDate: z.string().optional(),
+  targetDate: z.string().optional(),
   taskItems: z
     .array(
       z.object({

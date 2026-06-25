@@ -1,10 +1,16 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import type { CanvasEdgeLineStyle, CanvasEdgeType, CanvasNodeKind, CanvasShapeVariant, CanvasTextAlign, CanvasTextVerticalAlign } from '@pdi/contracts';
 import { LucideAngularModule } from 'lucide-angular';
 import { nodeKindMeta, nodeKindOrder } from '../canvas.constants';
-import type { CanvasEdgeDirection, CanvasEdgePatch, CanvasEdgeView, CanvasNodeStylePatch, CanvasNodeView, CanvasTextStyle } from '../canvas.models';
+import type { CanvasEdgeDirection, CanvasEdgePatch, CanvasEdgeView, CanvasNodeProgressPatch, CanvasNodeStylePatch, CanvasNodeView, CanvasTextStyle } from '../canvas.models';
 
 const inputValue = (event: Event) => (event.target as HTMLInputElement | HTMLSelectElement).value;
+
+const progressKinds = new Set<CanvasNodeKind>(['TASK', 'TASK_LIST', 'GOAL', 'CARD', 'NOTE']);
+
+const toDateInputValue = (iso?: string) => (iso ? iso.slice(0, 10) : '');
+
+const toIsoDate = (value: string): string | null => (value ? new Date(`${value}T00:00:00.000Z`).toISOString() : null);
 
 @Component({
   selector: 'app-canvas-toolbar',
@@ -28,9 +34,32 @@ export class CanvasToolbarComponent {
   readonly toggleConnectorMode = output<void>();
   readonly undo = output<void>();
   readonly redo = output<void>();
+  readonly nodeProgressChange = output<CanvasNodeProgressPatch>();
 
   protected readonly nodeKindMeta = nodeKindMeta;
   protected readonly nodeKindOrder = nodeKindOrder;
+
+  protected readonly supportsProgress = computed(() => {
+    const node = this.selectedNode();
+    return node ? progressKinds.has(node.kind) : false;
+  });
+
+  protected readonly progressValue = computed(() => this.selectedNode()?.progress ?? 0);
+  protected readonly startDateValue = computed(() => toDateInputValue(this.selectedNode()?.startDate));
+  protected readonly targetDateValue = computed(() => toDateInputValue(this.selectedNode()?.targetDate));
+
+  protected readonly setProgress = (event: Event) => {
+    const value = Number(inputValue(event));
+    if (Number.isFinite(value)) this.nodeProgressChange.emit({ progress: value });
+  };
+
+  protected readonly setStartDate = (event: Event) => {
+    this.nodeProgressChange.emit({ startDate: toIsoDate(inputValue(event)) });
+  };
+
+  protected readonly setTargetDate = (event: Event) => {
+    this.nodeProgressChange.emit({ targetDate: toIsoDate(inputValue(event)) });
+  };
 
   protected readonly handleCreateNode = (kind: CanvasNodeKind, variant?: CanvasShapeVariant) => {
     this.createNode.emit({ kind, variant });

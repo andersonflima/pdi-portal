@@ -40,6 +40,9 @@ export type CanvasNodeView = {
   label: string;
   parentId?: string;
   position: XYPosition;
+  progress?: number;
+  startDate?: string;
+  targetDate?: string;
   taskItems?: CanvasTaskItem[];
   textStyle?: CanvasTextStyle;
   variant?: CanvasShapeVariant;
@@ -79,6 +82,12 @@ export type CanvasNodeDataPatch = Partial<
 >;
 
 export type CanvasNodeStylePatch = Partial<Pick<CanvasNodeView, 'backgroundColor' | 'color'>>;
+
+export type CanvasNodeProgressPatch = {
+  progress?: number;
+  startDate?: string | null;
+  targetDate?: string | null;
+};
 
 export type CanvasEdgePatch = {
   color?: string;
