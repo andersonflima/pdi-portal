@@ -11,6 +11,9 @@ export type SvgTextAnchor = 'middle' | 'start' | 'end';
 
 const exportBoundsPadding = 64;
 
+/** Offset (px) that pulls connector endpoints back from a node so the arrow head fits. */
+export const arrowNeckOffset = 18;
+
 export const escapeXml = (value: string) =>
   value
     .replaceAll('&', '&amp;')
