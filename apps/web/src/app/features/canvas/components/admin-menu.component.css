@@ -250,10 +250,30 @@
   opacity: 0.58;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   .admin-menu-panel {
     left: 0;
     min-width: min(420px, calc(100vw - 56px));
     right: auto;
+  }
+}
+
+@media (max-width: 560px) {
+  .admin-menu-panel {
+    gap: 12px;
+    min-width: min(360px, calc(100vw - 28px));
+    padding: 12px;
+  }
+
+  .admin-form-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .temporary-password-field {
+    grid-template-columns: 1fr;
+  }
+
+  .temporary-password-field button {
+    width: 100%;
   }
 }

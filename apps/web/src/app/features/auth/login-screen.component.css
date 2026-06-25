@@ -119,7 +119,7 @@
   }
 }
 
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   .login-shell {
     grid-template-columns: 1fr;
   }
@@ -131,5 +131,25 @@
 
   .login-panel {
     padding: 32px;
+  }
+}
+
+@media (max-width: 560px) {
+  .login-visual {
+    min-height: 30svh;
+    padding: 24px 20px;
+  }
+
+  .login-visual span {
+    font-size: 16px;
+  }
+
+  .login-panel {
+    gap: 16px;
+    padding: 28px 20px;
+  }
+
+  .login-panel h2 {
+    font-size: 26px;
   }
 }

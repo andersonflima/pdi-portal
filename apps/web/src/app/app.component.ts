@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { LoginScreenComponent } from './features/auth/login-screen.component';
 import { AuthService } from './core/auth/auth.service';
 import { ToastComponent } from './core/notifications/toast.component';
+import { ThemeService } from './core/theme/theme.service';
 import { WorkspaceComponent } from './features/workspace/workspace.component';
 
 @Component({
@@ -54,6 +55,11 @@ import { WorkspaceComponent } from './features/workspace/workspace.component';
 })
 export class AppComponent implements OnInit {
   protected readonly auth = inject(AuthService);
+
+  constructor() {
+    // Instantiate the theme service so the persisted theme is applied at startup.
+    inject(ThemeService);
+  }
 
   ngOnInit() {
     void this.auth.bootstrap();

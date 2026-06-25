@@ -9,6 +9,14 @@
     <strong>{{ user.name }}</strong>
     <span>{{ user.email }}</span>
     <small>{{ user.role === 'ADMIN' ? usersCount + ' users managed as Tech Lead' : 'Personal workspace' }}</small>
+    <button
+      type="button"
+      [attr.aria-label]="theme() === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'"
+      (click)="toggleTheme()"
+    >
+      <i-lucide [name]="theme() === 'dark' ? 'sun' : 'moon'" [size]="16" />
+      {{ theme() === 'dark' ? 'Light theme' : 'Dark theme' }}
+    </button>
     <button type="button" (click)="logout.emit()">
       <i-lucide name="log-out" [size]="16" />
       Sign out
