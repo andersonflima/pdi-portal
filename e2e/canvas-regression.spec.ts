@@ -111,4 +111,16 @@ test.describe('Canvas critical regression', () => {
         top: before.top + 60
       });
   });
+
+  test('should export the board as downloadable SVG and PNG files', async ({ page }) => {
+    await login(page);
+
+    const svgDownload = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Export SVG' }).click();
+    expect((await svgDownload).suggestedFilename()).toMatch(/\.svg$/);
+
+    const pngDownload = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Export PNG' }).click();
+    expect((await pngDownload).suggestedFilename()).toMatch(/\.png$/);
+  });
 });
