@@ -86,4 +86,23 @@ describe('CanvasHistoryService', () => {
 
     expect(history.undo('b')).toBeNull();
   });
+
+  it('reports undo/redo availability', () => {
+    const history = new CanvasHistoryService();
+    expect(history.canUndo()).toBe(false);
+    expect(history.canRedo()).toBe(false);
+
+    history.observeSnapshot('a', options);
+    history.observeSnapshot('b', options);
+    expect(history.canUndo()).toBe(true);
+    expect(history.canRedo()).toBe(false);
+
+    history.undo('b');
+    expect(history.canUndo()).toBe(false);
+    expect(history.canRedo()).toBe(true);
+
+    history.reset();
+    expect(history.canUndo()).toBe(false);
+    expect(history.canRedo()).toBe(false);
+  });
 });

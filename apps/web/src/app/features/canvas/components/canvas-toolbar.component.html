@@ -4,6 +4,29 @@
     <span>Select</span>
   </button>
 
+  <div class="history-group" role="group" aria-label="History">
+    <button
+      class="is-icon"
+      type="button"
+      title="Undo (Ctrl/Cmd+Z)"
+      aria-label="Undo"
+      [disabled]="!canUndo()"
+      (click)="undo.emit()"
+    >
+      <i-lucide name="rotate-ccw" [size]="17" />
+    </button>
+    <button
+      class="is-icon is-flip-x"
+      type="button"
+      title="Redo (Ctrl/Cmd+Shift+Z)"
+      aria-label="Redo"
+      [disabled]="!canRedo()"
+      (click)="redo.emit()"
+    >
+      <i-lucide name="rotate-ccw" [size]="17" />
+    </button>
+  </div>
+
   @for (kind of nodeKindOrder; track kind) {
     <button type="button" [title]="'Add ' + nodeKindMeta[kind].label + ' (' + nodeKindMeta[kind].shortcut + ')'" (click)="handleCreateNode(kind)">
       <i-lucide [name]="nodeKindMeta[kind].iconName" [size]="18" />

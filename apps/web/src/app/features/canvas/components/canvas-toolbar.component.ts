@@ -19,11 +19,15 @@ export class CanvasToolbarComponent {
   readonly selectedEdge = input<CanvasEdgeView | null>(null);
   readonly selectedEdgeDirection = input<CanvasEdgeDirection>('left-to-right');
   readonly connectorSourceId = input<string | null>(null);
+  readonly canUndo = input(false);
+  readonly canRedo = input(false);
   readonly createNode = output<{ kind: CanvasNodeKind; variant?: CanvasShapeVariant }>();
   readonly nodeStyleChange = output<CanvasNodeStylePatch>();
   readonly textStyleChange = output<Partial<CanvasTextStyle>>();
   readonly edgeChange = output<CanvasEdgePatch>();
   readonly toggleConnectorMode = output<void>();
+  readonly undo = output<void>();
+  readonly redo = output<void>();
 
   protected readonly nodeKindMeta = nodeKindMeta;
   protected readonly nodeKindOrder = nodeKindOrder;

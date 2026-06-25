@@ -103,3 +103,14 @@
     }
   </div>
 </details>
+
+<app-confirm-dialog
+  [open]="isDeleteDialogOpen()"
+  title="Remove PDI"
+  [message]="deleteDialogMessage()"
+  confirmLabel="Remove"
+  cancelLabel="Cancel"
+  tone="danger"
+  (confirmed)="confirmDeletePlan()"
+  (cancelled)="cancelDeletePlan()"
+/>

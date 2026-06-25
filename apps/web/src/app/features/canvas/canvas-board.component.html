@@ -20,6 +20,8 @@
   />
 
   <app-canvas-toolbar
+    [canRedo]="canRedo()"
+    [canUndo]="canUndo()"
     [connectorSourceId]="connectorSourceId()"
     [selectedEdge]="selectedEdge()"
     [selectedEdgeDirection]="selectedEdgeDirection()"
@@ -27,8 +29,10 @@
     (createNode)="handleCreateNode($event)"
     (edgeChange)="updateSelectedEdge($event)"
     (nodeStyleChange)="updateSelectedNodeStyle($event)"
+    (redo)="handleRedo()"
     (textStyleChange)="updateSelectedTextStyle($event)"
     (toggleConnectorMode)="handleToggleConnectorMode()"
+    (undo)="handleUndo()"
   />
 
   <div
