@@ -47,6 +47,27 @@
   opacity: 0.42;
 }
 
+.canvas-toolbar .history-group {
+  align-items: stretch;
+  border-left: 1px solid var(--color-border-subtle);
+  border-right: 1px solid var(--color-border-subtle);
+  display: flex;
+  gap: 2px;
+  margin: 0 2px;
+  padding: 0 4px;
+}
+
+.canvas-toolbar button.is-icon {
+  align-content: center;
+  min-height: 58px;
+  min-width: 46px;
+  width: 46px;
+}
+
+.canvas-toolbar button.is-icon.is-flip-x i-lucide {
+  transform: scaleX(-1);
+}
+
 .canvas-toolbar button span {
   font-size: 12px;
   font-weight: 760;

@@ -49,6 +49,19 @@
       {{ isSaving ? 'Saving' : 'Save board' }}
     </button>
 
+    <button
+      class="secondary-action"
+      type="button"
+      title="Keyboard shortcuts"
+      aria-label="Keyboard shortcuts"
+      (click)="showShortcuts.set(true)"
+    >
+      <i-lucide name="info" [size]="17" />
+      Shortcuts
+    </button>
+
     <app-user-menu [user]="user" [usersCount]="usersCount" (logout)="logout.emit()" />
   </div>
+
+  <app-keyboard-shortcuts [open]="showShortcuts()" (closed)="showShortcuts.set(false)" />
 </header>

@@ -109,6 +109,14 @@ export class CanvasHistoryService {
     this.snapshot = snapshot;
   }
 
+  canUndo() {
+    return this.past.length > 0;
+  }
+
+  canRedo() {
+    return this.future.length > 0;
+  }
+
   private commitBatch(nextSnapshot: string, options: HistoryCommitOptions) {
     const baseSnapshot = this.batchBaseSnapshot;
     this.batchBaseSnapshot = null;

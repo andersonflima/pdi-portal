@@ -1,12 +1,13 @@
-import { ChangeDetectionStrategy, Component, Input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, output, signal } from '@angular/core';
 import type { PdiPlan, User } from '@pdi/contracts';
 import { LucideAngularModule } from 'lucide-angular';
+import { KeyboardShortcutsComponent } from '../../../shared/components/keyboard-shortcuts.component';
 import { UserMenuComponent } from './user-menu.component';
 
 @Component({
   selector: 'app-canvas-header',
   standalone: true,
-  imports: [LucideAngularModule, UserMenuComponent],
+  imports: [LucideAngularModule, KeyboardShortcutsComponent, UserMenuComponent],
   templateUrl: './canvas-header.component.html',
   styleUrl: './canvas-header.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -30,6 +31,8 @@ export class CanvasHeaderComponent {
   readonly logout = output<void>();
   readonly saveBoard = output<void>();
   readonly selectPlan = output<string>();
+
+  protected readonly showShortcuts = signal(false);
 
   protected readonly ownerName = (ownerId: string) => this.users.find((item) => item.id === ownerId)?.name;
 

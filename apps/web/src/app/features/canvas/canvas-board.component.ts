@@ -12,6 +12,7 @@ import {
   effect,
   inject,
   output,
+  signal,
   viewChild
 } from '@angular/core';
 import type { CanvasNodeKind, CanvasShapeVariant, PdiPlan, User } from '@pdi/contracts';
@@ -447,6 +448,8 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   protected readonly canvasEngineMode = this.featureFlags.canvasEngineMode;
   protected readonly minimapSize = { height: minimapHeight, width: minimapWidth };
   protected readonly activeConnector = this.canvasFacade.activeConnector;
+  protected readonly canUndo = signal(false);
+  protected readonly canRedo = signal(false);
   protected readonly boardTitle = this.canvasFacade.boardTitle;
   protected readonly connectorSourceId = this.canvasFacade.connectorSourceId;
   protected readonly currentPlanId = this.canvasFacade.currentPlanId;
@@ -594,6 +597,7 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
         isApplyingRemoteBoard: this.isApplyingRemoteBoard,
         isRestoringHistory: this.isRestoringHistory
       });
+      this.refreshHistoryAvailability();
     });
   }
 
@@ -2393,11 +2397,25 @@ svg[data-pdi-panning="true"] { cursor: grabbing; }
     };
   };
 
+  protected readonly handleUndo = () => {
+    this.undoBoardChange();
+  };
+
+  protected readonly handleRedo = () => {
+    this.redoBoardChange();
+  };
+
+  private readonly refreshHistoryAvailability = () => {
+    this.canUndo.set(this.historyService.canUndo());
+    this.canRedo.set(this.historyService.canRedo());
+  };
+
   private readonly undoBoardChange = () => {
     this.finalizeHistoryBatch();
     const previousSnapshot = this.historyService.undo(this.currentBoardSnapshot());
     if (!previousSnapshot) return false;
     this.applyHistorySnapshot(previousSnapshot);
+    this.refreshHistoryAvailability();
     return true;
   };
 
@@ -2406,6 +2424,7 @@ svg[data-pdi-panning="true"] { cursor: grabbing; }
     const nextSnapshot = this.historyService.redo(this.currentBoardSnapshot());
     if (!nextSnapshot) return false;
     this.applyHistorySnapshot(nextSnapshot);
+    this.refreshHistoryAvailability();
     return true;
   };
 

@@ -475,8 +475,11 @@
 }
 
 .pdi-node-goal {
-  background: color-mix(in srgb, var(--node-color) 8%, #ffffff);
+  background:
+    radial-gradient(120% 80% at 0 0, color-mix(in srgb, var(--node-color) 16%, #ffffff), transparent 60%),
+    color-mix(in srgb, var(--node-color) 8%, #ffffff);
   border-radius: 10px;
+  border-top: 3px solid color-mix(in srgb, var(--node-color) 72%, #ffffff);
   padding: 14px;
 }
 
@@ -488,9 +491,91 @@
 
 .pdi-node-frame {
   background: color-mix(in srgb, var(--node-background) 46%, transparent);
+  border: 1.5px dashed color-mix(in srgb, var(--node-color) 46%, transparent);
+  border-radius: 12px;
   padding: 18px;
 }
 
+.pdi-node-frame.is-selected {
+  border-style: solid;
+}
+
 .pdi-node-frame strong {
-  font-size: 20px;
+  background: color-mix(in srgb, var(--node-color) 16%, #ffffff);
+  border-radius: 6px;
+  font-size: 18px;
+  justify-self: start;
+  padding: 2px 10px;
+  width: auto;
+}
+
+/* ------- Fluidity & affordances (visual only) ------- */
+
+.pdi-node {
+  animation: pdi-node-in 150ms ease both;
+  transition: box-shadow 140ms ease, outline-color 140ms ease, transform 140ms ease, border-color 140ms ease;
+  will-change: box-shadow, transform;
+}
+
+.pdi-node:hover {
+  box-shadow: 0 10px 26px rgba(8, 17, 31, 0.2);
+}
+
+.pdi-node.is-selected {
+  outline: 2px solid var(--color-action-primary, #3d8ff4);
+  outline-offset: 3px;
+  overflow: visible;
+}
+
+.pdi-node-handle {
+  animation: pdi-handle-in 150ms ease both;
+  transition: transform 110ms ease, background-color 110ms ease, box-shadow 110ms ease;
+}
+
+.pdi-node-handle:hover {
+  background: var(--node-color);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--node-color) 24%, transparent);
+  transform: scale(1.5);
+}
+
+.pdi-node-resize-handle {
+  transition: transform 110ms ease, background-color 110ms ease;
+}
+
+.pdi-node-resize-handle:hover {
+  background: var(--node-color);
+  transform: scale(1.25);
+}
+
+@keyframes pdi-node-in {
+  from {
+    opacity: 0;
+    transform: scale(0.965);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pdi-handle-in {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pdi-node,
+  .pdi-node-handle,
+  .pdi-node-resize-handle {
+    animation: none;
+    transition: none;
+  }
 }

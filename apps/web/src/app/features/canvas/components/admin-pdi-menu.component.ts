@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, Input, OnChanges, SimpleChanges, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, OnChanges, SimpleChanges, computed, output, signal } from '@angular/core';
 import type { PdiPlan, User } from '@pdi/contracts';
 import { LucideAngularModule } from 'lucide-angular';
+import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog.component';
 
 type NewPlanForm = {
   objective: string;
@@ -31,7 +32,7 @@ const toEditPlan = (plan: PdiPlan): EditPlanForm => ({
 @Component({
   selector: 'app-admin-pdi-menu',
   standalone: true,
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, ConfirmDialogComponent],
   templateUrl: './admin-pdi-menu.component.html',
   styleUrl: './admin-menu.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -52,6 +53,13 @@ export class AdminPdiMenuComponent implements OnChanges {
   protected readonly editingPlanId = signal('');
   protected readonly editPlan = signal<EditPlanForm | null>(null);
   protected readonly newPlan = signal<NewPlanForm>(emptyNewPlan(''));
+  protected readonly pendingDelete = signal<{ id: string; title: string } | null>(null);
+  protected readonly isDeleteDialogOpen = computed(() => this.pendingDelete() !== null);
+  protected readonly deleteDialogMessage = computed(() => {
+    const target = this.pendingDelete();
+
+    return target ? `Remove "${target.title}" and its board?` : '';
+  });
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['plan']?.currentValue) {
@@ -108,9 +116,21 @@ export class AdminPdiMenuComponent implements OnChanges {
   };
 
   protected readonly handleDeletePlan = (planId: string, title: string) => {
-    if (window.confirm(`Remove "${title}" and its board?`)) {
-      this.deletePlan.emit(planId);
+    this.pendingDelete.set({ id: planId, title });
+  };
+
+  protected readonly confirmDeletePlan = () => {
+    const target = this.pendingDelete();
+
+    if (target) {
+      this.deletePlan.emit(target.id);
     }
+
+    this.pendingDelete.set(null);
+  };
+
+  protected readonly cancelDeletePlan = () => {
+    this.pendingDelete.set(null);
   };
 
   private readonly defaultOwnerId = () =>
