@@ -106,6 +106,36 @@ describe('board routes', () => {
     expect(response.json().nodes).toHaveLength(1);
   });
 
+  it('persists per-step progress and schedule fields across save and reload', async () => {
+    const planId = await createPlan(member, 'Progress board plan');
+    const trackedNode: CanvasNode = {
+      ...note('task-1', 20, 20),
+      kind: 'TASK',
+      progress: 70,
+      startDate: '2026-01-01T00:00:00.000Z',
+      targetDate: '2026-03-01T00:00:00.000Z'
+    };
+
+    const saved = await app.inject({
+      method: 'PUT',
+      url: `/api/pdi-plans/${planId}/board`,
+      headers: authHeader(app, member),
+      payload: { title: 'Tracked board', nodes: [trackedNode], edges: [] }
+    });
+    expect(saved.statusCode).toBe(200);
+
+    const reloaded = await app.inject({
+      method: 'GET',
+      url: `/api/pdi-plans/${planId}/board`,
+      headers: authHeader(app, member)
+    });
+
+    const persisted = reloaded.json().nodes.find((node: { id: string }) => node.id === 'task-1');
+    expect(persisted.progress).toBe(70);
+    expect(persisted.startDate).toBe('2026-01-01T00:00:00.000Z');
+    expect(persisted.targetDate).toBe('2026-03-01T00:00:00.000Z');
+  });
+
   it('recovers the roadmap template when a roadmap board is empty', async () => {
     const planId = await createPlan(member, softwareDeveloperRoadmapPlanTitle);
 

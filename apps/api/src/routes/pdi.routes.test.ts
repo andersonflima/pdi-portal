@@ -172,6 +172,61 @@ describe('pdi routes', () => {
     expect(response.json().ownerId).toBe(otherMember.id);
   });
 
+  it('round-trips per-step progress through export and import', async () => {
+    const created = (await createPlan(member, { title: 'Tracked plan', objective: 'Track progress' })).json();
+
+    await app.inject({
+      method: 'PUT',
+      url: `/api/pdi-plans/${created.id}/board`,
+      headers: authHeader(app, member),
+      payload: {
+        title: 'Tracked board',
+        nodes: [
+          {
+            id: 'task-1',
+            kind: 'TASK',
+            label: 'Read a book',
+            position: { x: 0, y: 0 },
+            style: { color: '#16a34a' },
+            progress: 70,
+            startDate: '2026-01-01T00:00:00.000Z',
+            targetDate: '2026-03-01T00:00:00.000Z'
+          }
+        ],
+        edges: []
+      }
+    });
+
+    const exported = (
+      await app.inject({
+        method: 'GET',
+        url: `/api/pdi-plans/${created.id}/export`,
+        headers: authHeader(app, member)
+      })
+    ).json();
+    expect(exported.board.nodes[0].progress).toBe(70);
+
+    const imported = (
+      await app.inject({
+        method: 'POST',
+        url: '/api/pdi-plans/import',
+        headers: authHeader(app, otherMember),
+        payload: exported
+      })
+    ).json();
+
+    const importedBoard = await app.inject({
+      method: 'GET',
+      url: `/api/pdi-plans/${imported.id}/board`,
+      headers: authHeader(app, otherMember)
+    });
+
+    const node = importedBoard.json().nodes.find((candidate: { id: string }) => candidate.id === 'task-1');
+    expect(node.progress).toBe(70);
+    expect(node.startDate).toBe('2026-01-01T00:00:00.000Z');
+    expect(node.targetDate).toBe('2026-03-01T00:00:00.000Z');
+  });
+
   it('deletes a plan and guards ownership', async () => {
     const created = (await createPlan(member, { title: 'Deletable', objective: 'Remove me' })).json();
 
