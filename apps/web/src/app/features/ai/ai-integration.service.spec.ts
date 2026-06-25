@@ -42,13 +42,25 @@ describe('AiIntegrationService', () => {
     vi.restoreAllMocks();
   });
 
-  it('starts from the recommended defaults (Anthropic Claude / claude-opus-4-8)', () => {
+  it('starts from neutral, provider-agnostic defaults', () => {
     const service = buildService();
 
     expect(service.config()).toEqual(DEFAULT_AI_CONFIG);
-    expect(service.config().provider).toBe('anthropic');
-    expect(service.config().model).toBe('claude-opus-4-8');
+    expect(service.config().providerName).toBe('');
+    expect(service.config().baseUrl).toBe('');
+    expect(service.config().model).toBe('');
+    expect(service.config().authHeaderName).toBe('Authorization');
     expect(service.isConfigured()).toBe(false);
+  });
+
+  it('applies a preset to prefill provider fields without committing to it', () => {
+    const service = buildService();
+
+    service.applyPreset('openai');
+
+    expect(service.config().providerName).toBe('OpenAI');
+    expect(service.config().baseUrl).toContain('openai.com');
+    expect(service.config().authHeaderName).toBe('Authorization');
   });
 
   it('persists updates to localStorage under the expected key', () => {
@@ -65,8 +77,9 @@ describe('AiIntegrationService', () => {
     storageMock = createStorageMock({
       [AI_CONFIG_STORAGE_KEY]: JSON.stringify({
         enabled: true,
-        provider: 'anthropic',
-        model: 'claude-opus-4-8',
+        providerName: 'OpenAI',
+        baseUrl: 'https://api.openai.com/v1',
+        model: 'gpt-4o',
         analysisInstructions: 'Be concise'
       })
     });
@@ -75,28 +88,29 @@ describe('AiIntegrationService', () => {
     const service = buildService();
 
     expect(service.config().enabled).toBe(true);
+    expect(service.config().providerName).toBe('OpenAI');
     expect(service.config().analysisInstructions).toBe('Be concise');
   });
 
-  it('toggles enablement via setEnabled', () => {
+  it('is not configured by enabling alone (provider-agnostic, no defaults)', () => {
     const service = buildService();
 
     service.setEnabled(true);
 
     expect(service.config().enabled).toBe(true);
-    expect(service.isConfigured()).toBe(true);
+    expect(service.isConfigured()).toBe(false);
   });
 
-  it('reports not configured when enabled but provider or model is blank', () => {
+  it('reports configured only when enabled with provider, endpoint and model', () => {
     const service = buildService();
 
-    service.update({ enabled: true, provider: '', model: 'claude-opus-4-8' });
+    service.update({ enabled: true, providerName: 'Acme', baseUrl: '', model: 'm1' });
     expect(service.isConfigured()).toBe(false);
 
-    service.update({ provider: 'anthropic', model: '   ' });
+    service.update({ baseUrl: 'https://api.acme.test/v1', model: '   ' });
     expect(service.isConfigured()).toBe(false);
 
-    service.update({ model: 'claude-opus-4-8' });
+    service.update({ model: 'm1' });
     expect(service.isConfigured()).toBe(true);
   });
 

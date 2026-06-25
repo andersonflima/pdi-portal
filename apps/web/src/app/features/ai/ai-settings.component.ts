@@ -32,10 +32,11 @@ import { AI_NOT_IMPLEMENTED_MESSAGE, AiIntegrationService, AiNotImplementedError
         <span class="ai-status__dot" aria-hidden="true"></span>
         <span class="ai-status__text">
           @if (ai.isConfigured()) {
-            Configured ({{ ai.config().provider }} · {{ ai.config().model }}) — still not connected. Integration
-            point: live analysis will run server-side once a key is configured.
+            Configured ({{ ai.config().providerName }} · {{ ai.config().model }}) — still not connected.
+            Integration point: live analysis will run server-side once a credential is configured.
           } @else {
-            Not connected. Integration point — live analysis will run server-side once a key is configured.
+            Not connected. Provider-agnostic — pick or describe any provider; live analysis will run server-side
+            once a credential is configured.
           }
         </span>
       </p>
@@ -51,20 +52,44 @@ import { AI_NOT_IMPLEMENTED_MESSAGE, AiIntegrationService, AiNotImplementedError
           />
         </label>
 
+        <label class="ai-field" for="ai-preset">
+          <span class="ai-field__label">Preset (optional)</span>
+          <select id="ai-preset" name="preset" (change)="onPreset($event)">
+            <option value="">Choose a starting point…</option>
+            @for (preset of presets; track preset.id) {
+              <option [value]="preset.id">{{ preset.label }}</option>
+            }
+          </select>
+        </label>
+
         <label class="ai-field" for="ai-provider">
-          <span class="ai-field__label">Provider</span>
+          <span class="ai-field__label">Provider name</span>
           <input
             id="ai-provider"
             name="provider"
             type="text"
             autocomplete="off"
-            [value]="provider()"
-            (input)="provider.set(asValue($event))"
+            placeholder="e.g. OpenAI, Anthropic, Internal agent…"
+            [value]="providerName()"
+            (input)="providerName.set(asValue($event))"
+          />
+        </label>
+
+        <label class="ai-field" for="ai-base-url">
+          <span class="ai-field__label">Endpoint base URL</span>
+          <input
+            id="ai-base-url"
+            name="baseUrl"
+            type="text"
+            autocomplete="off"
+            placeholder="https://api.your-provider.com/v1"
+            [value]="baseUrl()"
+            (input)="baseUrl.set(asValue($event))"
           />
         </label>
 
         <label class="ai-field" for="ai-model">
-          <span class="ai-field__label">Model</span>
+          <span class="ai-field__label">Model / deployment / agent id</span>
           <input
             id="ai-model"
             name="model"
@@ -74,6 +99,39 @@ import { AI_NOT_IMPLEMENTED_MESSAGE, AiIntegrationService, AiNotImplementedError
             (input)="model.set(asValue($event))"
           />
         </label>
+
+        <div class="ai-field-row">
+          <label class="ai-field" for="ai-auth-header">
+            <span class="ai-field__label">Auth header</span>
+            <input
+              id="ai-auth-header"
+              name="authHeader"
+              type="text"
+              autocomplete="off"
+              placeholder="Authorization"
+              [value]="authHeaderName()"
+              (input)="authHeaderName.set(asValue($event))"
+            />
+          </label>
+
+          <label class="ai-field" for="ai-auth-scheme">
+            <span class="ai-field__label">Auth scheme</span>
+            <input
+              id="ai-auth-scheme"
+              name="authScheme"
+              type="text"
+              autocomplete="off"
+              placeholder="Bearer (leave blank for raw key)"
+              [value]="authScheme()"
+              (input)="authScheme.set(asValue($event))"
+            />
+          </label>
+        </div>
+
+        <p class="ai-field-hint">
+          The credential itself is never entered here — it stays server-side (env / Doppler). These fields only
+          describe how the backend should reach and authenticate against the provider.
+        </p>
 
         <label class="ai-field" for="ai-instructions">
           <span class="ai-field__label">Analysis instructions</span>
@@ -96,7 +154,8 @@ import { AI_NOT_IMPLEMENTED_MESSAGE, AiIntegrationService, AiNotImplementedError
       <div class="ai-integration-point">
         <h3 class="ai-integration-point__title">Integration point</h3>
         <p class="ai-integration-point__hint">
-          This action is a scaffold. Wiring it to the Claude-backed endpoint is the only remaining step.
+          This action is a scaffold. Wiring it to your chosen provider's backend endpoint is the only remaining
+          step.
         </p>
         <button
           type="button"
@@ -194,6 +253,7 @@ import { AI_NOT_IMPLEMENTED_MESSAGE, AiIntegrationService, AiNotImplementedError
       }
 
       .ai-field input[type='text'],
+      .ai-field select,
       .ai-field textarea {
         background: var(--color-surface-base);
         border: 1px solid var(--color-border-subtle);
@@ -206,6 +266,24 @@ import { AI_NOT_IMPLEMENTED_MESSAGE, AiIntegrationService, AiNotImplementedError
 
       .ai-field textarea {
         resize: vertical;
+      }
+
+      .ai-field-row {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .ai-field-hint {
+        color: var(--color-content-muted);
+        font: var(--font-body-xs);
+        margin: -4px 0 0;
+      }
+
+      @media (max-width: 560px) {
+        .ai-field-row {
+          grid-template-columns: 1fr;
+        }
       }
 
       .ai-field input:focus-visible,
@@ -269,30 +347,51 @@ import { AI_NOT_IMPLEMENTED_MESSAGE, AiIntegrationService, AiNotImplementedError
 })
 export class AiSettingsComponent {
   protected readonly ai = inject(AiIntegrationService);
+  protected readonly presets = this.ai.presets;
 
   protected readonly enabled = signal(this.ai.config().enabled);
-  protected readonly provider = signal(this.ai.config().provider);
+  protected readonly providerName = signal(this.ai.config().providerName);
+  protected readonly baseUrl = signal(this.ai.config().baseUrl);
   protected readonly model = signal(this.ai.config().model);
+  protected readonly authHeaderName = signal(this.ai.config().authHeaderName);
+  protected readonly authScheme = signal(this.ai.config().authScheme);
   protected readonly instructions = signal(this.ai.config().analysisInstructions);
   protected readonly analysisNotice = signal<string | null>(null);
+
+  private readonly syncFromConfig = () => {
+    const config = this.ai.config();
+    this.enabled.set(config.enabled);
+    this.providerName.set(config.providerName);
+    this.baseUrl.set(config.baseUrl);
+    this.model.set(config.model);
+    this.authHeaderName.set(config.authHeaderName);
+    this.authScheme.set(config.authScheme);
+    this.instructions.set(config.analysisInstructions);
+  };
+
+  protected readonly onPreset = (event: Event) => {
+    const presetId = (event.target as HTMLSelectElement).value;
+    if (!presetId) return;
+    this.ai.applyPreset(presetId);
+    this.syncFromConfig();
+  };
 
   protected readonly onSave = (event: Event) => {
     event.preventDefault();
     this.ai.update({
       enabled: this.enabled(),
-      provider: this.provider().trim(),
+      providerName: this.providerName().trim(),
+      baseUrl: this.baseUrl().trim(),
       model: this.model().trim(),
+      authHeaderName: this.authHeaderName().trim(),
+      authScheme: this.authScheme().trim(),
       analysisInstructions: this.instructions()
     });
   };
 
   protected readonly onReset = () => {
     this.ai.reset();
-    const config = this.ai.config();
-    this.enabled.set(config.enabled);
-    this.provider.set(config.provider);
-    this.model.set(config.model);
-    this.instructions.set(config.analysisInstructions);
+    this.syncFromConfig();
     this.analysisNotice.set(null);
   };
 
