@@ -106,16 +106,17 @@
   white-space: nowrap;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   .canvas-header {
     align-items: flex-start;
     grid-template-columns: 1fr;
+    padding: 16px 18px;
   }
 
   .canvas-header-actions {
     align-items: stretch;
     flex-wrap: wrap;
-    justify-content: space-between;
+    justify-content: flex-start;
     min-width: 0;
     width: 100%;
   }
@@ -126,5 +127,27 @@
 
   .plan-picker select {
     max-width: calc(100vw - 120px);
+  }
+}
+
+@media (max-width: 560px) {
+  .canvas-header {
+    gap: 12px;
+    padding: 12px 14px;
+  }
+
+  .canvas-header-actions {
+    gap: 8px;
+  }
+
+  .secondary-action,
+  .save-board {
+    flex: 1 1 auto;
+    min-width: calc(50% - 4px);
+  }
+
+  .plan-picker select {
+    font-size: 19px;
+    max-width: calc(100vw - 96px);
   }
 }

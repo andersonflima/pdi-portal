@@ -88,3 +88,25 @@
   font: var(--font-mono-xs);
   padding: 2px 5px;
 }
+
+@media (max-width: 900px) {
+  .command-palette-backdrop {
+    padding: 6svh 16px 16px;
+  }
+}
+
+@media (max-width: 560px) {
+  .command-palette-backdrop {
+    padding: 4svh 12px 12px;
+  }
+
+  .command-palette {
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .command-palette footer {
+    flex-direction: column;
+    gap: 6px;
+  }
+}

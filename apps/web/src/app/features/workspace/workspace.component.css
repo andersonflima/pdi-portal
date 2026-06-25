@@ -179,3 +179,19 @@
     width: 100%;
   }
 }
+
+@media (max-width: 560px) {
+  .workspace-nav {
+    gap: 10px;
+    padding: 12px 14px;
+  }
+
+  .workspace-menu {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace-command-trigger {
+    justify-content: center;
+    width: 100%;
+  }
+}

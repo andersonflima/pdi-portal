@@ -1,4 +1,15 @@
-import { ChangeDetectionStrategy, Component, HostListener, input, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  HostListener,
+  effect,
+  input,
+  output,
+  viewChild
+} from '@angular/core';
+
+const FOCUSABLE_SELECTOR = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 @Component({
   selector: 'app-confirm-dialog',
@@ -7,11 +18,14 @@ import { ChangeDetectionStrategy, Component, HostListener, input, output } from 
     @if (open()) {
       <div class="confirm-overlay" (click)="onOverlayClick($event)">
         <div
+          #dialog
           class="confirm-dialog"
           role="dialog"
           aria-modal="true"
+          tabindex="-1"
           [attr.aria-labelledby]="titleId"
           (click)="$event.stopPropagation()"
+          (keydown)="onDialogKeydown($event)"
         >
           <h2 class="confirm-title" [id]="titleId">{{ title() }}</h2>
           <p class="confirm-message">{{ message() }}</p>
@@ -21,6 +35,7 @@ import { ChangeDetectionStrategy, Component, HostListener, input, output } from 
               {{ cancelLabel() }}
             </button>
             <button
+              #primary
               type="button"
               class="confirm-accept"
               [class.is-danger]="tone() === 'danger'"
@@ -165,6 +180,29 @@ export class ConfirmDialogComponent {
 
   protected readonly titleId = `confirm-dialog-${Math.random().toString(36).slice(2, 9)}`;
 
+  private readonly dialogRef = viewChild<ElementRef<HTMLElement>>('dialog');
+  private readonly primaryRef = viewChild<ElementRef<HTMLElement>>('primary');
+
+  private previouslyFocused: HTMLElement | null = null;
+  private trapped = false;
+
+  constructor() {
+    effect(() => {
+      const isOpen = this.open();
+      const dialog = this.dialogRef()?.nativeElement;
+
+      if (isOpen && dialog && !this.trapped) {
+        this.trapped = true;
+        this.previouslyFocused = (document.activeElement as HTMLElement | null) ?? null;
+        const primary = this.primaryRef()?.nativeElement ?? this.focusableElements(dialog)[0] ?? dialog;
+        primary.focus();
+      } else if (!isOpen && this.trapped) {
+        this.trapped = false;
+        this.restoreFocus();
+      }
+    });
+  }
+
   @HostListener('document:keydown.escape')
   protected onEscape() {
     if (this.open()) {
@@ -175,6 +213,53 @@ export class ConfirmDialogComponent {
   protected onOverlayClick(event: MouseEvent) {
     if (event.target === event.currentTarget) {
       this.cancelled.emit();
+    }
+  }
+
+  protected onDialogKeydown(event: KeyboardEvent) {
+    if (event.key !== 'Tab') {
+      return;
+    }
+
+    const dialog = this.dialogRef()?.nativeElement;
+    if (!dialog) {
+      return;
+    }
+
+    const focusables = this.focusableElements(dialog);
+    if (focusables.length === 0) {
+      event.preventDefault();
+      dialog.focus();
+      return;
+    }
+
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (!first || !last) return;
+    const active = document.activeElement as HTMLElement | null;
+
+    if (event.shiftKey) {
+      if (active === first || !dialog.contains(active)) {
+        event.preventDefault();
+        last.focus();
+      }
+    } else if (active === last || !dialog.contains(active)) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  private focusableElements(dialog: HTMLElement): HTMLElement[] {
+    return Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+      (element) => !element.hasAttribute('disabled') && element.tabIndex !== -1 && element.offsetParent !== null
+    );
+  }
+
+  private restoreFocus() {
+    const target = this.previouslyFocused;
+    this.previouslyFocused = null;
+    if (target && typeof target.focus === 'function' && document.contains(target)) {
+      target.focus();
     }
   }
 }

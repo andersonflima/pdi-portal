@@ -1,4 +1,15 @@
-import { ChangeDetectionStrategy, Component, HostListener, input, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  HostListener,
+  effect,
+  input,
+  output,
+  viewChild
+} from '@angular/core';
+
+const FOCUSABLE_SELECTOR = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 type ShortcutEntry = {
   readonly keys: readonly string[];
@@ -47,15 +58,18 @@ const createElementShortcuts: ShortcutGroup = {
     @if (open()) {
       <div class="shortcuts-overlay" (click)="onOverlayClick($event)">
         <div
+          #dialog
           class="shortcuts-dialog"
           role="dialog"
           aria-modal="true"
           aria-labelledby="shortcuts-title"
+          tabindex="-1"
           (click)="$event.stopPropagation()"
+          (keydown)="onDialogKeydown($event)"
         >
           <header class="shortcuts-header">
             <h2 id="shortcuts-title" class="shortcuts-title">Keyboard shortcuts</h2>
-            <button type="button" class="shortcuts-close" aria-label="Close" (click)="closed.emit()">
+            <button #primary type="button" class="shortcuts-close" aria-label="Close" (click)="closed.emit()">
               &times;
             </button>
           </header>
@@ -251,6 +265,29 @@ export class KeyboardShortcutsComponent {
 
   protected readonly groups: readonly ShortcutGroup[] = [generalShortcuts, createElementShortcuts];
 
+  private readonly dialogRef = viewChild<ElementRef<HTMLElement>>('dialog');
+  private readonly primaryRef = viewChild<ElementRef<HTMLElement>>('primary');
+
+  private previouslyFocused: HTMLElement | null = null;
+  private trapped = false;
+
+  constructor() {
+    effect(() => {
+      const isOpen = this.open();
+      const dialog = this.dialogRef()?.nativeElement;
+
+      if (isOpen && dialog && !this.trapped) {
+        this.trapped = true;
+        this.previouslyFocused = (document.activeElement as HTMLElement | null) ?? null;
+        const primary = this.primaryRef()?.nativeElement ?? this.focusableElements(dialog)[0] ?? dialog;
+        primary.focus();
+      } else if (!isOpen && this.trapped) {
+        this.trapped = false;
+        this.restoreFocus();
+      }
+    });
+  }
+
   @HostListener('document:keydown.escape')
   protected onEscape() {
     if (this.open()) {
@@ -261,6 +298,53 @@ export class KeyboardShortcutsComponent {
   protected onOverlayClick(event: MouseEvent) {
     if (event.target === event.currentTarget) {
       this.closed.emit();
+    }
+  }
+
+  protected onDialogKeydown(event: KeyboardEvent) {
+    if (event.key !== 'Tab') {
+      return;
+    }
+
+    const dialog = this.dialogRef()?.nativeElement;
+    if (!dialog) {
+      return;
+    }
+
+    const focusables = this.focusableElements(dialog);
+    if (focusables.length === 0) {
+      event.preventDefault();
+      dialog.focus();
+      return;
+    }
+
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (!first || !last) return;
+    const active = document.activeElement as HTMLElement | null;
+
+    if (event.shiftKey) {
+      if (active === first || !dialog.contains(active)) {
+        event.preventDefault();
+        last.focus();
+      }
+    } else if (active === last || !dialog.contains(active)) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  private focusableElements(dialog: HTMLElement): HTMLElement[] {
+    return Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+      (element) => !element.hasAttribute('disabled') && element.tabIndex !== -1 && element.offsetParent !== null
+    );
+  }
+
+  private restoreFocus() {
+    const target = this.previouslyFocused;
+    this.previouslyFocused = null;
+    if (target && typeof target.focus === 'function' && document.contains(target)) {
+      target.focus();
     }
   }
 }

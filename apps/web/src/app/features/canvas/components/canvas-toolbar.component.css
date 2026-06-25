@@ -211,8 +211,72 @@
   width: 48px;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   :host {
+    justify-content: flex-start;
     padding: 12px 16px 0;
+  }
+
+  .canvas-toolbar {
+    flex-wrap: nowrap;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+    scrollbar-width: thin;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .canvas-toolbar > button,
+  .canvas-toolbar .history-group {
+    flex: 0 0 auto;
+  }
+
+  .canvas-toolbar button {
+    min-width: 64px;
+    width: auto;
+  }
+
+  .canvas-toolbar button.is-icon {
+    min-width: 42px;
+    width: 42px;
+  }
+}
+
+@media (max-width: 560px) {
+  :host {
+    padding: 10px 10px 0;
+  }
+
+  .canvas-toolbar {
+    gap: 4px;
+    padding: 6px;
+  }
+
+  .canvas-toolbar button {
+    min-width: 60px;
+    padding: 6px 4px;
+  }
+
+  .canvas-toolbar button small {
+    display: none;
+  }
+
+  .node-style-panel,
+  .edge-style-panel {
+    left: 0;
+    margin: 0 auto;
+    max-width: calc(100vw - 24px);
+    right: 0;
+    transform: none;
+    width: auto;
+  }
+
+  .node-style-panel {
+    grid-template-columns: repeat(4, minmax(40px, 1fr));
+  }
+
+  .edge-style-panel {
+    grid-template-columns: 1fr 1fr;
   }
 }
