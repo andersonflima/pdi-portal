@@ -16,3 +16,5 @@ apps/api/data/
 *.db-journal
 .tmp-test/
 .scannerwork/
+test-results/
+playwright-report/

@@ -23,6 +23,7 @@ import { CanvasEdgeOperationsService } from './application/canvas-edge-operation
 import { CanvasFacade } from './application/canvas.facade';
 import { CanvasHistoryService } from './application/canvas-history.service';
 import { CanvasInteractionControllerService } from './application/canvas-interaction-controller.service';
+import { CanvasLiveSyncService } from './application/canvas-live-sync.service';
 import { ApiService } from '../../core/api/api.service';
 import { CanvasEdgeLayerComponent } from './components/canvas-edge-layer.component';
 import { CanvasHeaderComponent } from './components/canvas-header.component';
@@ -145,16 +146,6 @@ const toSelectionBounds = (first: XYPosition, second: XYPosition) => ({
   top: Math.min(first.y, second.y)
 });
 
-const toLiveWebSocketUrl = (apiUrl: string, pdiPlanId: string, clientId: string, token: string | null) => {
-  const url = new URL(apiUrl);
-  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-  url.pathname = `${url.pathname.replace(/\/$/, '')}/pdi-plans/${pdiPlanId}/board/live`;
-  url.searchParams.set('clientId', clientId);
-  url.searchParams.set('token', token ?? '');
-
-  return url.toString();
-};
-
 const isEditableTarget = (target: EventTarget | null) => {
   if (!(target instanceof HTMLElement)) return false;
 
@@ -272,7 +263,13 @@ const findNodeHandleAtPoint = (point: XYPosition, nodes: CanvasNodeView[], exclu
   imports: [CanvasEdgeLayerComponent, CanvasHeaderComponent, CanvasNodeComponent, CanvasToolbarComponent, LucideAngularModule],
   templateUrl: './canvas-board.component.html',
   styleUrl: './canvas-board.component.css',
-  providers: [CanvasFacade, CanvasHistoryService, CanvasEdgeOperationsService, CanvasInteractionControllerService],
+  providers: [
+    CanvasFacade,
+    CanvasHistoryService,
+    CanvasEdgeOperationsService,
+    CanvasInteractionControllerService,
+    CanvasLiveSyncService
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy {
@@ -296,11 +293,10 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   private readonly interactionController = inject(CanvasInteractionControllerService);
   private readonly canvasFacade = inject(CanvasFacade);
   private readonly historyService = inject(CanvasHistoryService);
+  private readonly liveSync = inject(CanvasLiveSyncService);
   private readonly featureFlags = inject(FeatureFlagsService);
   private readonly stageElement = viewChild<ElementRef<HTMLDivElement>>('canvasStage');
   private readonly planeElement = viewChild<ElementRef<HTMLDivElement>>('canvasPlane');
-  private readonly clientId = crypto.randomUUID();
-  private socket: WebSocket | null = null;
   private loadToken = 0;
   private isApplyingRemoteBoard = false;
   private isRestoringHistory = false;
@@ -411,7 +407,7 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       if (!planId || !title || this.isApplyingRemoteBoard) return;
 
       const timeoutId = window.setTimeout(() => {
-        this.sendLiveBoard(planId, title, nodes, edges);
+        this.sendLiveBoard(title, nodes, edges);
       }, 180);
 
       onCleanup(() => window.clearTimeout(timeoutId));
@@ -1119,48 +1115,35 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   };
 
   private readonly openLiveConnection = (planId: string) => {
-    const socket = new WebSocket(toLiveWebSocketUrl(this.api.apiUrl, planId, this.clientId, this.api.getToken()));
-    this.socket = socket;
-
-    socket.addEventListener('message', (event) => {
-      const message = JSON.parse(String(event.data)) as {
-        clientId: string;
-        payload: Parameters<typeof toCanvasNodes>[0];
-        type: 'BOARD_SYNC';
-      };
-
-      if (message.type !== 'BOARD_SYNC' || message.clientId === this.clientId) return;
-
-      this.isApplyingRemoteBoard = true;
-      const boardNodes = toCanvasNodes(message.payload);
-      const boardEdges = toCanvasEdges(message.payload);
-
-      this.boardTitle.set(message.payload.title);
-      this.nodes.set(boardNodes);
-      this.edges.set(boardEdges);
-      this.markBoardAsPersisted(message.payload.pdiPlanId, message.payload.title, boardNodes, boardEdges);
-      this.syncStageViewport();
-      window.setTimeout(() => {
-        this.isApplyingRemoteBoard = false;
-      }, 0);
+    this.liveSync.connect({
+      apiUrl: this.api.apiUrl,
+      planId,
+      token: this.api.getToken(),
+      onRemoteBoard: (payload) => this.applyRemoteBoard(payload)
     });
   };
 
-  private readonly closeLiveConnection = () => {
-    this.socket?.close();
-    this.socket = null;
+  private readonly applyRemoteBoard = (payload: Parameters<typeof toCanvasNodes>[0] & { pdiPlanId: string }) => {
+    this.isApplyingRemoteBoard = true;
+    const boardNodes = toCanvasNodes(payload);
+    const boardEdges = toCanvasEdges(payload);
+
+    this.boardTitle.set(payload.title);
+    this.nodes.set(boardNodes);
+    this.edges.set(boardEdges);
+    this.markBoardAsPersisted(payload.pdiPlanId, payload.title, boardNodes, boardEdges);
+    this.syncStageViewport();
+    window.setTimeout(() => {
+      this.isApplyingRemoteBoard = false;
+    }, 0);
   };
 
-  private readonly sendLiveBoard = (planId: string, title: string, nodes: CanvasNodeView[], edges: CanvasEdgeView[]) => {
-    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) return;
+  private readonly closeLiveConnection = () => {
+    this.liveSync.close();
+  };
 
-    this.socket.send(
-      JSON.stringify({
-        clientId: this.clientId,
-        payload: toSaveBoard(title, nodes, edges),
-        type: 'BOARD_SYNC'
-      })
-    );
+  private readonly sendLiveBoard = (title: string, nodes: CanvasNodeView[], edges: CanvasEdgeView[]) => {
+    this.liveSync.send(toSaveBoard(title, nodes, edges));
   };
 
   private readonly applyZoom = (nextZoom: number, pointer?: { clientX: number; clientY: number }) => {
