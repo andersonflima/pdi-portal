@@ -5,6 +5,16 @@ import type { CanvasHandlePosition, CanvasNodeDataPatch, CanvasNodeView } from '
 import { getNodeTextColor } from '../canvas.colors';
 import { nodeKindMeta } from '../canvas.constants';
 import { toTaskItemsFromText } from '../canvas.mappers';
+import { resolveProgressStatus, type ProgressStatus } from '../../progress/progress-analysis';
+
+const progressStatusLabel: Record<ProgressStatus, string> = {
+  ahead: 'Ahead',
+  behind: 'Behind',
+  done: 'Done',
+  'not-started': 'Not started',
+  'on-track': 'On track',
+  overdue: 'Overdue'
+};
 
 const toContentAlignment = (verticalAlign?: string) => {
   if (verticalAlign === 'bottom') return 'end';
@@ -58,6 +68,17 @@ export class CanvasNodeComponent implements AfterViewInit, OnDestroy {
   protected readonly goalIconSize = computed(() => {
     const node = this.node();
     return Math.max(16, Math.min(24, Math.round(Math.min(node.width, node.height) * 0.14)));
+  });
+  protected readonly showProgress = computed(() => typeof this.node().progress === 'number');
+  protected readonly progressValue = computed(() => Math.max(0, Math.min(100, Math.round(this.node().progress ?? 0))));
+  protected readonly progressStatus = computed<ProgressStatus | null>(() => {
+    const node = this.node();
+    if (!node.startDate && !node.targetDate) return null;
+    return resolveProgressStatus(node, new Date());
+  });
+  protected readonly progressStatusLabel = computed(() => {
+    const status = this.progressStatus();
+    return status ? progressStatusLabel[status] : '';
   });
 
   protected readonly nodeStyle = computed(() => {

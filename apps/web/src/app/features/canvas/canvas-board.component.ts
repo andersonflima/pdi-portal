@@ -37,6 +37,7 @@ import type {
   CanvasEdgeView,
   CanvasHandlePosition,
   CanvasNodeDataPatch,
+  CanvasNodeProgressPatch,
   CanvasNodeStylePatch,
   CanvasNodeView,
   CanvasTextStyle,
@@ -1026,6 +1027,26 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
             }
           : node
       )
+    );
+  };
+
+  protected readonly updateSelectedNodeProgress = (input: CanvasNodeProgressPatch) => {
+    const selectedNode = this.selectedNode();
+
+    if (!selectedNode) return;
+
+    this.nodes.update((nodes) =>
+      nodes.map((node) => {
+        if (node.id !== selectedNode.id) return node;
+
+        return {
+          ...node,
+          progress:
+            input.progress === undefined ? node.progress : Math.max(0, Math.min(100, Math.round(input.progress))),
+          startDate: input.startDate === undefined ? node.startDate : (input.startDate ?? undefined),
+          targetDate: input.targetDate === undefined ? node.targetDate : (input.targetDate ?? undefined)
+        };
+      })
     );
   };
 

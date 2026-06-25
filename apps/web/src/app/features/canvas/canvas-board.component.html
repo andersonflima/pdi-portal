@@ -28,6 +28,7 @@
     [selectedNode]="selectedNode()"
     (createNode)="handleCreateNode($event)"
     (edgeChange)="updateSelectedEdge($event)"
+    (nodeProgressChange)="updateSelectedNodeProgress($event)"
     (nodeStyleChange)="updateSelectedNodeStyle($event)"
     (redo)="handleRedo()"
     (textStyleChange)="updateSelectedTextStyle($event)"

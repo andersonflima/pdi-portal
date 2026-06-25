@@ -107,6 +107,22 @@ describe('canvas node schema', () => {
     expect(canvasNodeSchema.safeParse(withFont(97)).success).toBe(false);
   });
 
+  it('accepts optional progress and schedule fields', () => {
+    const node = {
+      ...validNode,
+      progress: 70,
+      startDate: '2026-01-01T00:00:00.000Z',
+      targetDate: '2026-03-01T00:00:00.000Z'
+    };
+
+    expect(canvasNodeSchema.safeParse(node).success).toBe(true);
+  });
+
+  it('rejects out-of-range progress', () => {
+    expect(canvasNodeSchema.safeParse({ ...validNode, progress: 120 }).success).toBe(false);
+    expect(canvasNodeSchema.safeParse({ ...validNode, progress: -5 }).success).toBe(false);
+  });
+
   it('accepts optional task items', () => {
     const node = {
       ...validNode,

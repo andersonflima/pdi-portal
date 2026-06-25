@@ -101,6 +101,31 @@
         <input type="number" min="8" max="96" [value]="node.textStyle?.fontSize ?? ''" (input)="setFontSize($event)" />
       </label>
     </div>
+
+    @if (supportsProgress()) {
+      <div class="node-progress-panel" aria-label="Step progress and schedule">
+        <label class="progress-slider" [title]="'Progress: ' + progressValue() + '%'">
+          <span>Progress</span>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            step="5"
+            [value]="progressValue()"
+            (input)="setProgress($event)"
+          />
+          <strong>{{ progressValue() }}%</strong>
+        </label>
+        <label title="Start date">
+          <span>Start</span>
+          <input type="date" [value]="startDateValue()" (change)="setStartDate($event)" />
+        </label>
+        <label title="Target date">
+          <span>Target</span>
+          <input type="date" [value]="targetDateValue()" (change)="setTargetDate($event)" />
+        </label>
+      </div>
+    }
   }
 
   @if (selectedEdge(); as edge) {
