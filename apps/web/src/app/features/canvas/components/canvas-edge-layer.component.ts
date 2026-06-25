@@ -1,4 +1,4 @@
-import { Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { canvasSize } from '../canvas.constants';
 import { getConnectorPath, getNodeCenter } from '../canvas.geometry';
 import type { CanvasEdgeView, CanvasHandlePosition, CanvasNodeView } from '../canvas.models';
@@ -24,7 +24,8 @@ const arrowNeckOffset = 18;
   selector: 'app-canvas-edge-layer',
   standalone: true,
   templateUrl: './canvas-edge-layer.component.html',
-  styleUrl: './canvas-edge-layer.component.css'
+  styleUrl: './canvas-edge-layer.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CanvasEdgeLayerComponent {
   readonly nodes = input.required<CanvasNodeView[]>();

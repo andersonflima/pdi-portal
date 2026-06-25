@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import type { PdiPlan, PdiPlanExport, User } from '@pdi/contracts';
 import { ApiService } from '../../core/api/api.service';
+import { ToastService } from '../../core/notifications/toast.service';
 
 type PlanPatch = {
   objective?: string;
@@ -36,6 +37,7 @@ const readJsonFile = async <T>(file: File): Promise<T> => JSON.parse(await file.
 @Injectable()
 export class WorkspaceService {
   private readonly api = inject(ApiService);
+  private readonly toast = inject(ToastService);
 
   readonly plans = signal<PdiPlan[]>([]);
   readonly users = signal<User[]>([]);
@@ -77,8 +79,9 @@ export class WorkspaceService {
       const plan = await this.api.createPdiPlan(input);
       this.plans.set(insertCreatedPlan(this.plans(), plan));
       this.activePlanId.set(plan.id);
+      this.toast.success(`PDI "${plan.title}" created`);
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Could not create PDI');
+      this.toast.error(error instanceof Error ? error.message : 'Could not create PDI');
     } finally {
       this.isCreatingPlan.set(false);
     }
@@ -105,7 +108,7 @@ export class WorkspaceService {
       this.plans.set(remainingPlans);
       this.activePlanId.set(this.activePlanId() === planId ? (remainingPlans[0]?.id ?? null) : this.activePlanId());
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Could not remove PDI');
+      this.toast.error(error instanceof Error ? error.message : 'Could not remove PDI');
     } finally {
       this.isDeletingPlan.set(false);
     }
@@ -121,7 +124,7 @@ export class WorkspaceService {
     try {
       downloadJson(toExportFileName(plan), await this.api.exportPdiPlan(planId));
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Could not export PDI');
+      this.toast.error(error instanceof Error ? error.message : 'Could not export PDI');
     } finally {
       this.isExportingPlan.set(false);
     }
@@ -134,8 +137,9 @@ export class WorkspaceService {
       const plan = await this.api.importPdiPlan(await readJsonFile<PdiPlanExport>(file));
       this.plans.set(insertCreatedPlan(this.plans(), plan));
       this.activePlanId.set(plan.id);
+      this.toast.success(`PDI "${plan.title}" imported`);
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Could not import PDI');
+      this.toast.error(error instanceof Error ? error.message : 'Could not import PDI');
     } finally {
       this.isImportingPlan.set(false);
     }
@@ -162,7 +166,7 @@ export class WorkspaceService {
       this.plans.set(plans);
       this.activePlanId.set(plans.some((plan) => plan.id === this.activePlanId()) ? this.activePlanId() : (plans[0]?.id ?? null));
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Could not remove user');
+      this.toast.error(error instanceof Error ? error.message : 'Could not remove user');
     } finally {
       this.isDeletingUser.set(false);
     }

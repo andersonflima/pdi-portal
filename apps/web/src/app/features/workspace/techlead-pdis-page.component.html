@@ -28,8 +28,41 @@
         <small>Click to open and edit</small>
       </div>
 
+      <div
+        style="
+          align-items: center;
+          background: var(--color-surface-base);
+          border: 1px solid var(--color-border-subtle);
+          border-radius: var(--radius-md);
+          color: var(--color-content-muted);
+          display: flex;
+          gap: 8px;
+          margin-bottom: 12px;
+          padding: 0 10px;
+        "
+      >
+        <i-lucide name="search" [size]="16" aria-hidden="true" />
+        <input
+          type="search"
+          placeholder="Search by title, owner or status"
+          aria-label="Search plans by title, owner or status"
+          [ngModel]="planSearch()"
+          (ngModelChange)="planSearch.set($event)"
+          name="plan-search"
+          style="
+            background: transparent;
+            border: 0;
+            color: var(--color-content-primary);
+            flex: 1;
+            min-height: 40px;
+            min-width: 0;
+            outline: none;
+          "
+        />
+      </div>
+
       <div class="plan-list">
-        @for (item of plans; track item.id) {
+        @for (item of filteredPlans(); track item.id) {
           <div [class.is-active]="item.id === editingPlanId">
             <button type="button" (click)="selectPlanForEdit(item.id)">
               <strong>{{ item.title }}</strong>
@@ -42,6 +75,10 @@
               {{ isDeletingPlan && item.id === editingPlanId ? 'Removing...' : 'Remove' }}
             </button>
           </div>
+        } @empty {
+          <p style="color: var(--color-content-muted); font: var(--font-body-sm); margin: 8px 0; text-align: center;">
+            No plans match your search.
+          </p>
         }
       </div>
     </article>

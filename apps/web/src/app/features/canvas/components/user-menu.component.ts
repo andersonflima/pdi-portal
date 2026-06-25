@@ -1,4 +1,4 @@
-import { Component, Input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, output } from '@angular/core';
 import type { User } from '@pdi/contracts';
 import { LucideAngularModule } from 'lucide-angular';
 
@@ -7,7 +7,8 @@ import { LucideAngularModule } from 'lucide-angular';
   standalone: true,
   imports: [LucideAngularModule],
   templateUrl: './user-menu.component.html',
-  styleUrl: './user-menu.component.css'
+  styleUrl: './user-menu.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UserMenuComponent {
   @Input({ required: true }) user!: User;

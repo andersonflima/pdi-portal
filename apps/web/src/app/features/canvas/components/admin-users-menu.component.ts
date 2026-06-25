@@ -1,4 +1,4 @@
-import { Component, Input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, output, signal } from '@angular/core';
 import type { User } from '@pdi/contracts';
 import { LucideAngularModule } from 'lucide-angular';
 import { generateTemporaryPassword } from '../canvas.mappers';
@@ -22,7 +22,8 @@ const emptyNewUser = (): NewUserForm => ({
   standalone: true,
   imports: [LucideAngularModule],
   templateUrl: './admin-users-menu.component.html',
-  styleUrl: './admin-menu.component.css'
+  styleUrl: './admin-menu.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AdminUsersMenuComponent {
   @Input({ required: true }) users: User[] = [];

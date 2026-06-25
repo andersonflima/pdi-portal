@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, HostListener, Input, OnChanges, SimpleChanges, inject, signal } from '@angular/core';
 import type { PdiPlan, User } from '@pdi/contracts';
+import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../core/auth/auth.service';
 import { CanvasBoardComponent } from '../canvas/canvas-board.component';
 import { CommandPaletteComponent } from './components/command-palette.component';
@@ -10,7 +11,13 @@ import { WorkspaceService } from './workspace.service';
 @Component({
   selector: 'app-workspace',
   standalone: true,
-  imports: [CanvasBoardComponent, CommandPaletteComponent, TechleadPdisPageComponent, TechleadUsersPageComponent],
+  imports: [
+    CanvasBoardComponent,
+    CommandPaletteComponent,
+    LucideAngularModule,
+    TechleadPdisPageComponent,
+    TechleadUsersPageComponent
+  ],
   providers: [WorkspaceService],
   templateUrl: './workspace.component.html',
   styleUrl: './workspace.component.css',

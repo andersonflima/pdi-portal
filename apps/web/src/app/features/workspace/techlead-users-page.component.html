@@ -28,8 +28,41 @@
         <small>Delete users when needed</small>
       </div>
 
+      <div
+        style="
+          align-items: center;
+          background: var(--color-surface-base);
+          border: 1px solid var(--color-border-subtle);
+          border-radius: var(--radius-md);
+          color: var(--color-content-muted);
+          display: flex;
+          gap: 8px;
+          margin-bottom: 12px;
+          padding: 0 10px;
+        "
+      >
+        <i-lucide name="search" [size]="16" aria-hidden="true" />
+        <input
+          type="search"
+          placeholder="Search by name, email or role"
+          aria-label="Search users by name, email or role"
+          [ngModel]="userSearch()"
+          (ngModelChange)="userSearch.set($event)"
+          name="user-search"
+          style="
+            background: transparent;
+            border: 0;
+            color: var(--color-content-primary);
+            flex: 1;
+            min-height: 40px;
+            min-width: 0;
+            outline: none;
+          "
+        />
+      </div>
+
       <div class="user-list">
-        @for (user of users; track user.id) {
+        @for (user of filteredUsers(); track user.id) {
           <div>
             <div class="identity">
               <strong>{{ user.name }}</strong>
@@ -51,6 +84,10 @@
               }}
             </button>
           </div>
+        } @empty {
+          <p style="color: var(--color-content-muted); font: var(--font-body-sm); margin: 8px 0; text-align: center;">
+            No users match your search.
+          </p>
         }
       </div>
     </article>

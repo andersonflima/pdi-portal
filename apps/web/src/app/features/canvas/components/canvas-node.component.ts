@@ -1,5 +1,5 @@
 import { NgStyle } from '@angular/common';
-import { AfterViewInit, Component, ElementRef, OnDestroy, computed, effect, inject, input, output, signal } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, OnDestroy, computed, effect, inject, input, output, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import type { CanvasHandlePosition, CanvasNodeDataPatch, CanvasNodeView } from '../canvas.models';
 import { getNodeTextColor } from '../canvas.colors';
@@ -29,7 +29,8 @@ const toNodeClassName = (node: CanvasNodeView, selected: boolean) =>
   standalone: true,
   imports: [NgStyle, LucideAngularModule],
   templateUrl: './canvas-node.component.html',
-  styleUrl: './canvas-node.component.css'
+  styleUrl: './canvas-node.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CanvasNodeComponent implements AfterViewInit, OnDestroy {
   readonly node = input.required<CanvasNodeView>();

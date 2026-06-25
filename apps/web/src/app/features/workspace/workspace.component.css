@@ -106,6 +106,57 @@
   min-width: 0;
 }
 
+.empty-card {
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  max-width: 420px;
+  padding: 32px 28px;
+  text-align: center;
+}
+
+.empty-icon {
+  align-items: center;
+  background: color-mix(in srgb, var(--color-action-primary) 16%, transparent);
+  border-radius: 50%;
+  color: var(--color-action-primary);
+  display: inline-flex;
+  height: 56px;
+  justify-content: center;
+  width: 56px;
+}
+
+.empty-card h2 {
+  color: var(--color-content-primary);
+  font: var(--font-title-md);
+  margin: 4px 0 0;
+}
+
+.empty-card p {
+  color: var(--color-content-muted);
+  font: var(--font-body-sm);
+  margin: 0;
+}
+
+.empty-cta {
+  background: var(--color-action-primary);
+  border-radius: var(--radius-md);
+  color: var(--color-content-on-primary);
+  font: var(--font-label-md);
+  margin-top: 6px;
+  min-height: 44px;
+  padding: 0 18px;
+  transition: background-color 120ms ease;
+}
+
+.empty-cta:hover {
+  background: var(--color-action-primary-strong);
+}
+
 @media (max-width: 920px) {
   .workspace-nav {
     align-items: stretch;
