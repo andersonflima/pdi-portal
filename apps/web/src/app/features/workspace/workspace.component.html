@@ -66,7 +66,19 @@
         (deleteUser)="handleDeleteUser($event)"
       />
     } @else {
-      <div class="empty-state">Create a PDI plan to start.</div>
+      <div class="empty-state">
+        <div class="empty-card" role="status">
+          <span class="empty-icon" aria-hidden="true">
+            <i-lucide name="goal" [size]="26" />
+          </span>
+          <h2>No PDI plan yet</h2>
+          <p>Open the collaborative board to create your first development plan and start mapping goals.</p>
+          <button class="empty-cta" type="button" (click)="openView('board')">
+            <i-lucide name="plus" [size]="17" />
+            Create a PDI plan
+          </button>
+        </div>
+      </div>
     }
   </section>
 </main>

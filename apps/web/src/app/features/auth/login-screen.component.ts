@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { ApiRequestError, ApiService } from '../../core/api/api.service';
@@ -16,7 +16,8 @@ const toAuthErrorMessage = (error: unknown, canCreateAdmin: boolean) => {
   standalone: true,
   imports: [FormsModule, LucideAngularModule],
   templateUrl: './login-screen.component.html',
-  styleUrl: './login-screen.component.css'
+  styleUrl: './login-screen.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LoginScreenComponent implements OnInit {
   private readonly api = inject(ApiService);

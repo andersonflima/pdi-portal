@@ -1,4 +1,4 @@
-import { Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import type { CanvasEdgeLineStyle, CanvasEdgeType, CanvasNodeKind, CanvasShapeVariant, CanvasTextAlign, CanvasTextVerticalAlign } from '@pdi/contracts';
 import { LucideAngularModule } from 'lucide-angular';
 import { nodeKindMeta, nodeKindOrder } from '../canvas.constants';
@@ -11,7 +11,8 @@ const inputValue = (event: Event) => (event.target as HTMLInputElement | HTMLSel
   standalone: true,
   imports: [LucideAngularModule],
   templateUrl: './canvas-toolbar.component.html',
-  styleUrl: './canvas-toolbar.component.css'
+  styleUrl: './canvas-toolbar.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CanvasToolbarComponent {
   readonly selectedNode = input<CanvasNodeView | null>(null);

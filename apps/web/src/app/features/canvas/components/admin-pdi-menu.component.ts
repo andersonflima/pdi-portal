@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, SimpleChanges, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, OnChanges, SimpleChanges, output, signal } from '@angular/core';
 import type { PdiPlan, User } from '@pdi/contracts';
 import { LucideAngularModule } from 'lucide-angular';
 
@@ -33,7 +33,8 @@ const toEditPlan = (plan: PdiPlan): EditPlanForm => ({
   standalone: true,
   imports: [LucideAngularModule],
   templateUrl: './admin-pdi-menu.component.html',
-  styleUrl: './admin-menu.component.css'
+  styleUrl: './admin-menu.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AdminPdiMenuComponent implements OnChanges {
   @Input({ required: true }) isCreatingPlan = false;

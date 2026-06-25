@@ -1,6 +1,7 @@
-import { Component, Input, OnChanges, SimpleChanges, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, OnChanges, SimpleChanges, computed, output, signal } from '@angular/core';
 import type { PdiPlan, User } from '@pdi/contracts';
 import { FormsModule } from '@angular/forms';
+import { LucideAngularModule } from 'lucide-angular';
 
 type NewPlanForm = {
   objective: string;
@@ -31,27 +32,69 @@ const toEditForm = (plan: PdiPlan): EditPlanForm => ({
 @Component({
   selector: 'app-techlead-pdis-page',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, LucideAngularModule],
   templateUrl: './techlead-pdis-page.component.html',
-  styleUrl: './techlead-pdis-page.component.css'
+  styleUrl: './techlead-pdis-page.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TechleadPdisPageComponent implements OnChanges {
   @Input({ required: true }) isCreatingPlan = false;
   @Input({ required: true }) isDeletingPlan = false;
   @Input({ required: true }) isUpdatingPlan = false;
   @Input({ required: true }) plan!: PdiPlan;
-  @Input({ required: true }) plans: PdiPlan[] = [];
-  @Input({ required: true }) users: User[] = [];
+  @Input({ required: true })
+  set plans(value: PdiPlan[]) {
+    this.plansSignal.set(value);
+  }
+  get plans(): PdiPlan[] {
+    return this.plansSignal();
+  }
+  @Input({ required: true })
+  set users(value: User[]) {
+    this.usersSignal.set(value);
+  }
+  get users(): User[] {
+    return this.usersSignal();
+  }
 
   readonly createPlan = output<{ objective: string; ownerId?: string; title: string }>();
   readonly deletePlan = output<string>();
   readonly selectPlan = output<string>();
   readonly updatePlan = output<{ id: string; data: Partial<Pick<PdiPlan, 'objective' | 'ownerId' | 'status' | 'title'>> }>();
 
-  protected editingPlanId = '';
+  private readonly plansSignal = signal<PdiPlan[]>([]);
+  private readonly usersSignal = signal<User[]>([]);
+  protected readonly editingPlanIdSignal = signal('');
+  protected readonly planSearch = signal('');
+
+  protected readonly filteredPlans = computed(() => {
+    const term = this.planSearch().trim().toLowerCase();
+    const plans = this.plansSignal();
+
+    if (!term) return plans;
+
+    const ownerName = this.ownerNameResolver();
+
+    return plans.filter((plan) =>
+      [plan.title, ownerName(plan.ownerId), plan.status].some((field) => field.toLowerCase().includes(term))
+    );
+  });
+
+  private readonly ownerNameResolver = () => {
+    const users = this.usersSignal();
+    return (ownerId: string) => users.find((user) => user.id === ownerId)?.name ?? 'No owner';
+  };
+
   protected editPlan: EditPlanForm | null = null;
   protected newPlan: NewPlanForm = emptyNewPlan('');
   protected pendingDeletePlan: { id: string; title: string } | null = null;
+
+  protected get editingPlanId() {
+    return this.editingPlanIdSignal();
+  }
+  protected set editingPlanId(value: string) {
+    this.editingPlanIdSignal.set(value);
+  }
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['isDeletingPlan'] && !this.isDeletingPlan) {

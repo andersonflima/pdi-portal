@@ -38,37 +38,37 @@
       }
 
       <div class="text-format-group" aria-label="Text emphasis">
-        <button type="button" title="Bold" [class.is-active]="node.textStyle?.bold" (click)="toggleTextStyle('bold')">
+        <button type="button" title="Bold" aria-label="Bold" [class.is-active]="node.textStyle?.bold" (click)="toggleTextStyle('bold')">
           <i-lucide name="bold" [size]="14" />
         </button>
-        <button type="button" title="Italic" [class.is-active]="node.textStyle?.italic" (click)="toggleTextStyle('italic')">
+        <button type="button" title="Italic" aria-label="Italic" [class.is-active]="node.textStyle?.italic" (click)="toggleTextStyle('italic')">
           <i-lucide name="italic" [size]="14" />
         </button>
-        <button type="button" title="Underline" [class.is-active]="node.textStyle?.underline" (click)="toggleTextStyle('underline')">
+        <button type="button" title="Underline" aria-label="Underline" [class.is-active]="node.textStyle?.underline" (click)="toggleTextStyle('underline')">
           <i-lucide name="underline" [size]="14" />
         </button>
       </div>
 
       <div class="text-format-group" aria-label="Text alignment">
-        <button type="button" title="Align left" [class.is-active]="(node.textStyle?.align ?? 'left') === 'left'" (click)="setTextAlign('left')">
+        <button type="button" title="Align left" aria-label="Align left" [class.is-active]="(node.textStyle?.align ?? 'left') === 'left'" (click)="setTextAlign('left')">
           <i-lucide name="align-left" [size]="14" />
         </button>
-        <button type="button" title="Align center" [class.is-active]="node.textStyle?.align === 'center'" (click)="setTextAlign('center')">
+        <button type="button" title="Align center" aria-label="Align center" [class.is-active]="node.textStyle?.align === 'center'" (click)="setTextAlign('center')">
           <i-lucide name="align-center" [size]="14" />
         </button>
-        <button type="button" title="Align right" [class.is-active]="node.textStyle?.align === 'right'" (click)="setTextAlign('right')">
+        <button type="button" title="Align right" aria-label="Align right" [class.is-active]="node.textStyle?.align === 'right'" (click)="setTextAlign('right')">
           <i-lucide name="align-right" [size]="14" />
         </button>
       </div>
 
       <div class="text-format-group" aria-label="Vertical alignment">
-        <button type="button" title="Align top" [class.is-active]="(node.textStyle?.verticalAlign ?? 'top') === 'top'" (click)="setVerticalAlign('top')">
+        <button type="button" title="Align top" aria-label="Align top" [class.is-active]="(node.textStyle?.verticalAlign ?? 'top') === 'top'" (click)="setVerticalAlign('top')">
           <i-lucide name="align-vertical-justify-start" [size]="14" />
         </button>
-        <button type="button" title="Align middle" [class.is-active]="node.textStyle?.verticalAlign === 'center'" (click)="setVerticalAlign('center')">
+        <button type="button" title="Align middle" aria-label="Align middle" [class.is-active]="node.textStyle?.verticalAlign === 'center'" (click)="setVerticalAlign('center')">
           <i-lucide name="align-vertical-justify-center" [size]="14" />
         </button>
-        <button type="button" title="Align bottom" [class.is-active]="node.textStyle?.verticalAlign === 'bottom'" (click)="setVerticalAlign('bottom')">
+        <button type="button" title="Align bottom" aria-label="Align bottom" [class.is-active]="node.textStyle?.verticalAlign === 'bottom'" (click)="setVerticalAlign('bottom')">
           <i-lucide name="align-vertical-justify-end" [size]="14" />
         </button>
       </div>

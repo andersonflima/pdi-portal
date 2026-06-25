@@ -7,7 +7,7 @@
     </div>
   </section>
 
-  <form class="login-panel" (ngSubmit)="handleSubmit()">
+  <form class="login-panel" [attr.aria-busy]="isSubmitting()" (ngSubmit)="handleSubmit()">
     <i-lucide name="lock-keyhole" aria-hidden="true" />
     <h2>{{ canCreateAdmin() ? 'Create first Tech Lead' : 'Sign in' }}</h2>
 
@@ -15,31 +15,76 @@
       <label>
         Name
         <input
+          #nameControl="ngModel"
           [ngModel]="adminName()"
           (ngModelChange)="adminName.set($event)"
-          minLength="2"
+          [disabled]="isSubmitting()"
+          [attr.aria-invalid]="nameControl.invalid && nameControl.touched ? 'true' : null"
+          [attr.aria-describedby]="nameControl.invalid && nameControl.touched ? 'login-name-error' : null"
+          minlength="2"
           name="adminName"
           required
           type="text"
         />
+        @if (nameControl.invalid && nameControl.touched) {
+          <small class="field-error" id="login-name-error">
+            @if (nameControl.errors?.['required']) {
+              Name is required
+            } @else if (nameControl.errors?.['minlength']) {
+              Name must be at least 2 characters
+            }
+          </small>
+        }
       </label>
     }
 
     <label>
       Email
-      <input [ngModel]="email()" (ngModelChange)="email.set($event)" name="email" required type="email" />
+      <input
+        #emailControl="ngModel"
+        [ngModel]="email()"
+        (ngModelChange)="email.set($event)"
+        [disabled]="isSubmitting()"
+        [attr.aria-invalid]="emailControl.invalid && emailControl.touched ? 'true' : null"
+        [attr.aria-describedby]="emailControl.invalid && emailControl.touched ? 'login-email-error' : null"
+        name="email"
+        required
+        type="email"
+      />
+      @if (emailControl.invalid && emailControl.touched) {
+        <small class="field-error" id="login-email-error">
+          @if (emailControl.errors?.['required']) {
+            Email is required
+          } @else if (emailControl.errors?.['email']) {
+            Enter a valid email address
+          }
+        </small>
+      }
     </label>
 
     <label>
       Password
       <input
-        [minLength]="canCreateAdmin() ? 8 : 6"
+        #passwordControl="ngModel"
+        [minlength]="canCreateAdmin() ? 8 : 6"
         [ngModel]="password()"
         (ngModelChange)="password.set($event)"
+        [disabled]="isSubmitting()"
+        [attr.aria-invalid]="passwordControl.invalid && passwordControl.touched ? 'true' : null"
+        [attr.aria-describedby]="passwordControl.invalid && passwordControl.touched ? 'login-password-error' : null"
         name="password"
         required
         type="password"
       />
+      @if (passwordControl.invalid && passwordControl.touched) {
+        <small class="field-error" id="login-password-error">
+          @if (passwordControl.errors?.['required']) {
+            Password is required
+          } @else if (passwordControl.errors?.['minlength']) {
+            Password must be at least {{ canCreateAdmin() ? 8 : 6 }} characters
+          }
+        </small>
+      }
     </label>
 
     @if (error()) {
@@ -47,7 +92,11 @@
     }
 
     <button [disabled]="isSubmitting()" type="submit">
-      <i-lucide [name]="canCreateAdmin() ? 'user-plus' : 'log-in'" [size]="18" />
+      @if (isSubmitting()) {
+        <span class="login-spinner" aria-hidden="true"></span>
+      } @else {
+        <i-lucide [name]="canCreateAdmin() ? 'user-plus' : 'log-in'" [size]="18" />
+      }
       {{
         isSubmitting()
             ? canCreateAdmin()

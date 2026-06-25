@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import type { PdiPlan, User } from '@pdi/contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiService } from '../../core/api/api.service';
+import { ToastService } from '../../core/notifications/toast.service';
 import { WorkspaceService } from './workspace.service';
 
 const plan = (id: string, overrides: Partial<PdiPlan> = {}): PdiPlan => ({
@@ -30,12 +31,24 @@ const createApiMock = () => ({
   deleteUser: vi.fn().mockResolvedValue(undefined)
 });
 
+const createToastMock = () => ({
+  success: vi.fn(),
+  error: vi.fn(),
+  info: vi.fn(),
+  dismiss: vi.fn()
+});
+
 let apiMock: ReturnType<typeof createApiMock>;
+let toastMock: ReturnType<typeof createToastMock>;
 
 const buildService = () => {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
-    providers: [WorkspaceService, { provide: ApiService, useValue: apiMock }]
+    providers: [
+      WorkspaceService,
+      { provide: ApiService, useValue: apiMock },
+      { provide: ToastService, useValue: toastMock }
+    ]
   });
   return TestBed.inject(WorkspaceService);
 };
@@ -43,7 +56,7 @@ const buildService = () => {
 describe('WorkspaceService', () => {
   beforeEach(() => {
     apiMock = createApiMock();
-    vi.spyOn(window, 'alert').mockImplementation(() => undefined);
+    toastMock = createToastMock();
   });
 
   afterEach(() => {
@@ -95,13 +108,13 @@ describe('WorkspaceService', () => {
     expect(service.isCreatingPlan()).toBe(false);
   });
 
-  it('surfaces an alert when creating a plan fails', async () => {
+  it('surfaces an error toast when creating a plan fails', async () => {
     apiMock.createPdiPlan.mockRejectedValue(new Error('nope'));
     const service = buildService();
 
     await service.createPlan({ title: 'New', objective: 'Obj' });
 
-    expect(window.alert).toHaveBeenCalledWith('nope');
+    expect(toastMock.error).toHaveBeenCalledWith('nope');
     expect(service.isCreatingPlan()).toBe(false);
   });
 
