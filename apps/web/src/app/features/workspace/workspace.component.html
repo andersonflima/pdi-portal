@@ -65,6 +65,10 @@
         (createUser)="handleCreateUser($event)"
         (deleteUser)="handleDeleteUser($event)"
       />
+    } @else if (activeView === 'report') {
+      <app-report [plan]="workspace.activePlan()" />
+    } @else if (activeView === 'integrations' && isTechLead()) {
+      <app-ai-settings />
     } @else {
       <div class="empty-state">
         <div class="empty-card" role="status">
