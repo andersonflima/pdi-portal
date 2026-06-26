@@ -54,6 +54,14 @@ export class AdminPdiMenuComponent implements OnChanges {
   protected readonly editPlan = signal<EditPlanForm | null>(null);
   protected readonly newPlan = signal<NewPlanForm>(emptyNewPlan(''));
   protected readonly pendingDelete = signal<{ id: string; title: string } | null>(null);
+  protected readonly canCreatePlan = computed(() => {
+    const form = this.newPlan();
+    return !!form.ownerId && form.title.trim().length >= 3 && form.objective.trim().length >= 3;
+  });
+  protected readonly canSaveEditPlan = computed(() => {
+    const form = this.editPlan();
+    return !!form && !!form.ownerId && form.title.trim().length >= 3 && form.objective.trim().length >= 3;
+  });
   protected readonly isDeleteDialogOpen = computed(() => this.pendingDelete() !== null);
   protected readonly deleteDialogMessage = computed(() => {
     const target = this.pendingDelete();
