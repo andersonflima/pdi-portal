@@ -2,7 +2,7 @@
   display: flex;
   justify-content: center;
   max-width: 100%;
-  padding: 14px 24px 0;
+  padding: 14px var(--space-6) 0;
   pointer-events: none;
   position: relative;
   width: 100%;
@@ -14,27 +14,27 @@
   background: color-mix(in srgb, var(--color-surface-raised) 88%, transparent);
   border: 1px solid var(--color-border-subtle);
   border-radius: 10px;
-  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.26);
+  box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: row;
   gap: 6px;
   max-width: calc(100vw - 48px);
   overflow: visible;
-  padding: 8px;
+  padding: var(--space-2);
   pointer-events: auto;
   width: max-content;
 }
 
 .canvas-toolbar button {
   background: transparent;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   color: var(--color-content-primary);
   display: grid;
   gap: 3px;
   justify-items: center;
   min-height: 58px;
   min-width: 78px;
-  padding: 8px 6px;
+  padding: var(--space-2) 6px;
   width: 78px;
 }
 
@@ -54,7 +54,7 @@
   display: flex;
   gap: 2px;
   margin: 0 2px;
-  padding: 0 4px;
+  padding: 0 var(--space-1);
 }
 
 .canvas-toolbar button.is-icon {
@@ -116,7 +116,7 @@
   color: var(--color-content-muted);
   display: inline-flex;
   font-size: 10px;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .canvas-toolbar button kbd {
@@ -132,7 +132,7 @@
   height: 16px;
   justify-content: center;
   min-width: 16px;
-  padding: 0 4px;
+  padding: 0 var(--space-1);
 }
 
 .canvas-toolbar button.is-passive,
@@ -151,11 +151,11 @@
   background: var(--color-surface-raised);
   border: 1px solid var(--color-border-subtle);
   border-radius: 10px;
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-lg);
   display: grid;
-  gap: 8px;
+  gap: var(--space-2);
   left: 50%;
-  padding: 8px;
+  padding: var(--space-2);
   position: absolute;
   top: calc(100% + 12px);
   transform: translateX(-50%);
@@ -203,13 +203,13 @@
   color: var(--color-content-primary);
   height: 32px;
   min-width: 0;
-  padding: 0 8px;
+  padding: 0 var(--space-2);
   width: 100%;
 }
 
 .text-format-group {
   display: grid;
-  gap: 4px;
+  gap: var(--space-1);
   grid-template-columns: repeat(3, minmax(0, 1fr));
   min-width: 0;
   width: 104px;
@@ -218,7 +218,7 @@
 .text-format-group button {
   align-items: center;
   background: color-mix(in srgb, var(--color-surface-floating) 92%, transparent);
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   color: var(--color-content-muted);
   display: inline-flex;
   justify-content: center;
@@ -237,7 +237,7 @@
 .node-style-panel .font-size-control input {
   background: var(--color-surface-floating);
   border: 1px solid var(--color-border-subtle);
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   color: var(--color-content-primary);
   cursor: text;
   font-size: 12px;
@@ -252,7 +252,7 @@
 @media (max-width: 900px) {
   :host {
     justify-content: flex-start;
-    padding: 12px 16px 0;
+    padding: var(--space-3) var(--space-4) 0;
   }
 
   .canvas-toolbar {
@@ -287,13 +287,13 @@
   }
 
   .canvas-toolbar {
-    gap: 4px;
+    gap: var(--space-1);
     padding: 6px;
   }
 
   .canvas-toolbar button {
     min-width: 60px;
-    padding: 6px 4px;
+    padding: 6px var(--space-1);
   }
 
   .canvas-toolbar button small {
