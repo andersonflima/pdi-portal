@@ -13,9 +13,20 @@ const readStoredTheme = (): ThemeMode | null => {
   }
 };
 
+const detectPreferredTheme = (): ThemeMode => {
+  try {
+    if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+      return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    }
+  } catch {
+    // Ignore matchMedia failures (unsupported environments).
+  }
+  return 'dark';
+};
+
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
-  private readonly themeSignal = signal<ThemeMode>(readStoredTheme() ?? 'dark');
+  private readonly themeSignal = signal<ThemeMode>(readStoredTheme() ?? detectPreferredTheme());
 
   readonly theme = this.themeSignal.asReadonly();
 
