@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, Input, output, signal } from '@angular/core';
 import type { PdiPlan, User } from '@pdi/contracts';
 import { LucideAngularModule } from 'lucide-angular';
 import { KeyboardShortcutsComponent } from '../../../shared/components/keyboard-shortcuts.component';
@@ -33,6 +33,19 @@ export class CanvasHeaderComponent {
   readonly selectPlan = output<string>();
 
   protected readonly showShortcuts = signal(false);
+
+  @HostListener('window:keydown', ['$event'])
+  protected readonly handleShortcutHelpKey = (event: KeyboardEvent) => {
+    if (event.key !== '?') return;
+
+    const target = event.target as HTMLElement | null;
+    const isTyping =
+      !!target && (target.isContentEditable || ['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName));
+    if (isTyping) return;
+
+    event.preventDefault();
+    this.showShortcuts.set(true);
+  };
 
   protected readonly ownerName = (ownerId: string) => this.users.find((item) => item.id === ownerId)?.name;
 

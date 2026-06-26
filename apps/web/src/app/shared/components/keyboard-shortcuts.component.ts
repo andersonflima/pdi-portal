@@ -24,6 +24,8 @@ type ShortcutGroup = {
 const generalShortcuts: ShortcutGroup = {
   title: 'General',
   entries: [
+    { keys: ['?'], label: 'Show keyboard shortcuts' },
+    { keys: ['Ctrl/Cmd', 'K'], label: 'Open command palette' },
     { keys: ['Ctrl/Cmd', 'Z'], label: 'Undo' },
     { keys: ['Shift', 'Ctrl/Cmd', 'Z'], label: 'Redo' },
     { keys: ['Ctrl', 'Y'], label: 'Redo (alternative)' },

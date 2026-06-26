@@ -39,9 +39,28 @@
   margin: 0;
 }
 
+.command-search {
+  background: var(--color-surface-base);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--color-content-primary);
+  min-height: 44px;
+  padding: 0 14px;
+  width: 100%;
+}
+
 .command-list {
   display: grid;
   gap: 8px;
+  max-height: 52svh;
+  overflow-y: auto;
+}
+
+.command-empty {
+  color: var(--color-content-muted);
+  font: var(--font-body-sm);
+  margin: 0;
+  padding: 12px 4px;
 }
 
 .command-list button {
@@ -59,8 +78,9 @@
   transition: border-color 120ms ease, background-color 120ms ease;
 }
 
-.command-list button:hover {
-  background: color-mix(in srgb, var(--color-action-primary) 8%, var(--color-surface-raised));
+.command-list button:hover,
+.command-list button.is-active {
+  background: color-mix(in srgb, var(--color-action-primary) 12%, var(--color-surface-raised));
   border-color: var(--color-action-primary);
 }
 

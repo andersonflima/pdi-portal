@@ -36,7 +36,7 @@
 
     <form (submit)="handleCreatePlan($event)">
       <strong>New PDI</strong>
-      <select required [value]="newPlan().ownerId" (change)="updateNewPlan('ownerId', $any($event.target).value)">
+      <select required aria-label="Plan owner" [value]="newPlan().ownerId" (change)="updateNewPlan('ownerId', $any($event.target).value)">
         <option value="">Select owner</option>
         @for (user of users; track user.id) {
           <option [value]="user.id">{{ user.name }}</option>
@@ -44,12 +44,14 @@
       </select>
       <input
         placeholder="PDI title"
+        aria-label="PDI title"
         required
         [value]="newPlan().title"
         (input)="updateNewPlan('title', $any($event.target).value)"
       />
       <textarea
         placeholder="Development objective"
+        aria-label="Development objective"
         required
         [value]="newPlan().objective"
         (input)="updateNewPlan('objective', $any($event.target).value)"
@@ -62,24 +64,26 @@
     @if (editPlan(); as form) {
       <form (submit)="handleUpdatePlan($event)">
         <strong>Edit PDI</strong>
-        <select required [value]="form.ownerId" (change)="updateEditPlan('ownerId', $any($event.target).value)">
+        <select required aria-label="Plan owner" [value]="form.ownerId" (change)="updateEditPlan('ownerId', $any($event.target).value)">
           @for (user of users; track user.id) {
             <option [value]="user.id">{{ user.name }}</option>
           }
         </select>
-        <select [value]="form.status" (change)="updateEditPlan('status', $any($event.target).value)">
+        <select aria-label="Plan status" [value]="form.status" (change)="updateEditPlan('status', $any($event.target).value)">
           <option value="DRAFT">Draft</option>
           <option value="ACTIVE">Active</option>
           <option value="DONE">Done</option>
         </select>
         <input
           placeholder="PDI title"
+          aria-label="PDI title"
           required
           [value]="form.title"
           (input)="updateEditPlan('title', $any($event.target).value)"
         />
         <textarea
           placeholder="Development objective"
+          aria-label="Development objective"
           required
           [value]="form.objective"
           (input)="updateEditPlan('objective', $any($event.target).value)"

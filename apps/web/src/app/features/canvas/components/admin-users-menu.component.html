@@ -29,12 +29,14 @@
       <strong>New user</strong>
       <input
         placeholder="Name"
+        aria-label="User name"
         required
         [value]="newUser().name"
         (input)="updateNewUser('name', $any($event.target).value)"
       />
       <input
         placeholder="Email"
+        aria-label="User email"
         required
         type="email"
         [value]="newUser().email"
@@ -44,16 +46,17 @@
         <input
           minLength="6"
           placeholder="Temporary password"
+          aria-label="Temporary password"
           required
           type="text"
           [value]="newUser().password"
           (input)="updateNewUser('password', $any($event.target).value)"
         />
-        <button title="Generate temporary password" type="button" (click)="regeneratePassword()">
+        <button title="Generate temporary password" aria-label="Generate temporary password" type="button" (click)="regeneratePassword()">
           <i-lucide name="sparkles" [size]="15" />
         </button>
       </div>
-      <select [value]="newUser().role" (change)="updateNewUser('role', $any($event.target).value)">
+      <select aria-label="User role" [value]="newUser().role" (change)="updateNewUser('role', $any($event.target).value)">
         <option value="MEMBER">Member</option>
         <option value="ADMIN">Admin</option>
       </select>
