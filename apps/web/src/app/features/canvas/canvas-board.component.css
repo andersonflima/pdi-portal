@@ -1,5 +1,5 @@
 .canvas-shell {
-  background: linear-gradient(180deg, #08111f 0%, #0b1528 100%);
+  background: linear-gradient(180deg, var(--color-surface-base) 0%, var(--color-surface-raised) 100%);
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
   height: 100svh;
@@ -8,9 +8,13 @@
 
 .canvas-stage {
   background:
-    radial-gradient(circle at 1px 1px, rgba(125, 159, 214, 0.24) 1px, transparent 0),
-    linear-gradient(180deg, rgba(7, 14, 28, 0.98), rgba(11, 20, 37, 0.98));
-  background-size: 24px 24px;
+    radial-gradient(
+      circle at 1px 1px,
+      color-mix(in srgb, var(--color-content-muted) 32%, transparent) 1px,
+      transparent 0
+    ),
+    linear-gradient(180deg, var(--color-surface-base), var(--color-surface-raised));
+  background-size: var(--space-6) var(--space-6);
   height: 100%;
   min-height: 0;
   overflow: auto;
@@ -29,14 +33,14 @@
 
 .canvas-zoom-controls {
   align-items: center;
-  background: rgba(13, 22, 40, 0.9);
-  border: 1px solid rgba(125, 159, 214, 0.24);
-  border-radius: 8px;
-  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.3);
+  background: color-mix(in srgb, var(--color-surface-raised) 92%, transparent);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
   display: flex;
-  gap: 4px;
-  bottom: 16px;
-  padding: 4px;
+  gap: var(--space-1);
+  bottom: var(--space-4);
+  padding: var(--space-1);
   position: fixed;
   right: calc(16px + 240px + 12px);
   width: max-content;
@@ -47,7 +51,7 @@
   align-items: center;
   background: transparent;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   color: var(--color-content-primary);
   cursor: pointer;
   display: inline-flex;
@@ -57,7 +61,7 @@
 }
 
 .canvas-zoom-controls button:hover {
-  background: rgba(90, 164, 255, 0.16);
+  background: color-mix(in srgb, var(--color-action-primary) 16%, transparent);
 }
 
 .canvas-zoom-controls span {
@@ -94,7 +98,7 @@
   fill: none;
   filter: drop-shadow(0 1px 0 rgba(8, 17, 31, 0.82));
   pointer-events: none;
-  stroke: #93a7c7;
+  stroke: var(--color-content-muted);
   stroke-dasharray: 8 6;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -123,8 +127,8 @@
 }
 
 .selection-marquee {
-  background: rgba(0, 95, 204, 0.14);
-  border: 1px dashed rgba(0, 95, 204, 0.88);
+  background: color-mix(in srgb, var(--color-action-primary) 14%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--color-action-primary) 88%, transparent);
   border-radius: 4px;
   pointer-events: none;
   position: absolute;
@@ -140,10 +144,10 @@
 }
 
 .canvas-minimap-surface {
-  background: rgba(13, 22, 40, 0.94);
-  border: 1px solid rgba(125, 159, 214, 0.24);
+  background: color-mix(in srgb, var(--color-surface-raised) 94%, transparent);
+  border: 1px solid var(--color-border-subtle);
   border-radius: 10px;
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-md);
   cursor: pointer;
   overflow: hidden;
   pointer-events: auto;
@@ -151,17 +155,17 @@
 }
 
 .canvas-minimap-node {
-  background: rgba(90, 164, 255, 0.28);
+  background: color-mix(in srgb, var(--color-action-primary) 28%, transparent);
   border-radius: 1px;
   position: absolute;
 }
 
 .canvas-minimap-node.is-selected {
-  background: rgba(90, 164, 255, 0.9);
+  background: color-mix(in srgb, var(--color-action-primary) 90%, transparent);
 }
 
 .canvas-minimap-viewport {
-  border: 1px solid rgba(76, 217, 123, 0.95);
+  border: 1px solid var(--color-success);
   border-radius: 2px;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.24);
   position: absolute;
