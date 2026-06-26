@@ -28,6 +28,20 @@ test.describe('Canvas critical regression', () => {
     await expect(page.getByRole('heading', { name: /pdi portfolio/i })).toBeVisible();
   });
 
+  test('should filter the command palette and run the active result with Enter', async ({ page }) => {
+    await login(page);
+
+    await page.keyboard.press('Control+K');
+    const search = page.getByRole('textbox', { name: /search commands/i });
+    await search.fill('report');
+
+    await expect(page.getByRole('button', { name: /open report/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /open board/i })).toHaveCount(0);
+
+    await search.press('Enter');
+    await expect(page.getByRole('heading', { name: /command palette/i })).toBeHidden();
+  });
+
   test('should create a text node and keep zoom controls working', async ({ page }) => {
     await login(page);
 

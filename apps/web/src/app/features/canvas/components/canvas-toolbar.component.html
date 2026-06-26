@@ -1,5 +1,5 @@
 <div class="canvas-toolbar" aria-label="Canvas tools">
-  <button class="is-passive" title="Select and move nodes" type="button">
+  <button class="is-passive" title="Select and move nodes" aria-label="Select mode" type="button">
     <i-lucide name="mouse-pointer-2" [size]="17" />
     <span>Select</span>
   </button>
@@ -40,6 +40,7 @@
     [class.is-active]="connectorSourceId()"
     [disabled]="!selectedNode()"
     title="Connect selected node to the next node you click"
+    aria-label="Connect nodes"
     (click)="toggleConnectorMode.emit()"
   >
     <i-lucide name="diamond" [size]="17" />
@@ -50,13 +51,13 @@
     <div class="node-style-panel" aria-label="Selected item style">
       <label title="Change selected item color">
         <span>Stroke</span>
-        <input type="color" [value]="node.color" (input)="handleNodeColor($event)" />
+        <input type="color" aria-label="Stroke color" [value]="node.color" (input)="handleNodeColor($event)" />
       </label>
 
       @if (node.kind === 'FRAME') {
         <label title="Change frame background">
           <span>Bg</span>
-          <input type="color" [value]="node.backgroundColor ?? '#f8fafc'" (input)="handleFrameBackground($event)" />
+          <input type="color" aria-label="Frame background color" [value]="node.backgroundColor ?? '#f8fafc'" (input)="handleFrameBackground($event)" />
         </label>
       }
 
