@@ -59,6 +59,9 @@
         (input)="updateNewPlan('objective', $any($event.target).value)"
       ></textarea>
       <button [disabled]="isCreatingPlan || !canCreatePlan()" type="submit">
+        @if (isCreatingPlan) {
+          <span class="spinner" aria-hidden="true"></span>
+        }
         {{ isCreatingPlan ? 'Creating PDI' : 'Create linked PDI' }}
       </button>
     </form>
@@ -92,6 +95,9 @@
         ></textarea>
         <div class="admin-form-actions">
           <button [disabled]="isUpdatingPlan || !canSaveEditPlan()" type="submit">
+            @if (isUpdatingPlan) {
+              <span class="spinner" aria-hidden="true"></span>
+            }
             {{ isUpdatingPlan ? 'Saving PDI' : 'Save changes' }}
           </button>
           <button

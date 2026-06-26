@@ -63,6 +63,9 @@
         <option value="ADMIN">Admin</option>
       </select>
       <button [disabled]="isCreatingUser || !canCreateUser()" type="submit">
+        @if (isCreatingUser) {
+          <span class="spinner" aria-hidden="true"></span>
+        }
         {{ isCreatingUser ? 'Creating user' : 'Create user' }}
       </button>
     </form>
