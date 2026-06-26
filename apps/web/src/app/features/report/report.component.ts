@@ -11,12 +11,12 @@ import {
 import { barWidths, circleCircumference, donutDashArray, percentToLength } from './report-charts';
 
 const STATUS_COLORS: Record<ProgressStatus, string> = {
-  done: '#2e9b6b',
-  'on-track': '#2e9b6b',
-  ahead: '#0d8f8f',
-  behind: '#d98414',
-  overdue: '#d9504a',
-  'not-started': '#6b7a90'
+  done: 'var(--color-success)',
+  'on-track': 'var(--color-success)',
+  ahead: 'var(--color-info)',
+  behind: 'var(--color-warning)',
+  overdue: 'var(--color-danger)',
+  'not-started': 'var(--color-content-muted)'
 };
 
 const STATUS_LABELS: Record<ProgressStatus, string> = {
@@ -271,7 +271,7 @@ const toStepView = (insight: NodeProgressInsight): StepView => ({
       }
 
       .report-state-error {
-        color: #d9504a;
+        color: var(--color-danger);
       }
 
       .report-stats {
@@ -340,7 +340,7 @@ const toStepView = (insight: NodeProgressInsight): StepView => ({
 
       .donut-value {
         fill: none;
-        stroke: #2e9b6b;
+        stroke: var(--color-success);
         stroke-width: 14;
         stroke-linecap: round;
         transition: stroke-dasharray 0.4s ease;
