@@ -30,6 +30,8 @@
               <i-lucide name="trash-2" [size]="14" />
             </button>
           </div>
+        } @empty {
+          <p class="admin-empty">No PDIs yet. Create your first plan below.</p>
         }
       </div>
     </section>
@@ -56,7 +58,7 @@
         [value]="newPlan().objective"
         (input)="updateNewPlan('objective', $any($event.target).value)"
       ></textarea>
-      <button [disabled]="isCreatingPlan" type="submit">
+      <button [disabled]="isCreatingPlan || !canCreatePlan()" type="submit">
         {{ isCreatingPlan ? 'Creating PDI' : 'Create linked PDI' }}
       </button>
     </form>
@@ -89,7 +91,7 @@
           (input)="updateEditPlan('objective', $any($event.target).value)"
         ></textarea>
         <div class="admin-form-actions">
-          <button [disabled]="isUpdatingPlan" type="submit">
+          <button [disabled]="isUpdatingPlan || !canSaveEditPlan()" type="submit">
             {{ isUpdatingPlan ? 'Saving PDI' : 'Save changes' }}
           </button>
           <button

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, computed, output, signal } from '@angular/core';
 import type { User } from '@pdi/contracts';
 import { LucideAngularModule } from 'lucide-angular';
 import { generateTemporaryPassword } from '../canvas.mappers';
@@ -32,6 +32,11 @@ export class AdminUsersMenuComponent {
 
   readonly createUser = output<NewUserForm>();
   protected readonly newUser = signal<NewUserForm>(emptyNewUser());
+
+  protected readonly canCreateUser = computed(() => {
+    const user = this.newUser();
+    return user.name.trim().length >= 2 && /\S+@\S+\.\S+/.test(user.email) && user.password.length >= 6;
+  });
 
   protected readonly updateNewUser = <TKey extends keyof NewUserForm>(key: TKey, value: NewUserForm[TKey]) => {
     this.newUser.update((current) => ({ ...current, [key]: value }));

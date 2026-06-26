@@ -21,6 +21,8 @@
             </div>
             <small>{{ user.role }}</small>
           </div>
+        } @empty {
+          <p class="admin-empty">No users yet. Create the first one below.</p>
         }
       </div>
     </section>
@@ -60,7 +62,7 @@
         <option value="MEMBER">Member</option>
         <option value="ADMIN">Admin</option>
       </select>
-      <button [disabled]="isCreatingUser" type="submit">
+      <button [disabled]="isCreatingUser || !canCreateUser()" type="submit">
         {{ isCreatingUser ? 'Creating user' : 'Create user' }}
       </button>
     </form>

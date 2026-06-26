@@ -3,6 +3,13 @@
   position: relative;
 }
 
+.admin-empty {
+  color: var(--color-content-muted);
+  font: var(--font-body-sm);
+  margin: 0;
+  padding: var(--space-3) var(--space-1);
+}
+
 .admin-menu {
   position: relative;
 }
