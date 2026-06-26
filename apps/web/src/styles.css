@@ -1,4 +1,5 @@
 :root {
+  /* Surfaces & content */
   --color-surface-base: #08111f;
   --color-surface-raised: #101a2d;
   --color-surface-floating: #16243d;
@@ -9,22 +10,79 @@
   --color-action-primary-strong: #3d8ff4;
   --color-border-subtle: rgba(143, 170, 214, 0.22);
   --color-overlay: #020814;
+
+  /* Semantic status colors */
+  --color-success: #4cd97b;
+  --color-success-surface: rgba(76, 217, 123, 0.16);
+  --color-warning: #e2b53d;
+  --color-warning-surface: rgba(226, 181, 61, 0.16);
+  --color-danger: #f0726a;
+  --color-danger-surface: rgba(240, 114, 106, 0.16);
+  --color-info: #67adff;
+  --color-info-surface: rgba(103, 173, 255, 0.16);
+
+  /* Focus ring */
+  --color-focus-ring: color-mix(in srgb, var(--color-action-primary) 70%, white);
+
+  /* Spacing scale (4px grid) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Radius scale */
+  --radius-xs: 6px;
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  /* Elevation scale */
+  --shadow-sm: 0 2px 6px rgba(2, 8, 20, 0.28);
+  --shadow-md: 0 12px 28px rgba(2, 8, 20, 0.32);
   --shadow-lg: 0 24px 56px rgba(9, 17, 38, 0.2);
+  --shadow-xl: 0 36px 88px rgba(2, 8, 20, 0.42);
+
+  /* Motion */
+  --motion-fast: 120ms;
+  --motion-base: 160ms;
+  --motion-slow: 240ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1.2);
+  --ease-decelerate: cubic-bezier(0, 0, 0, 1);
+
+  /* Z-index scale */
+  --z-base: 0;
+  --z-canvas-overlay: 10;
+  --z-panel: 20;
+  --z-toolbar: 30;
+  --z-dropdown: 40;
+  --z-modal: 60;
+  --z-toast: 80;
+  --z-tooltip: 90;
+
+  /* Typography */
   --font-title-md: 650 1.22rem/1.22 "Manrope", "IBM Plex Sans", "Segoe UI", sans-serif;
   --font-title-sm: 650 1rem/1.2 "Manrope", "IBM Plex Sans", "Segoe UI", sans-serif;
   --font-label-md: 600 0.88rem/1.2 "IBM Plex Sans", "Segoe UI", sans-serif;
   --font-body-sm: 500 0.84rem/1.35 "IBM Plex Sans", "Segoe UI", sans-serif;
   --font-body-xs: 500 0.74rem/1.25 "IBM Plex Sans", "Segoe UI", sans-serif;
   --font-mono-xs: 500 0.71rem/1.2 "JetBrains Mono", "IBM Plex Mono", monospace;
+
   background: var(--color-surface-base);
   color: var(--color-content-primary);
   font-family:
     "IBM Plex Sans", "Segoe UI", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 :root[data-theme="light"] {
@@ -38,9 +96,20 @@
   --color-action-primary-strong: #1f5fe0;
   --color-border-subtle: rgba(20, 40, 80, 0.16);
   --color-overlay: rgba(15, 25, 45, 0.55);
+
+  --color-success: #1f9d57;
+  --color-success-surface: rgba(31, 157, 87, 0.12);
+  --color-warning: #b5821a;
+  --color-warning-surface: rgba(181, 130, 26, 0.12);
+  --color-danger: #d24a40;
+  --color-danger-surface: rgba(210, 74, 64, 0.12);
+  --color-info: #2f6fed;
+  --color-info-surface: rgba(47, 111, 237, 0.12);
+
+  --shadow-sm: 0 2px 6px rgba(23, 42, 86, 0.1);
+  --shadow-md: 0 12px 28px rgba(23, 42, 86, 0.12);
   --shadow-lg: 0 24px 56px rgba(23, 42, 86, 0.16);
-  background: var(--color-surface-base);
-  color: var(--color-content-primary);
+  --shadow-xl: 0 36px 88px rgba(23, 42, 86, 0.2);
 }
 
 :root[data-theme="light"] body {
@@ -76,14 +145,17 @@ button {
   border: 0;
   cursor: pointer;
   display: inline-flex;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
+a:focus-visible,
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
-textarea:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--color-action-primary) 70%, white);
+textarea:focus-visible,
+[tabindex]:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
   outline-offset: 1px;
 }
 
@@ -97,4 +169,15 @@ i-lucide {
   display: grid;
   min-height: 100svh;
   place-items: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

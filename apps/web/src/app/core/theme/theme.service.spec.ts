@@ -42,4 +42,17 @@ describe('ThemeService', () => {
     expect(restored.theme()).toBe('light');
     expect(document.documentElement.getAttribute('data-theme')).toBe('light');
   });
+
+  it('falls back to the system preference when nothing is stored', () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query.includes('light'),
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined
+    }));
+
+    const service = new ThemeService();
+    expect(service.theme()).toBe('light');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+  });
 });
