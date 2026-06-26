@@ -208,6 +208,23 @@ i-lucide {
   line-height: 0;
 }
 
+.spinner {
+  animation: spinner-rotate 720ms linear infinite;
+  border: 2px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-radius: 50%;
+  border-top-color: currentColor;
+  display: inline-block;
+  flex: none;
+  height: 1em;
+  width: 1em;
+}
+
+@keyframes spinner-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .boot,
 .empty-state {
   display: grid;
