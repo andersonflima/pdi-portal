@@ -24,14 +24,18 @@ describe('ThemeService', () => {
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
   });
 
-  it('toggles between dark and light', () => {
+  it('cycles through dark, light and high-contrast', () => {
     const service = new ThemeService();
 
-    service.toggleTheme();
+    service.cycleTheme();
     expect(service.theme()).toBe('light');
     expect(document.documentElement.getAttribute('data-theme')).toBe('light');
 
-    service.toggleTheme();
+    service.cycleTheme();
+    expect(service.theme()).toBe('high-contrast');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('high-contrast');
+
+    service.cycleTheme();
     expect(service.theme()).toBe('dark');
   });
 
@@ -54,5 +58,18 @@ describe('ThemeService', () => {
     const service = new ThemeService();
     expect(service.theme()).toBe('light');
     expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+  });
+
+  it('prefers high-contrast when the system requests more contrast', () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query.includes('contrast'),
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined
+    }));
+
+    const service = new ThemeService();
+    expect(service.theme()).toBe('high-contrast');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('high-contrast');
   });
 });

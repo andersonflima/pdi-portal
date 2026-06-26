@@ -1,13 +1,17 @@
 import { Injectable, signal } from '@angular/core';
 
-export type ThemeMode = 'dark' | 'light';
+export type ThemeMode = 'dark' | 'light' | 'high-contrast';
 
 const STORAGE_KEY = 'pdi.theme';
+const THEME_ORDER: readonly ThemeMode[] = ['dark', 'light', 'high-contrast'];
+
+const isThemeMode = (value: unknown): value is ThemeMode =>
+  value === 'dark' || value === 'light' || value === 'high-contrast';
 
 const readStoredTheme = (): ThemeMode | null => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    return stored === 'light' || stored === 'dark' ? stored : null;
+    return isThemeMode(stored) ? stored : null;
   } catch {
     return null;
   }
@@ -16,7 +20,12 @@ const readStoredTheme = (): ThemeMode | null => {
 const detectPreferredTheme = (): ThemeMode => {
   try {
     if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
-      return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      if (window.matchMedia('(prefers-contrast: more)').matches) {
+        return 'high-contrast';
+      }
+      if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+        return 'light';
+      }
     }
   } catch {
     // Ignore matchMedia failures (unsupported environments).
@@ -40,8 +49,10 @@ export class ThemeService {
     this.applyTheme(mode);
   };
 
-  readonly toggleTheme = () => {
-    this.setTheme(this.themeSignal() === 'dark' ? 'light' : 'dark');
+  readonly cycleTheme = () => {
+    const index = THEME_ORDER.indexOf(this.themeSignal());
+    const next = THEME_ORDER[(index + 1) % THEME_ORDER.length] ?? 'dark';
+    this.setTheme(next);
   };
 
   private readonly persistTheme = (mode: ThemeMode) => {

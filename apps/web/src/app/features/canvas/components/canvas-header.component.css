@@ -5,7 +5,7 @@
   display: grid;
   gap: 18px;
   grid-template-columns: minmax(0, 1fr) auto;
-  padding: 20px 28px;
+  padding: var(--space-5) 28px;
   position: relative;
   z-index: 60;
 }
@@ -24,7 +24,7 @@
 .plan-picker {
   align-items: center;
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   min-width: 0;
   position: relative;
 }
@@ -41,7 +41,7 @@
   max-width: min(680px, 54vw);
   min-width: 0;
   outline: 0;
-  padding: 4px 10px;
+  padding: var(--space-1) 10px;
 }
 
 .plan-picker select option {
@@ -73,7 +73,7 @@
 .canvas-header-actions {
   align-items: start;
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
   justify-content: flex-end;
   min-width: max-content;
 }
@@ -102,7 +102,7 @@
   justify-content: center;
   min-height: 42px;
   min-width: 132px;
-  padding: 0 16px;
+  padding: 0 var(--space-4);
   white-space: nowrap;
 }
 
@@ -110,7 +110,7 @@
   .canvas-header {
     align-items: flex-start;
     grid-template-columns: 1fr;
-    padding: 16px 18px;
+    padding: var(--space-4) 18px;
   }
 
   .canvas-header-actions {
@@ -132,12 +132,12 @@
 
 @media (max-width: 560px) {
   .canvas-header {
-    gap: 12px;
-    padding: 12px 14px;
+    gap: var(--space-3);
+    padding: var(--space-3) 14px;
   }
 
   .canvas-header-actions {
-    gap: 8px;
+    gap: var(--space-2);
   }
 
   .secondary-action,

@@ -9,16 +9,16 @@
 
 .user-menu summary {
   align-items: center;
-  background: #ffffff;
-  border: 1px solid #dfe5ee;
-  border-radius: 999px;
-  color: #172033;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-pill);
+  color: var(--color-content-primary);
   cursor: pointer;
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   list-style: none;
   min-height: 42px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
 }
 
 .user-menu summary::-webkit-details-marker {
@@ -35,10 +35,10 @@
 }
 
 .user-menu-panel {
-  background: #ffffff;
-  border: 1px solid #dfe5ee;
-  border-radius: 8px;
-  box-shadow: 0 18px 48px rgba(23, 32, 51, 0.16);
+  background: var(--color-surface-floating);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
   display: grid;
   gap: 5px;
   min-width: 260px;
@@ -51,17 +51,17 @@
 
 .user-menu-panel span,
 .user-menu-panel small {
-  color: #64748b;
+  color: var(--color-content-muted);
 }
 
 .user-menu-panel button {
-  background: #172033;
-  border-radius: 8px;
-  color: #ffffff;
+  background: var(--color-content-primary);
+  border-radius: var(--radius-sm);
+  color: var(--color-content-on-primary);
   justify-content: center;
   margin-top: 10px;
   min-height: 38px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
 }
 
 @media (max-width: 860px) {
