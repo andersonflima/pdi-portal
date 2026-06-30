@@ -47,15 +47,12 @@ import type {
 import { arrowNeckOffset, toExportBounds, toFileName, toFiniteNumber } from './canvas-board.export-helpers';
 import { buildBoardSvgMarkup } from './canvas-board.svg-export';
 import {
-  clampNodePositionToCanvas,
   clampPointToCanvas,
   clampZoom,
   findDescendantNodeIds,
   findNodeHandleAtPoint,
   findTopNodeAtPoint,
-  hasNodeOverlap,
   normalizeWheelDeltaY,
-  nodePlacementPadding,
   toClosestHandle,
   toConnectorHandlePoint,
   toConnectorPath,
@@ -70,6 +67,7 @@ import {
   sendNodeToBack,
   sortNodesForRender
 } from './canvas-board.layers';
+import { findAvailableNodePosition } from './canvas-board.placement';
 
 type ConnectorDraft = {
   sourceHandle: CanvasHandlePosition;
@@ -93,8 +91,6 @@ const minimapWidth = 240;
 const minimapHeight = Math.round((minimapWidth * canvasSize.height) / canvasSize.width);
 const exportImagePixelRatio = 2;
 const exportZoomScale = 1;
-const nodePlacementStep = 48;
-const nodePlacementSearchRings = Math.ceil(Math.max(canvasSize.width, canvasSize.height) / nodePlacementStep);
 
 const nodeCreationShortcuts = new Map<string, CanvasNodeKind>(
   nodeKindOrder.flatMap((kind) => {
@@ -422,97 +418,13 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     const node = createCanvasNode(kind, currentNodes, currentNodes.length, variant);
     const positionedNode = {
       ...node,
-      position: this.findAvailableNodePosition(node, currentNodes)
+      position: findAvailableNodePosition(node, currentNodes, this.stageViewport())
     };
 
     this.nodes.set(currentNodes.concat(positionedNode));
     this.canvasFacade.selectSingleNode(positionedNode.id);
     this.connectorSourceId.set(null);
     this.activeConnector.set(null);
-  };
-
-  private readonly findAvailableNodePosition = (node: CanvasNodeView, nodes: CanvasNodeView[]) => {
-    const viewport = this.stageViewport();
-    const fallbackViewport = {
-      height: Math.min(canvasSize.height, 720),
-      left: Math.max(0, (canvasSize.width - 960) / 2),
-      top: Math.max(0, (canvasSize.height - 720) / 2),
-      width: Math.min(canvasSize.width, 960)
-    };
-    const placementViewport = viewport.width > 0 && viewport.height > 0 ? viewport : fallbackViewport;
-    const origin = clampNodePositionToCanvas(node, {
-      x: placementViewport.left + placementViewport.width / 2 - node.width / 2,
-      y: placementViewport.top + placementViewport.height / 2 - node.height / 2
-    });
-    const candidates = [
-      origin,
-      ...this.nodePlacementGridPositions(node, placementViewport),
-      ...this.nodePlacementGridPositions(node, {
-        height: canvasSize.height,
-        left: 0,
-        top: 0,
-        width: canvasSize.width
-      })
-    ];
-
-    for (const position of candidates) {
-      const candidate = { ...node, position };
-
-      if (!hasNodeOverlap(candidate, nodes)) return position;
-    }
-
-    for (let ring = 0; ring <= nodePlacementSearchRings; ring += 1) {
-      const offsets = ring === 0 ? [{ x: 0, y: 0 }] : this.nodePlacementRingOffsets(ring);
-
-      for (const offset of offsets) {
-        const position = clampNodePositionToCanvas(node, {
-          x: origin.x + offset.x,
-          y: origin.y + offset.y
-        });
-        const candidate = { ...node, position };
-
-        if (!hasNodeOverlap(candidate, nodes)) return position;
-      }
-    }
-
-    return origin;
-  };
-
-  private readonly nodePlacementGridPositions = (
-    node: Pick<CanvasNodeView, 'height' | 'width'>,
-    area: { height: number; left: number; top: number; width: number }
-  ): XYPosition[] => {
-    const left = Math.max(0, Math.floor(area.left) + nodePlacementPadding);
-    const top = Math.max(0, Math.floor(area.top) + nodePlacementPadding);
-    const right = Math.min(canvasSize.width - node.width, Math.ceil(area.left + area.width) - node.width - nodePlacementPadding);
-    const bottom = Math.min(canvasSize.height - node.height, Math.ceil(area.top + area.height) - node.height - nodePlacementPadding);
-
-    if (right < left || bottom < top) return [];
-
-    const positions: XYPosition[] = [];
-
-    for (let y = top; y <= bottom; y += nodePlacementStep) {
-      for (let x = left; x <= right; x += nodePlacementStep) {
-        positions.push({ x, y });
-      }
-    }
-
-    return positions;
-  };
-
-  private readonly nodePlacementRingOffsets = (ring: number): XYPosition[] => {
-    const distance = ring * nodePlacementStep;
-    const offsets: XYPosition[] = [];
-
-    for (let x = -distance; x <= distance; x += nodePlacementStep) {
-      offsets.push({ x, y: -distance }, { x, y: distance });
-    }
-
-    for (let y = -distance + nodePlacementStep; y <= distance - nodePlacementStep; y += nodePlacementStep) {
-      offsets.push({ x: -distance, y }, { x: distance, y });
-    }
-
-    return offsets;
   };
 
   protected readonly handlePlanePointerDown = (event: PointerEvent) => {
