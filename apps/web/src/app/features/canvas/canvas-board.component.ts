@@ -46,7 +46,6 @@ import type {
 } from './canvas.models';
 import { arrowNeckOffset } from './canvas-board.export-helpers';
 import {
-  clampPointToCanvas,
   clampZoom,
   findDescendantNodeIds,
   findNodeHandleAtPoint,
@@ -68,6 +67,15 @@ import {
 import { findAvailableNodePosition } from './canvas-board.placement';
 import { removeEdgePair, shouldRenderEdgeLabel as computeShouldRenderEdgeLabel } from './canvas-board.edges';
 import { buildHistoryBoardPayload } from './canvas-board.history';
+import {
+  applyNodeDragDelta,
+  clientToCanvasPoint,
+  computeResizedDimensions,
+  computeZoomScroll,
+  dragStartThreshold,
+  hasCrossedThreshold,
+  marqueeStartThreshold
+} from './canvas-board.interactions';
 import { toMarqueeBoxStyle, toMinimapNodes, toMinimapViewport } from './canvas-board.view';
 
 type ConnectorDraft = {
@@ -79,9 +87,7 @@ type ConnectorDraft = {
 
 const zoomStep = 0.1;
 const wheelZoomSensitivity = 0.0022;
-const dragStartThreshold = 4;
 const autosaveDelayMs = 1200;
-const marqueeStartThreshold = 6;
 const minimapWidth = 240;
 const minimapHeight = Math.round((minimapWidth * canvasSize.height) / canvasSize.width);
 
@@ -685,21 +691,15 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     const initialZoom = this.zoom();
 
     const handleMove = (moveEvent: PointerEvent) => {
-      const width = Math.max(96, initialSize.width + (moveEvent.clientX - start.x) / initialZoom);
-      const height = Math.max(72, initialSize.height + (moveEvent.clientY - start.y) / initialZoom);
-      const shouldKeepAspectRatio = node.kind === 'SHAPE' && node.variant === 'CIRCLE';
-      const nextSize = shouldKeepAspectRatio ? Math.max(width, height) : null;
+      const { width, height } = computeResizedDimensions(
+        node,
+        initialSize,
+        (moveEvent.clientX - start.x) / initialZoom,
+        (moveEvent.clientY - start.y) / initialZoom
+      );
 
       this.nodes.update((nodes) =>
-        nodes.map((candidate) =>
-          candidate.id === node.id
-            ? {
-                ...candidate,
-                height: nextSize ?? height,
-                width: nextSize ?? width
-              }
-            : candidate
-        )
+        nodes.map((candidate) => (candidate.id === node.id ? { ...candidate, height, width } : candidate))
       );
     };
 
@@ -810,20 +810,22 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     if (!stage || nextZoom === currentZoom) return;
 
     const stageRect = stage.getBoundingClientRect();
-    const pointerOffsetX = pointer ? pointer.clientX - stageRect.left : stage.clientWidth / 2;
-    const pointerOffsetY = pointer ? pointer.clientY - stageRect.top : stage.clientHeight / 2;
-    const clampedPointerOffsetX = Math.min(stage.clientWidth, Math.max(0, pointerOffsetX));
-    const clampedPointerOffsetY = Math.min(stage.clientHeight, Math.max(0, pointerOffsetY));
-    const canvasX = (stage.scrollLeft + clampedPointerOffsetX) / currentZoom;
-    const canvasY = (stage.scrollTop + clampedPointerOffsetY) / currentZoom;
 
     this.zoom.set(nextZoom);
 
-    const maxScrollLeft = Math.max(0, canvasSize.width * nextZoom - stage.clientWidth);
-    const maxScrollTop = Math.max(0, canvasSize.height * nextZoom - stage.clientHeight);
+    const { scrollLeft, scrollTop } = computeZoomScroll({
+      currentZoom,
+      nextZoom,
+      clientWidth: stage.clientWidth,
+      clientHeight: stage.clientHeight,
+      scrollLeft: stage.scrollLeft,
+      scrollTop: stage.scrollTop,
+      pointerOffsetX: pointer ? pointer.clientX - stageRect.left : undefined,
+      pointerOffsetY: pointer ? pointer.clientY - stageRect.top : undefined
+    });
 
-    stage.scrollLeft = Math.min(maxScrollLeft, Math.max(0, canvasX * nextZoom - clampedPointerOffsetX));
-    stage.scrollTop = Math.min(maxScrollTop, Math.max(0, canvasY * nextZoom - clampedPointerOffsetY));
+    stage.scrollLeft = scrollLeft;
+    stage.scrollTop = scrollTop;
     this.syncStageViewport();
   };
 
@@ -921,7 +923,7 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       const pointerDeltaX = moveEvent.clientX - start.x;
       const pointerDeltaY = moveEvent.clientY - start.y;
 
-      if (!isDragging && Math.hypot(pointerDeltaX, pointerDeltaY) < dragStartThreshold) {
+      if (!isDragging && !hasCrossedThreshold(pointerDeltaX, pointerDeltaY, dragStartThreshold)) {
         return;
       }
 
@@ -932,23 +934,9 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
       const rawDeltaX = (moveEvent.clientX - start.x) / initialZoom;
       const rawDeltaY = (moveEvent.clientY - start.y) / initialZoom;
-      const deltaX = Math.max(-rootInitialPosition.x, rawDeltaX);
-      const deltaY = Math.max(-rootInitialPosition.y, rawDeltaY);
 
       this.nodes.update((nodes) =>
-        nodes.map((candidate) => {
-          if (!nodeIdsToMove.has(candidate.id)) return candidate;
-
-          const initialPosition = initialPositions.get(candidate.id) ?? candidate.position;
-
-          return {
-            ...candidate,
-            position: {
-              x: Math.max(0, initialPosition.x + deltaX),
-              y: Math.max(0, initialPosition.y + deltaY)
-            }
-          };
-        })
+        applyNodeDragDelta(nodes, nodeIdsToMove, initialPositions, rootInitialPosition, rawDeltaX, rawDeltaY)
       );
     };
 
@@ -1099,11 +1087,13 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     if (!stage) return null;
 
     const stageRect = stage.getBoundingClientRect();
-    const zoom = this.zoom();
 
-    return clampPointToCanvas({
-      x: (stage.scrollLeft + (clientX - stageRect.left)) / zoom,
-      y: (stage.scrollTop + (clientY - stageRect.top)) / zoom
+    return clientToCanvasPoint(clientX, clientY, {
+      rectLeft: stageRect.left,
+      rectTop: stageRect.top,
+      scrollLeft: stage.scrollLeft,
+      scrollTop: stage.scrollTop,
+      zoom: this.zoom()
     });
   };
 
