@@ -5,7 +5,8 @@ import {
   AI_NOT_IMPLEMENTED_MESSAGE,
   AiIntegrationService,
   AiNotImplementedError,
-  DEFAULT_AI_CONFIG
+  DEFAULT_AI_CONFIG,
+  analysisNoticeFor
 } from './ai-integration.service';
 
 const createStorageMock = (initial: Record<string, string> = {}) => {
@@ -150,5 +151,16 @@ describe('AiIntegrationService', () => {
     await expect(service.analyzeBoard({ planId: 'p1', boardTitle: 'Board' })).rejects.toThrow(
       AI_NOT_IMPLEMENTED_MESSAGE
     );
+  });
+
+  describe('analysisNoticeFor', () => {
+    it('uses the error message for a not-implemented error', () => {
+      expect(analysisNoticeFor(new AiNotImplementedError())).toBe(AI_NOT_IMPLEMENTED_MESSAGE);
+    });
+
+    it('falls back to the default message for an unknown error', () => {
+      expect(analysisNoticeFor(new Error('boom'))).toBe(AI_NOT_IMPLEMENTED_MESSAGE);
+      expect(analysisNoticeFor(null)).toBe(AI_NOT_IMPLEMENTED_MESSAGE);
+    });
   });
 });
