@@ -56,8 +56,7 @@ import {
   toClosestHandle,
   toConnectorHandlePoint,
   toConnectorPath,
-  toOppositeHandle,
-  toSelectionBounds
+  toOppositeHandle
 } from './canvas-board.geometry';
 import {
   bringNodeToFront,
@@ -68,6 +67,7 @@ import {
   sortNodesForRender
 } from './canvas-board.layers';
 import { findAvailableNodePosition } from './canvas-board.placement';
+import { toMarqueeBoxStyle, toMinimapNodes, toMinimapViewport } from './canvas-board.view';
 import { injectSvgInteractivity, sanitizeExportedSvgMarkup, svgDataUrlToMarkup } from './canvas-board.svg-runtime';
 
 type ConnectorDraft = {
@@ -194,43 +194,11 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   protected readonly renderedNodes = computed(() => sortNodesForRender(this.nodes()));
   protected readonly zoomPercent = computed(() => Math.round(this.zoom() * 100));
   protected readonly minimapScale = computed(() => minimapWidth / canvasSize.width);
-  protected readonly minimapNodes = computed(() => {
-    const scale = this.minimapScale();
-
-    return this.nodes().map((node) => ({
-      height: Math.max(2, node.height * scale),
-      id: node.id,
-      isSelected: this.selectedNodeIdSet().has(node.id),
-      width: Math.max(2, node.width * scale),
-      x: node.position.x * scale,
-      y: node.position.y * scale
-    }));
-  });
-  protected readonly minimapViewport = computed(() => {
-    const scale = this.minimapScale();
-    const viewport = this.stageViewport();
-
-    return {
-      height: Math.max(6, viewport.height * scale),
-      width: Math.max(6, viewport.width * scale),
-      x: viewport.left * scale,
-      y: viewport.top * scale
-    };
-  });
-  protected readonly marqueeBoxStyle = computed(() => {
-    const selection = this.marqueeSelection();
-
-    if (!selection) return null;
-
-    const bounds = toSelectionBounds(selection.origin, selection.current);
-
-    return {
-      height: `${bounds.bottom - bounds.top}px`,
-      left: `${bounds.left}px`,
-      top: `${bounds.top}px`,
-      width: `${bounds.right - bounds.left}px`
-    };
-  });
+  protected readonly minimapNodes = computed(() =>
+    toMinimapNodes(this.nodes(), this.minimapScale(), this.selectedNodeIdSet())
+  );
+  protected readonly minimapViewport = computed(() => toMinimapViewport(this.stageViewport(), this.minimapScale()));
+  protected readonly marqueeBoxStyle = computed(() => toMarqueeBoxStyle(this.marqueeSelection()));
 
   constructor() {
     effect((onCleanup) => {
