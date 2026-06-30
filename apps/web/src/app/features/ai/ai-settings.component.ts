@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { AI_NOT_IMPLEMENTED_MESSAGE, AiIntegrationService, AiNotImplementedError } from './ai-integration.service';
+import { AiIntegrationService, analysisNoticeFor } from './ai-integration.service';
+import { buildConfigPatch } from './ai-settings.form';
 
 /**
  * Configuration surface for the AI / Agents integration.
@@ -378,15 +379,17 @@ export class AiSettingsComponent {
 
   protected readonly onSave = (event: Event) => {
     event.preventDefault();
-    this.ai.update({
-      enabled: this.enabled(),
-      providerName: this.providerName().trim(),
-      baseUrl: this.baseUrl().trim(),
-      model: this.model().trim(),
-      authHeaderName: this.authHeaderName().trim(),
-      authScheme: this.authScheme().trim(),
-      analysisInstructions: this.instructions()
-    });
+    this.ai.update(
+      buildConfigPatch({
+        enabled: this.enabled(),
+        providerName: this.providerName(),
+        baseUrl: this.baseUrl(),
+        model: this.model(),
+        authHeaderName: this.authHeaderName(),
+        authScheme: this.authScheme(),
+        instructions: this.instructions()
+      })
+    );
   };
 
   protected readonly onReset = () => {
@@ -404,7 +407,7 @@ export class AiSettingsComponent {
     try {
       await this.ai.analyzeBoard({ planId: 'preview', boardTitle: 'Current board' });
     } catch (error) {
-      this.analysisNotice.set(error instanceof AiNotImplementedError ? error.message : AI_NOT_IMPLEMENTED_MESSAGE);
+      this.analysisNotice.set(analysisNoticeFor(error));
     }
   };
 

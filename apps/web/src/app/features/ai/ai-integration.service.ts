@@ -84,6 +84,10 @@ export class AiNotImplementedError extends Error {
   }
 }
 
+/** Maps a board-analysis failure to the user-facing notice, falling back to the default message. */
+export const analysisNoticeFor = (error: unknown): string =>
+  error instanceof AiNotImplementedError ? error.message : AI_NOT_IMPLEMENTED_MESSAGE;
+
 const asString = (value: unknown, fallback: string) => (typeof value === 'string' ? value : fallback);
 
 const sanitizeConfig = (value: Partial<AiIntegrationConfig> | null | undefined): AiIntegrationConfig => ({
