@@ -3,14 +3,13 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
-  HostListener,
-  Input,
   OnChanges,
   OnDestroy,
   SimpleChanges,
   computed,
   effect,
   inject,
+  input,
   output,
   signal,
   viewChild
@@ -125,17 +124,18 @@ const isEditableTarget = (target: EventTarget | null) => {
     CanvasLiveSyncService,
     CanvasExportService
   ],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '(window:keydown)': 'handleWindowKeydown($event)' }
 })
 export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy {
-  @Input({ required: true }) isCreatingPlan = false;
-  @Input({ required: true }) isExportingPlan = false;
-  @Input({ required: true }) isImportingPlan = false;
-  @Input({ required: true }) plan!: PdiPlan;
-  @Input({ required: true }) plans: PdiPlan[] = [];
-  @Input({ required: true }) user!: User;
-  @Input({ required: true }) users: User[] = [];
-  @Input({ required: true }) usersCount = 0;
+  readonly isCreatingPlan = input.required<boolean>();
+  readonly isExportingPlan = input.required<boolean>();
+  readonly isImportingPlan = input.required<boolean>();
+  readonly plan = input.required<PdiPlan>();
+  readonly plans = input.required<PdiPlan[]>();
+  readonly user = input.required<User>();
+  readonly users = input.required<User[]>();
+  readonly usersCount = input.required<number>();
 
   readonly createPlan = output<{ objective: string; ownerId?: string; title: string }>();
   readonly exportPlan = output<string>();
@@ -230,7 +230,7 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
       if (!planId || !title || this.isApplyingRemoteBoard) return;
 
-      const board = toSaveBoard(title || this.plan.title, nodes, edges);
+      const board = toSaveBoard(title || this.plan().title, nodes, edges);
       const snapshot = JSON.stringify(board);
 
       if (this.lastPersistedPlanId === planId && this.lastPersistedBoardSnapshot === snapshot) return;
@@ -257,7 +257,7 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
     effect(() => {
       const planId = this.currentPlanId();
-      const title = this.boardTitle() || this.plan.title;
+      const title = this.boardTitle() || this.plan().title;
       const nodes = this.nodes();
       const edges = this.edges();
 
@@ -273,8 +273,8 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   }
 
   ngOnChanges(changes: SimpleChanges) {
-    if (changes['plan']?.currentValue && this.plan.id !== this.currentPlanId()) {
-      void this.loadBoard(this.plan.id);
+    if (changes['plan']?.currentValue && this.plan().id !== this.currentPlanId()) {
+      void this.loadBoard(this.plan().id);
     }
   }
 
@@ -299,7 +299,6 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     this.closeLiveConnection();
   }
 
-  @HostListener('window:keydown', ['$event'])
   protected readonly handleWindowKeydown = (event: KeyboardEvent) => {
     if (event.defaultPrevented) return;
     const isUndoShortcut = (event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === 'z';
@@ -717,7 +716,7 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
     if (!planId) return;
 
-    const board = toSaveBoard(this.boardTitle() || this.plan.title, this.nodes(), this.edges());
+    const board = toSaveBoard(this.boardTitle() || this.plan().title, this.nodes(), this.edges());
     const snapshot = JSON.stringify(board);
     await this.persistBoard(planId, board, snapshot, true);
   };
@@ -727,7 +726,7 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   protected readonly exportBoardToPng = () => this.exportService.exportPng(this.boardExportInput());
 
   private readonly boardExportInput = (): BoardExportInput => ({
-    title: this.boardTitle() || this.plan.title,
+    title: this.boardTitle() || this.plan().title,
     plane: this.planeElement()?.nativeElement ?? null,
     renderedNodes: this.renderedNodes(),
     nodes: this.nodes(),
@@ -836,7 +835,7 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     edges: CanvasEdgeView[]
   ) => {
     this.lastPersistedPlanId = planId;
-    this.lastPersistedBoardSnapshot = JSON.stringify(toSaveBoard(title || this.plan.title, nodes, edges));
+    this.lastPersistedBoardSnapshot = JSON.stringify(toSaveBoard(title || this.plan().title, nodes, edges));
   };
 
   private readonly persistBoard = async (
@@ -1147,7 +1146,7 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   };
 
   private readonly applyHistorySnapshot = (snapshot: string) => {
-    const planId = this.currentPlanId() ?? this.plan.id;
+    const planId = this.currentPlanId() ?? this.plan().id;
     const parsed = JSON.parse(snapshot) as ReturnType<typeof toSaveBoard>;
     const boardPayload = buildHistoryBoardPayload(parsed, {
       planId,
@@ -1191,7 +1190,7 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   };
 
   private readonly currentBoardSnapshot = () =>
-    JSON.stringify(toSaveBoard(this.boardTitle() || this.plan.title, this.nodes(), this.edges()));
+    JSON.stringify(toSaveBoard(this.boardTitle() || this.plan().title, this.nodes(), this.edges()));
 
   private readonly historyCommitOptions = () => ({
     isApplyingRemoteBoard: this.isApplyingRemoteBoard,
