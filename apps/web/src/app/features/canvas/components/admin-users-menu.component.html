@@ -9,11 +9,11 @@
     <section>
       <div class="admin-panel-title">
         <strong>Users</strong>
-        <span>{{ usersCount }} registered</span>
+        <span>{{ usersCount() }} registered</span>
       </div>
 
       <div class="admin-user-list">
-        @for (user of users; track user.id) {
+        @for (user of users(); track user.id) {
           <div>
             <div>
               <strong>{{ user.name }}</strong>
@@ -62,11 +62,11 @@
         <option value="MEMBER">Member</option>
         <option value="ADMIN">Admin</option>
       </select>
-      <button [disabled]="isCreatingUser || !canCreateUser()" type="submit">
-        @if (isCreatingUser) {
+      <button [disabled]="isCreatingUser() || !canCreateUser()" type="submit">
+        @if (isCreatingUser()) {
           <span class="spinner" aria-hidden="true"></span>
         }
-        {{ isCreatingUser ? 'Creating user' : 'Create user' }}
+        {{ isCreatingUser() ? 'Creating user' : 'Create user' }}
       </button>
     </form>
   </div>

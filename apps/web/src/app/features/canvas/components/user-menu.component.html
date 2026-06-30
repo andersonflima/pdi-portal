@@ -1,14 +1,14 @@
 <details class="user-menu">
   <summary aria-label="Open user menu">
     <i-lucide name="user-circle-2" [size]="24" />
-    <span>{{ user.name }}</span>
+    <span>{{ user().name }}</span>
     <i-lucide name="chevron-down" [size]="16" />
   </summary>
 
   <div class="user-menu-panel">
-    <strong>{{ user.name }}</strong>
-    <span>{{ user.email }}</span>
-    <small>{{ user.role === 'ADMIN' ? usersCount + ' users managed as Tech Lead' : 'Personal workspace' }}</small>
+    <strong>{{ user().name }}</strong>
+    <span>{{ user().email }}</span>
+    <small>{{ user().role === 'ADMIN' ? usersCount() + ' users managed as Tech Lead' : 'Personal workspace' }}</small>
     <button
       type="button"
       [attr.aria-label]="'Switch to ' + nextTheme().label.toLowerCase()"

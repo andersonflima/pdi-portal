@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Input, computed, inject, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import type { User } from '@pdi/contracts';
 import { LucideAngularModule } from 'lucide-angular';
 import { ThemeService, type ThemeMode } from '../../../core/theme/theme.service';
@@ -18,8 +18,8 @@ const NEXT_THEME: Record<ThemeMode, { label: string; icon: string }> = {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UserMenuComponent {
-  @Input({ required: true }) user!: User;
-  @Input({ required: true }) usersCount = 0;
+  readonly user = input.required<User>();
+  readonly usersCount = input.required<number>();
 
   readonly logout = output<void>();
 

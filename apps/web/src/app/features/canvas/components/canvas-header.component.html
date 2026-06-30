@@ -2,15 +2,15 @@
   <div class="canvas-title">
     <span>PDI Portal</span>
     <div class="plan-picker">
-      <select aria-label="Select PDI plan" [value]="plan.id" (change)="selectPlan.emit($any($event.target).value)">
-        @for (item of plans; track item.id) {
+      <select aria-label="Select PDI plan" [value]="plan().id" (change)="selectPlan.emit($any($event.target).value)">
+        @for (item of plans(); track item.id) {
           <option [value]="item.id">
             {{ item.title }}{{ ownerName(item.ownerId) ? ' - ' + ownerName(item.ownerId) : '' }}
           </option>
         }
       </select>
-      <button type="button" title="Create PDI plan" aria-label="Create PDI plan" [disabled]="isCreatingPlan" (click)="handleQuickCreate()">
-        @if (isCreatingPlan) {
+      <button type="button" title="Create PDI plan" aria-label="Create PDI plan" [disabled]="isCreatingPlan()" (click)="handleQuickCreate()">
+        @if (isCreatingPlan()) {
           <span class="spinner" aria-hidden="true"></span>
         } @else {
           <i-lucide name="plus" [size]="17" />
@@ -18,8 +18,8 @@
       </button>
     </div>
     <p>
-      {{ plan.objective }}
-      @if (ownerName(plan.ownerId); as owner) {
+      {{ plan().objective }}
+      @if (ownerName(plan().ownerId); as owner) {
         Owner: {{ owner }}
       }
     </p>
@@ -28,22 +28,22 @@
   <div class="canvas-header-actions">
     <input #importInput class="import-file-input" type="file" accept="application/json,.json" (change)="handleImportFile($event)" />
 
-    <button class="secondary-action" type="button" title="Import PDI" [disabled]="isImportingPlan" (click)="importInput.click()">
-      @if (isImportingPlan) {
+    <button class="secondary-action" type="button" title="Import PDI" [disabled]="isImportingPlan()" (click)="importInput.click()">
+      @if (isImportingPlan()) {
         <span class="spinner" aria-hidden="true"></span>
       } @else {
         <i-lucide name="upload" [size]="17" />
       }
-      {{ isImportingPlan ? 'Importing' : 'Import' }}
+      {{ isImportingPlan() ? 'Importing' : 'Import' }}
     </button>
 
-    <button class="secondary-action" type="button" title="Export PDI" [disabled]="isExportingPlan" (click)="exportPlan.emit(plan.id)">
-      @if (isExportingPlan) {
+    <button class="secondary-action" type="button" title="Export PDI" [disabled]="isExportingPlan()" (click)="exportPlan.emit(plan().id)">
+      @if (isExportingPlan()) {
         <span class="spinner" aria-hidden="true"></span>
       } @else {
         <i-lucide name="download" [size]="17" />
       }
-      {{ isExportingPlan ? 'Exporting' : 'Export' }}
+      {{ isExportingPlan() ? 'Exporting' : 'Export' }}
     </button>
 
     <button class="secondary-action" type="button" title="Save board as SVG" (click)="exportBoardAsSvg.emit()">
@@ -56,13 +56,13 @@
       Export PNG
     </button>
 
-    <button class="save-board" type="button" [disabled]="isSaving" (click)="saveBoard.emit()">
-      @if (isSaving) {
+    <button class="save-board" type="button" [disabled]="isSaving()" (click)="saveBoard.emit()">
+      @if (isSaving()) {
         <span class="spinner" aria-hidden="true"></span>
       } @else {
         <i-lucide name="save" [size]="17" />
       }
-      {{ isSaving ? 'Saving' : 'Save board' }}
+      {{ isSaving() ? 'Saving' : 'Save board' }}
     </button>
 
     <button
@@ -76,7 +76,7 @@
       Shortcuts
     </button>
 
-    <app-user-menu [user]="user" [usersCount]="usersCount" (logout)="logout.emit()" />
+    <app-user-menu [user]="user()" [usersCount]="usersCount()" (logout)="logout.emit()" />
   </div>
 
   <app-keyboard-shortcuts [open]="showShortcuts()" (closed)="showShortcuts.set(false)" />
