@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Input, OnChanges, SimpleChanges, computed, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnChanges, SimpleChanges, computed, input, output, signal } from '@angular/core';
 import type { PdiPlan, User } from '@pdi/contracts';
 import { LucideAngularModule } from 'lucide-angular';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog.component';
@@ -38,12 +38,12 @@ const toEditPlan = (plan: PdiPlan): EditPlanForm => ({
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AdminPdiMenuComponent implements OnChanges {
-  @Input({ required: true }) isCreatingPlan = false;
-  @Input({ required: true }) isDeletingPlan = false;
-  @Input({ required: true }) isUpdatingPlan = false;
-  @Input({ required: true }) plan!: PdiPlan;
-  @Input({ required: true }) plans: PdiPlan[] = [];
-  @Input({ required: true }) users: User[] = [];
+  readonly isCreatingPlan = input.required<boolean>();
+  readonly isDeletingPlan = input.required<boolean>();
+  readonly isUpdatingPlan = input.required<boolean>();
+  readonly plan = input.required<PdiPlan>();
+  readonly plans = input.required<PdiPlan[]>();
+  readonly users = input.required<User[]>();
 
   readonly createPlan = output<{ objective: string; ownerId?: string; title: string }>();
   readonly deletePlan = output<string>();
@@ -71,8 +71,8 @@ export class AdminPdiMenuComponent implements OnChanges {
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['plan']?.currentValue) {
-      this.editingPlanId.set(this.plan.id);
-      this.editPlan.set(toEditPlan(this.plan));
+      this.editingPlanId.set(this.plan().id);
+      this.editPlan.set(toEditPlan(this.plan()));
     }
 
     if (changes['users'] || changes['plan']) {
@@ -82,10 +82,10 @@ export class AdminPdiMenuComponent implements OnChanges {
     }
   }
 
-  protected readonly ownerName = (ownerId: string) => this.users.find((user) => user.id === ownerId)?.name ?? 'No owner';
+  protected readonly ownerName = (ownerId: string) => this.users().find((user) => user.id === ownerId)?.name ?? 'No owner';
 
   protected readonly selectPlanForEdit = (planId: string) => {
-    const selectedPlan = this.plans.find((candidate) => candidate.id === planId) ?? this.plan;
+    const selectedPlan = this.plans().find((candidate) => candidate.id === planId) ?? this.plan();
     this.editingPlanId.set(selectedPlan.id);
     this.editPlan.set(toEditPlan(selectedPlan));
   };
@@ -142,5 +142,5 @@ export class AdminPdiMenuComponent implements OnChanges {
   };
 
   private readonly defaultOwnerId = () =>
-    this.users.find((user) => user.role === 'MEMBER')?.id ?? this.users[0]?.id ?? '';
+    this.users().find((user) => user.role === 'MEMBER')?.id ?? this.users()[0]?.id ?? '';
 }

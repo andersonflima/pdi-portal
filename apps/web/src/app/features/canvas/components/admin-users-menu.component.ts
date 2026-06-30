@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Input, computed, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import type { User } from '@pdi/contracts';
 import { LucideAngularModule } from 'lucide-angular';
 import { generateTemporaryPassword } from '../canvas.mappers';
@@ -26,9 +26,9 @@ const emptyNewUser = (): NewUserForm => ({
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AdminUsersMenuComponent {
-  @Input({ required: true }) users: User[] = [];
-  @Input({ required: true }) usersCount = 0;
-  @Input({ required: true }) isCreatingUser = false;
+  readonly users = input.required<User[]>();
+  readonly usersCount = input.required<number>();
+  readonly isCreatingUser = input.required<boolean>();
 
   readonly createUser = output<NewUserForm>();
   protected readonly newUser = signal<NewUserForm>(emptyNewUser());

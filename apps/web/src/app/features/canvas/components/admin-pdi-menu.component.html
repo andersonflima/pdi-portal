@@ -9,11 +9,11 @@
     <section>
       <div class="admin-panel-title">
         <strong>PDIs</strong>
-        <span>{{ plans.length }} plans</span>
+        <span>{{ plans().length }} plans</span>
       </div>
 
       <div class="admin-pdi-list">
-        @for (item of plans; track item.id) {
+        @for (item of plans(); track item.id) {
           <div [class.is-active]="item.id === editingPlanId()">
             <button class="admin-pdi-select" type="button" (click)="selectPlanForEdit(item.id); selectPlanForCanvas.emit(item.id)">
               <i-lucide name="pencil" [size]="14" />
@@ -24,7 +24,7 @@
               class="admin-pdi-remove"
               type="button"
               title="Remove PDI"
-              [disabled]="isDeletingPlan"
+              [disabled]="isDeletingPlan()"
               (click)="handleDeletePlan(item.id, item.title)"
             >
               <i-lucide name="trash-2" [size]="14" />
@@ -40,7 +40,7 @@
       <strong>New PDI</strong>
       <select required aria-label="Plan owner" [value]="newPlan().ownerId" (change)="updateNewPlan('ownerId', $any($event.target).value)">
         <option value="">Select owner</option>
-        @for (user of users; track user.id) {
+        @for (user of users(); track user.id) {
           <option [value]="user.id">{{ user.name }}</option>
         }
       </select>
@@ -58,11 +58,11 @@
         [value]="newPlan().objective"
         (input)="updateNewPlan('objective', $any($event.target).value)"
       ></textarea>
-      <button [disabled]="isCreatingPlan || !canCreatePlan()" type="submit">
-        @if (isCreatingPlan) {
+      <button [disabled]="isCreatingPlan() || !canCreatePlan()" type="submit">
+        @if (isCreatingPlan()) {
           <span class="spinner" aria-hidden="true"></span>
         }
-        {{ isCreatingPlan ? 'Creating PDI' : 'Create linked PDI' }}
+        {{ isCreatingPlan() ? 'Creating PDI' : 'Create linked PDI' }}
       </button>
     </form>
 
@@ -70,7 +70,7 @@
       <form (submit)="handleUpdatePlan($event)">
         <strong>Edit PDI</strong>
         <select required aria-label="Plan owner" [value]="form.ownerId" (change)="updateEditPlan('ownerId', $any($event.target).value)">
-          @for (user of users; track user.id) {
+          @for (user of users(); track user.id) {
             <option [value]="user.id">{{ user.name }}</option>
           }
         </select>
@@ -94,21 +94,21 @@
           (input)="updateEditPlan('objective', $any($event.target).value)"
         ></textarea>
         <div class="admin-form-actions">
-          <button [disabled]="isUpdatingPlan || !canSaveEditPlan()" type="submit">
-            @if (isUpdatingPlan) {
+          <button [disabled]="isUpdatingPlan() || !canSaveEditPlan()" type="submit">
+            @if (isUpdatingPlan()) {
               <span class="spinner" aria-hidden="true"></span>
             }
-            {{ isUpdatingPlan ? 'Saving PDI' : 'Save changes' }}
+            {{ isUpdatingPlan() ? 'Saving PDI' : 'Save changes' }}
           </button>
           <button
             class="danger"
             type="button"
             title="Remove PDI"
-            [disabled]="isDeletingPlan"
+            [disabled]="isDeletingPlan()"
             (click)="handleDeletePlan(editingPlanId(), form.title)"
           >
             <i-lucide name="trash-2" [size]="16" />
-            {{ isDeletingPlan ? 'Removing' : 'Remove' }}
+            {{ isDeletingPlan() ? 'Removing' : 'Remove' }}
           </button>
         </div>
       </form>

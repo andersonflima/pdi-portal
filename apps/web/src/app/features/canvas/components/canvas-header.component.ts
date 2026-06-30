@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, HostListener, Input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
 import type { PdiPlan, User } from '@pdi/contracts';
 import { LucideAngularModule } from 'lucide-angular';
 import { KeyboardShortcutsComponent } from '../../../shared/components/keyboard-shortcuts.component';
@@ -10,18 +10,19 @@ import { UserMenuComponent } from './user-menu.component';
   imports: [LucideAngularModule, KeyboardShortcutsComponent, UserMenuComponent],
   templateUrl: './canvas-header.component.html',
   styleUrl: './canvas-header.component.css',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '(window:keydown)': 'handleShortcutHelpKey($event)' }
 })
 export class CanvasHeaderComponent {
-  @Input({ required: true }) isCreatingPlan = false;
-  @Input({ required: true }) isExportingPlan = false;
-  @Input({ required: true }) isImportingPlan = false;
-  @Input({ required: true }) isSaving = false;
-  @Input({ required: true }) plan!: PdiPlan;
-  @Input({ required: true }) plans: PdiPlan[] = [];
-  @Input({ required: true }) user!: User;
-  @Input({ required: true }) users: User[] = [];
-  @Input({ required: true }) usersCount = 0;
+  readonly isCreatingPlan = input.required<boolean>();
+  readonly isExportingPlan = input.required<boolean>();
+  readonly isImportingPlan = input.required<boolean>();
+  readonly isSaving = input.required<boolean>();
+  readonly plan = input.required<PdiPlan>();
+  readonly plans = input.required<PdiPlan[]>();
+  readonly user = input.required<User>();
+  readonly users = input.required<User[]>();
+  readonly usersCount = input.required<number>();
 
   readonly createPlan = output<{ objective: string; ownerId?: string; title: string }>();
   readonly exportPlan = output<string>();
@@ -34,7 +35,6 @@ export class CanvasHeaderComponent {
 
   protected readonly showShortcuts = signal(false);
 
-  @HostListener('window:keydown', ['$event'])
   protected readonly handleShortcutHelpKey = (event: KeyboardEvent) => {
     if (event.key !== '?') return;
 
@@ -47,12 +47,12 @@ export class CanvasHeaderComponent {
     this.showShortcuts.set(true);
   };
 
-  protected readonly ownerName = (ownerId: string) => this.users.find((item) => item.id === ownerId)?.name;
+  protected readonly ownerName = (ownerId: string) => this.users().find((item) => item.id === ownerId)?.name;
 
   protected readonly handleQuickCreate = () => {
     this.createPlan.emit({
       objective: 'Define a measurable development outcome.',
-      ownerId: this.users.find((candidate) => candidate.role === 'MEMBER')?.id,
+      ownerId: this.users().find((candidate) => candidate.role === 'MEMBER')?.id,
       title: 'New PDI plan'
     });
   };
