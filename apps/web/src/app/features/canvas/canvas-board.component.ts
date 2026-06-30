@@ -77,12 +77,6 @@ type ConnectorDraft = {
   targetPoint: XYPosition;
 };
 
-type MarqueeSelectionDraft = {
-  append: boolean;
-  current: XYPosition;
-  origin: XYPosition;
-};
-
 const zoomStep = 0.1;
 const wheelZoomSensitivity = 0.0022;
 const dragStartThreshold = 4;
@@ -1283,7 +1277,7 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       .querySelectorAll<SVGPathElement>('path.edge-line, path.edge-line-live, path.edge-line-preview, path.edge-line-live-export')
       .forEach((edgeLine) => {
         edgeLine.style.filter = 'none';
-        edgeLine.style.webkitFilter = 'none';
+        edgeLine.style.setProperty('-webkit-filter', 'none');
         edgeLine.style.fill = 'none';
         edgeLine.style.strokeLinecap = 'round';
         edgeLine.style.strokeLinejoin = 'round';
