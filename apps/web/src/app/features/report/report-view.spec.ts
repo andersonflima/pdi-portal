@@ -42,6 +42,11 @@ describe('toDeadlineLabel', () => {
     expect(toDeadlineLabel(5)).toBe('5 days left');
     expect(toDeadlineLabel(-3)).toBe('3 days late');
   });
+
+  it('uses the singular unit for a single day', () => {
+    expect(toDeadlineLabel(1)).toBe('1 day left');
+    expect(toDeadlineLabel(-1)).toBe('1 day late');
+  });
 });
 
 describe('toStepView', () => {

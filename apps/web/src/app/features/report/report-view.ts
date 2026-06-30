@@ -56,7 +56,11 @@ export type StepView = {
 export const toDeadlineLabel = (days: number | null): string | null => {
   if (days === null) return null;
   if (days === 0) return 'Due today';
-  return days > 0 ? `${days} days left` : `${Math.abs(days)} days late`;
+
+  const magnitude = Math.abs(days);
+  const unit = magnitude === 1 ? 'day' : 'days';
+
+  return days > 0 ? `${magnitude} ${unit} left` : `${magnitude} ${unit} late`;
 };
 
 export const toStepView = (insight: NodeProgressInsight): StepView => ({
