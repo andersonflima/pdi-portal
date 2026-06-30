@@ -126,4 +126,44 @@ describe('CanvasBoardComponent (integration)', () => {
 
     expect(component.nodes()).toHaveLength(0);
   });
+
+  it('persists the current board, including new nodes, on explicit save', async () => {
+    const fixture = await setup();
+    const component = fixture.componentInstance as unknown as {
+      handleCreateNode: (event: { kind: string }) => void;
+      saveCurrentBoard: () => Promise<void>;
+    };
+
+    apiMock.saveBoard.mockClear();
+    component.handleCreateNode({ kind: 'NOTE' });
+    fixture.detectChanges();
+
+    await component.saveCurrentBoard();
+
+    expect(apiMock.saveBoard).toHaveBeenCalledTimes(1);
+    const [planId, board] = apiMock.saveBoard.mock.calls[0] as unknown as [string, { nodes: unknown[] }];
+    expect(planId).toBe('plan-1');
+    expect(board.nodes).toHaveLength(1);
+  });
+
+  it('autosaves after the debounce delay following a board change', async () => {
+    const fixture = await setup();
+    const component = fixture.componentInstance as unknown as { handleCreateNode: (event: { kind: string }) => void };
+
+    apiMock.saveBoard.mockClear();
+    vi.useFakeTimers();
+
+    try {
+      component.handleCreateNode({ kind: 'NOTE' });
+      fixture.detectChanges();
+
+      expect(apiMock.saveBoard).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(1200);
+
+      expect(apiMock.saveBoard).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
