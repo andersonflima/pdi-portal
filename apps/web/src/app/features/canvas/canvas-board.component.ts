@@ -16,10 +16,10 @@ import {
   viewChild
 } from '@angular/core';
 import type { CanvasNodeKind, CanvasShapeVariant, PdiPlan, User } from '@pdi/contracts';
-import { toBlob as toDomBlob, toSvg as toDomSvg } from 'html-to-image';
 import { LucideAngularModule } from 'lucide-angular';
 import { FeatureFlagsService } from '../../core/platform/feature-flags.service';
 import { CanvasEdgeOperationsService } from './application/canvas-edge-operations.service';
+import { CanvasExportService, type BoardExportInput } from './application/canvas-export.service';
 import { CanvasFacade } from './application/canvas.facade';
 import { CanvasHistoryService } from './application/canvas-history.service';
 import { CanvasInteractionControllerService } from './application/canvas-interaction-controller.service';
@@ -44,8 +44,7 @@ import type {
   CanvasTextStyle,
   XYPosition
 } from './canvas.models';
-import { arrowNeckOffset, toExportBounds, toFileName, toFiniteNumber } from './canvas-board.export-helpers';
-import { buildBoardSvgMarkup } from './canvas-board.svg-export';
+import { arrowNeckOffset } from './canvas-board.export-helpers';
 import {
   clampPointToCanvas,
   clampZoom,
@@ -70,7 +69,6 @@ import { findAvailableNodePosition } from './canvas-board.placement';
 import { removeEdgePair, shouldRenderEdgeLabel as computeShouldRenderEdgeLabel } from './canvas-board.edges';
 import { buildHistoryBoardPayload } from './canvas-board.history';
 import { toMarqueeBoxStyle, toMinimapNodes, toMinimapViewport } from './canvas-board.view';
-import { injectSvgInteractivity, sanitizeExportedSvgMarkup, svgDataUrlToMarkup } from './canvas-board.svg-runtime';
 
 type ConnectorDraft = {
   sourceHandle: CanvasHandlePosition;
@@ -86,8 +84,6 @@ const autosaveDelayMs = 1200;
 const marqueeStartThreshold = 6;
 const minimapWidth = 240;
 const minimapHeight = Math.round((minimapWidth * canvasSize.height) / canvasSize.width);
-const exportImagePixelRatio = 2;
-const exportZoomScale = 1;
 
 const nodeCreationShortcuts = new Map<string, CanvasNodeKind>(
   nodeKindOrder.flatMap((kind) => {
@@ -120,7 +116,8 @@ const isEditableTarget = (target: EventTarget | null) => {
     CanvasHistoryService,
     CanvasEdgeOperationsService,
     CanvasInteractionControllerService,
-    CanvasLiveSyncService
+    CanvasLiveSyncService,
+    CanvasExportService
   ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -146,6 +143,7 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   private readonly canvasFacade = inject(CanvasFacade);
   private readonly historyService = inject(CanvasHistoryService);
   private readonly liveSync = inject(CanvasLiveSyncService);
+  private readonly exportService = inject(CanvasExportService);
   private readonly featureFlags = inject(FeatureFlagsService);
   private readonly stageElement = viewChild<ElementRef<HTMLDivElement>>('canvasStage');
   private readonly planeElement = viewChild<ElementRef<HTMLDivElement>>('canvasPlane');
@@ -724,73 +722,17 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     await this.persistBoard(planId, board, snapshot, true);
   };
 
-  protected readonly exportBoardToSvg = async () => {
-    const title = this.boardTitle() || this.plan.title;
-    const visualExportNode = this.createVisualExportNode(exportZoomScale);
+  protected readonly exportBoardToSvg = () => this.exportService.exportSvg(this.boardExportInput());
 
-    if (visualExportNode) {
-      try {
-        if ('fonts' in document) {
-          await (document as Document & { fonts?: { ready?: Promise<unknown> } }).fonts?.ready;
-        }
+  protected readonly exportBoardToPng = () => this.exportService.exportPng(this.boardExportInput());
 
-        const dataUrl = await toDomSvg(visualExportNode.node, {
-          cacheBust: true,
-          height: visualExportNode.height,
-          width: visualExportNode.width
-        });
-        const svgMarkup = svgDataUrlToMarkup(dataUrl);
-        const svgBlob = svgMarkup
-          ? new Blob([injectSvgInteractivity(sanitizeExportedSvgMarkup(svgMarkup))], {
-              type: 'image/svg+xml;charset=utf-8'
-            })
-          : await this.dataUrlToBlob(dataUrl);
-        this.downloadBlob(svgBlob, toFileName(title, 'svg'));
-        return;
-      } finally {
-        visualExportNode.cleanup();
-      }
-    }
-
-    const { markup: fallbackMarkup } = buildBoardSvgMarkup({ renderedNodes: this.renderedNodes(), nodes: this.nodes(), edges: this.edges() });
-    const finalMarkup = injectSvgInteractivity(sanitizeExportedSvgMarkup(fallbackMarkup));
-    const fallbackBlob = new Blob([finalMarkup], { type: 'image/svg+xml;charset=utf-8' });
-    this.downloadBlob(fallbackBlob, toFileName(title, 'svg'));
-  };
-
-  protected readonly exportBoardToPng = async () => {
-    const title = this.boardTitle() || this.plan.title;
-    const visualExportNode = this.createVisualExportNode(exportZoomScale);
-
-    if (visualExportNode) {
-      try {
-        if ('fonts' in document) {
-          await (document as Document & { fonts?: { ready?: Promise<unknown> } }).fonts?.ready;
-        }
-
-        const pngBlob = await toDomBlob(visualExportNode.node, {
-          cacheBust: true,
-          canvasHeight: visualExportNode.height,
-          canvasWidth: visualExportNode.width,
-          height: visualExportNode.height,
-          pixelRatio: exportImagePixelRatio,
-          width: visualExportNode.width
-        });
-
-        if (pngBlob) {
-          this.downloadBlob(pngBlob, toFileName(title, 'png'));
-          return;
-        }
-      } finally {
-        visualExportNode.cleanup();
-      }
-    }
-
-    const { height, markup: fallbackMarkup, width } = buildBoardSvgMarkup({ renderedNodes: this.renderedNodes(), nodes: this.nodes(), edges: this.edges() });
-    const fallbackSvg = new Blob([sanitizeExportedSvgMarkup(fallbackMarkup)], { type: 'image/svg+xml;charset=utf-8' });
-    const pngBlob = await this.svgBlobToPngBlob(fallbackSvg, width, height, exportImagePixelRatio);
-    this.downloadBlob(pngBlob, toFileName(title, 'png'));
-  };
+  private readonly boardExportInput = (): BoardExportInput => ({
+    title: this.boardTitle() || this.plan.title,
+    plane: this.planeElement()?.nativeElement ?? null,
+    renderedNodes: this.renderedNodes(),
+    nodes: this.nodes(),
+    edges: this.edges()
+  });
 
   private readonly loadBoard = async (planId: string) => {
     const token = ++this.loadToken;
@@ -1183,99 +1125,6 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     this.syncStageViewport();
   };
 
-  private readonly downloadBlob = (blob: Blob, fileName: string) => {
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  private readonly dataUrlToBlob = async (dataUrl: string) => {
-    const response = await fetch(dataUrl);
-    return response.blob();
-  };
-
-  private readonly createVisualExportNode = (zoomScale: number) => {
-    const plane = this.planeElement()?.nativeElement;
-
-    if (!plane) return null;
-
-    const bounds = toExportBounds(this.renderedNodes());
-    const width = Math.max(1, toFiniteNumber(bounds.width, canvasSize.width));
-    const height = Math.max(1, toFiniteNumber(bounds.height, canvasSize.height));
-    const minX = toFiniteNumber(bounds.minX, 0);
-    const minY = toFiniteNumber(bounds.minY, 0);
-    const exportNode = document.createElement('div');
-
-    exportNode.style.background = 'radial-gradient(circle at 1px 1px, #d8dee8 1px, transparent 0), #f6f4ef';
-    exportNode.style.backgroundSize = '24px 24px';
-    exportNode.style.height = `${height}px`;
-    exportNode.style.left = '0';
-    exportNode.style.overflow = 'hidden';
-    exportNode.style.pointerEvents = 'none';
-    exportNode.style.position = 'fixed';
-    exportNode.style.top = '0';
-    exportNode.style.width = `${width}px`;
-    exportNode.style.zIndex = '-1';
-
-    const planeClone = plane.cloneNode(true);
-
-    if (!(planeClone instanceof HTMLDivElement)) return null;
-
-    const safeZoomScale = Number.isFinite(zoomScale) && zoomScale > 0 ? zoomScale : 1;
-
-    planeClone.style.height = `${canvasSize.height}px`;
-    planeClone.style.left = '0';
-    planeClone.style.position = 'relative';
-    planeClone.style.top = '0';
-    planeClone.style.transform = `translate(${-minX}px, ${-minY}px) scale(${safeZoomScale})`;
-    planeClone.style.transformOrigin = 'left top';
-    planeClone.style.width = `${canvasSize.width}px`;
-
-    planeClone
-      .querySelectorAll<SVGPathElement>('path.edge-line, path.edge-line-live, path.edge-line-preview, path.edge-line-live-export')
-      .forEach((edgeLine) => {
-        edgeLine.style.filter = 'none';
-        edgeLine.style.setProperty('-webkit-filter', 'none');
-        edgeLine.style.fill = 'none';
-        edgeLine.style.strokeLinecap = 'round';
-        edgeLine.style.strokeLinejoin = 'round';
-
-        if (edgeLine.classList.contains('edge-line-dashed')) {
-          edgeLine.style.strokeDasharray = '6 12';
-          return;
-        }
-
-        if (edgeLine.classList.contains('edge-line-live-dashed')) {
-          edgeLine.style.strokeDasharray = '10 24';
-          return;
-        }
-
-        if (edgeLine.classList.contains('edge-line-live') || edgeLine.classList.contains('edge-line-live-export')) {
-          edgeLine.style.strokeDasharray = '30 10';
-        }
-      });
-
-    exportNode.appendChild(planeClone);
-    document.body.appendChild(exportNode);
-
-    return {
-      cleanup: () => {
-        if (exportNode.parentNode) {
-          exportNode.parentNode.removeChild(exportNode);
-        }
-      },
-      height,
-      node: exportNode,
-      width
-    };
-  };
-
   protected readonly handleUndo = () => {
     this.undoBoardChange();
   };
@@ -1358,44 +1207,6 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     isApplyingRemoteBoard: this.isApplyingRemoteBoard,
     isRestoringHistory: this.isRestoringHistory
   });
-
-  private readonly svgBlobToPngBlob = async (svgBlob: Blob, width: number, height: number, pixelRatio: number) => {
-    const objectUrl = URL.createObjectURL(svgBlob);
-
-    try {
-      const image = await this.loadImageFromUrl(objectUrl);
-      const canvas = document.createElement('canvas');
-
-      canvas.width = Math.round(width * pixelRatio);
-      canvas.height = Math.round(height * pixelRatio);
-
-      const context = canvas.getContext('2d');
-
-      if (!context) throw new Error('Failed to create canvas 2D context');
-
-      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-      context.drawImage(image, 0, 0, width, height);
-
-      const pngBlob = await new Promise<Blob | null>((resolve) => {
-        canvas.toBlob((blob) => resolve(blob), 'image/png');
-      });
-
-      if (!pngBlob) throw new Error('Failed to encode board PNG');
-
-      return pngBlob;
-    } finally {
-      URL.revokeObjectURL(objectUrl);
-    }
-  };
-
-  private readonly loadImageFromUrl = (url: string) =>
-    new Promise<HTMLImageElement>((resolve, reject) => {
-      const image = new Image();
-
-      image.onload = () => resolve(image);
-      image.onerror = () => reject(new Error('Failed to load board SVG image'));
-      image.src = url;
-    });
 
   private readonly removeSelectedEdge = () => {
     const selectedEdgeId = this.selectedEdgeId();
