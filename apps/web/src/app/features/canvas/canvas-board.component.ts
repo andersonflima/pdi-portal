@@ -53,17 +53,23 @@ import {
   findDescendantNodeIds,
   findNodeHandleAtPoint,
   findTopNodeAtPoint,
-  frameLayerMax,
   hasNodeOverlap,
   normalizeWheelDeltaY,
   nodePlacementPadding,
-  objectLayerBase,
   toClosestHandle,
   toConnectorHandlePoint,
   toConnectorPath,
   toOppositeHandle,
   toSelectionBounds
 } from './canvas-board.geometry';
+import {
+  bringNodeToFront,
+  moveNodeBackward,
+  moveNodeForward,
+  nodeStackLevel,
+  sendNodeToBack,
+  sortNodesForRender
+} from './canvas-board.layers';
 
 type ConnectorDraft = {
   sourceHandle: CanvasHandlePosition;
@@ -193,23 +199,8 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     return this.edgeOperations.edgeHorizontalDirection(selectedEdge, this.nodes());
   });
   protected readonly selectedNodeIdSet = computed(() => new Set(this.selectedNodeIds()));
-  protected readonly nodeStackLevel = (node: CanvasNodeView) =>
-    node.kind === 'FRAME' ? Math.min(frameLayerMax, node.zIndex) : Math.max(objectLayerBase, node.zIndex);
-  protected readonly renderedNodes = computed(() =>
-    [...this.nodes()].sort((leftNode, rightNode) => {
-      const leftLayer = this.nodeStackLevel(leftNode);
-      const rightLayer = this.nodeStackLevel(rightNode);
-
-      if (leftLayer !== rightLayer) {
-        return leftLayer - rightLayer;
-      }
-
-      if (leftNode.kind === 'FRAME' && rightNode.kind !== 'FRAME') return -1;
-      if (leftNode.kind !== 'FRAME' && rightNode.kind === 'FRAME') return 1;
-
-      return 0;
-    })
-  );
+  protected readonly nodeStackLevel = nodeStackLevel;
+  protected readonly renderedNodes = computed(() => sortNodesForRender(this.nodes()));
   protected readonly zoomPercent = computed(() => Math.round(this.zoom() * 100));
   protected readonly minimapScale = computed(() => minimapWidth / canvasSize.width);
   protected readonly minimapNodes = computed(() => {
@@ -1262,7 +1253,17 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     });
   };
 
-  private readonly bringSelectedNodeToFront = () => {
+  private readonly bringSelectedNodeToFront = () => this.applyNodeOrderChange(bringNodeToFront);
+
+  private readonly sendSelectedNodeToBack = () => this.applyNodeOrderChange(sendNodeToBack);
+
+  private readonly moveSelectedNodeOneLayerForward = () => this.applyNodeOrderChange(moveNodeForward);
+
+  private readonly moveSelectedNodeOneLayerBackward = () => this.applyNodeOrderChange(moveNodeBackward);
+
+  private readonly applyNodeOrderChange = (
+    reorder: (nodes: CanvasNodeView[], selectedNodeId: string) => { changed: boolean; nodes: CanvasNodeView[] }
+  ) => {
     const selectedNodeId = this.selectedNodeId();
 
     if (!selectedNodeId) return false;
@@ -1270,111 +1271,10 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     let hasChanged = false;
 
     this.nodes.update((nodes) => {
-      const selectedNode = nodes.find((node) => node.id === selectedNodeId);
+      const result = reorder(nodes, selectedNodeId);
+      hasChanged = result.changed;
 
-      if (!selectedNode || selectedNode.kind === 'FRAME') return nodes;
-
-      const highestObjectLayer = nodes
-        .filter((node) => node.kind !== 'FRAME')
-        .reduce((highest, node) => Math.max(highest, node.zIndex), objectLayerBase - 1);
-      const nextZIndex = highestObjectLayer + 1;
-
-      if (selectedNode.zIndex === nextZIndex) return nodes;
-
-      hasChanged = true;
-
-      return nodes.map((node) => (node.id === selectedNodeId ? { ...node, zIndex: nextZIndex } : node));
-    });
-
-    return hasChanged;
-  };
-
-  private readonly sendSelectedNodeToBack = () => {
-    const selectedNodeId = this.selectedNodeId();
-
-    if (!selectedNodeId) return false;
-
-    let hasChanged = false;
-
-    this.nodes.update((nodes) => {
-      const selectedNode = nodes.find((node) => node.id === selectedNodeId);
-
-      if (!selectedNode || selectedNode.kind === 'FRAME') return nodes;
-
-      const lowestObjectLayer = nodes
-        .filter((node) => node.kind !== 'FRAME')
-        .reduce((lowest, node) => Math.min(lowest, node.zIndex), Number.POSITIVE_INFINITY);
-      const nextZIndex = Math.max(objectLayerBase, lowestObjectLayer - 1);
-
-      if (selectedNode.zIndex === nextZIndex) return nodes;
-
-      hasChanged = true;
-
-      return nodes.map((node) => (node.id === selectedNodeId ? { ...node, zIndex: nextZIndex } : node));
-    });
-
-    return hasChanged;
-  };
-
-  private readonly moveSelectedNodeOneLayerForward = () => {
-    const selectedNodeId = this.selectedNodeId();
-
-    if (!selectedNodeId) return false;
-
-    let hasChanged = false;
-
-    this.nodes.update((nodes) => {
-      const contentNodes = [...nodes]
-        .filter((node) => node.kind !== 'FRAME')
-        .sort((leftNode, rightNode) => leftNode.zIndex - rightNode.zIndex);
-      const selectedIndex = contentNodes.findIndex((node) => node.id === selectedNodeId);
-
-      if (selectedIndex === -1 || selectedIndex >= contentNodes.length - 1) return nodes;
-
-      const selectedNode = contentNodes[selectedIndex];
-      const nextNode = contentNodes[selectedIndex + 1];
-
-      if (!selectedNode || !nextNode) return nodes;
-
-      hasChanged = true;
-
-      return nodes.map((node) => {
-        if (node.id === selectedNode.id) return { ...node, zIndex: nextNode.zIndex };
-        if (node.id === nextNode.id) return { ...node, zIndex: selectedNode.zIndex };
-        return node;
-      });
-    });
-
-    return hasChanged;
-  };
-
-  private readonly moveSelectedNodeOneLayerBackward = () => {
-    const selectedNodeId = this.selectedNodeId();
-
-    if (!selectedNodeId) return false;
-
-    let hasChanged = false;
-
-    this.nodes.update((nodes) => {
-      const contentNodes = [...nodes]
-        .filter((node) => node.kind !== 'FRAME')
-        .sort((leftNode, rightNode) => leftNode.zIndex - rightNode.zIndex);
-      const selectedIndex = contentNodes.findIndex((node) => node.id === selectedNodeId);
-
-      if (selectedIndex <= 0) return nodes;
-
-      const selectedNode = contentNodes[selectedIndex];
-      const previousNode = contentNodes[selectedIndex - 1];
-
-      if (!selectedNode || !previousNode) return nodes;
-
-      hasChanged = true;
-
-      return nodes.map((node) => {
-        if (node.id === selectedNode.id) return { ...node, zIndex: previousNode.zIndex };
-        if (node.id === previousNode.id) return { ...node, zIndex: selectedNode.zIndex };
-        return node;
-      });
+      return result.nodes;
     });
 
     return hasChanged;
