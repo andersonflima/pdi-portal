@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Input, OnChanges, SimpleChanges, computed, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnChanges, SimpleChanges, computed, input, output, signal } from '@angular/core';
 import type { User } from '@pdi/contracts';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -32,17 +32,11 @@ const matchesRole = (role: User['role'], term: string) =>
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TechleadUsersPageComponent implements OnChanges {
-  @Input({ required: true }) isCreatingUser = false;
-  @Input({ required: true }) isDeletingUser = false;
-  @Input({ required: true }) currentUserId = '';
-  @Input({ required: true })
-  set users(value: User[]) {
-    this.usersSignal.set(value);
-  }
-  get users(): User[] {
-    return this.usersSignal();
-  }
-  @Input({ required: true }) usersCount = 0;
+  readonly isCreatingUser = input.required<boolean>();
+  readonly isDeletingUser = input.required<boolean>();
+  readonly currentUserId = input.required<string>();
+  readonly users = input.required<User[]>();
+  readonly usersCount = input.required<number>();
 
   readonly createUser = output<NewUserForm>();
   readonly deleteUser = output<string>();
@@ -51,12 +45,11 @@ export class TechleadUsersPageComponent implements OnChanges {
   protected deletingUserId = '';
   protected pendingDeleteUser: User | null = null;
 
-  private readonly usersSignal = signal<User[]>([]);
   protected readonly userSearch = signal('');
 
   protected readonly filteredUsers = computed(() => {
     const term = this.userSearch().trim().toLowerCase();
-    const users = this.usersSignal();
+    const users = this.users();
 
     if (!term) return users;
 
@@ -66,7 +59,7 @@ export class TechleadUsersPageComponent implements OnChanges {
   });
 
   ngOnChanges(changes: SimpleChanges) {
-    if (changes['isDeletingUser'] && !this.isDeletingUser) {
+    if (changes['isDeletingUser'] && !this.isDeletingUser()) {
       this.deletingUserId = '';
       this.pendingDeleteUser = null;
     }
@@ -82,7 +75,7 @@ export class TechleadUsersPageComponent implements OnChanges {
     this.newUser = emptyNewUser();
   };
 
-  protected readonly canDeleteUser = (user: User) => user.id !== this.currentUserId;
+  protected readonly canDeleteUser = (user: User) => user.id !== this.currentUserId();
 
   protected readonly handleDeleteUser = (user: User) => {
     if (!this.canDeleteUser(user)) return;

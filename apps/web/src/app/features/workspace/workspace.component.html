@@ -1,7 +1,7 @@
 <main class="workspace">
   <header class="workspace-nav">
     <div class="workspace-identity">
-      <strong>{{ user.name }}</strong>
+      <strong>{{ user().name }}</strong>
       <span>{{ roleLabel() }}</span>
     </div>
 
@@ -33,7 +33,7 @@
         [isImportingPlan]="workspace.isImportingPlan()"
         [plan]="activePlan"
         [plans]="workspace.plans()"
-        [user]="user"
+        [user]="user()"
         [users]="workspace.users()"
         [usersCount]="workspace.users().length"
         (createPlan)="handleCreatePlan($event)"
@@ -59,7 +59,7 @@
       <app-techlead-users-page
         [isCreatingUser]="workspace.isCreatingUser()"
         [isDeletingUser]="workspace.isDeletingUser()"
-        [currentUserId]="user.id"
+        [currentUserId]="user().id"
         [users]="workspace.users()"
         [usersCount]="workspace.users().length"
         (createUser)="handleCreateUser($event)"
