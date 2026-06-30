@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Input, OnChanges, SimpleChanges, computed, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnChanges, SimpleChanges, computed, input, output, signal } from '@angular/core';
 import type { PdiPlan, User } from '@pdi/contracts';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -38,38 +38,24 @@ const toEditForm = (plan: PdiPlan): EditPlanForm => ({
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TechleadPdisPageComponent implements OnChanges {
-  @Input({ required: true }) isCreatingPlan = false;
-  @Input({ required: true }) isDeletingPlan = false;
-  @Input({ required: true }) isUpdatingPlan = false;
-  @Input({ required: true }) plan!: PdiPlan;
-  @Input({ required: true })
-  set plans(value: PdiPlan[]) {
-    this.plansSignal.set(value);
-  }
-  get plans(): PdiPlan[] {
-    return this.plansSignal();
-  }
-  @Input({ required: true })
-  set users(value: User[]) {
-    this.usersSignal.set(value);
-  }
-  get users(): User[] {
-    return this.usersSignal();
-  }
+  readonly isCreatingPlan = input.required<boolean>();
+  readonly isDeletingPlan = input.required<boolean>();
+  readonly isUpdatingPlan = input.required<boolean>();
+  readonly plan = input.required<PdiPlan>();
+  readonly plans = input.required<PdiPlan[]>();
+  readonly users = input.required<User[]>();
 
   readonly createPlan = output<{ objective: string; ownerId?: string; title: string }>();
   readonly deletePlan = output<string>();
   readonly selectPlan = output<string>();
   readonly updatePlan = output<{ id: string; data: Partial<Pick<PdiPlan, 'objective' | 'ownerId' | 'status' | 'title'>> }>();
 
-  private readonly plansSignal = signal<PdiPlan[]>([]);
-  private readonly usersSignal = signal<User[]>([]);
   protected readonly editingPlanIdSignal = signal('');
   protected readonly planSearch = signal('');
 
   protected readonly filteredPlans = computed(() => {
     const term = this.planSearch().trim().toLowerCase();
-    const plans = this.plansSignal();
+    const plans = this.plans();
 
     if (!term) return plans;
 
@@ -81,7 +67,7 @@ export class TechleadPdisPageComponent implements OnChanges {
   });
 
   private readonly ownerNameResolver = () => {
-    const users = this.usersSignal();
+    const users = this.users();
     return (ownerId: string) => users.find((user) => user.id === ownerId)?.name ?? 'No owner';
   };
 
@@ -97,13 +83,13 @@ export class TechleadPdisPageComponent implements OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges) {
-    if (changes['isDeletingPlan'] && !this.isDeletingPlan) {
+    if (changes['isDeletingPlan'] && !this.isDeletingPlan()) {
       this.pendingDeletePlan = null;
     }
 
-    if (!this.editingPlanId && this.plan?.id) {
-      this.editingPlanId = this.plan.id;
-      this.editPlan = toEditForm(this.plan);
+    if (!this.editingPlanId && this.plan()?.id) {
+      this.editingPlanId = this.plan().id;
+      this.editPlan = toEditForm(this.plan());
     }
 
     if (!this.newPlan.ownerId) {
@@ -111,7 +97,7 @@ export class TechleadPdisPageComponent implements OnChanges {
     }
   }
 
-  protected readonly ownerName = (ownerId: string) => this.users.find((user) => user.id === ownerId)?.name ?? 'No owner';
+  protected readonly ownerName = (ownerId: string) => this.users().find((user) => user.id === ownerId)?.name ?? 'No owner';
 
   protected readonly handleCreatePlan = (event: Event) => {
     event.preventDefault();
@@ -128,7 +114,7 @@ export class TechleadPdisPageComponent implements OnChanges {
   };
 
   protected readonly selectPlanForEdit = (planId: string) => {
-    const selected = this.plans.find((candidate) => candidate.id === planId);
+    const selected = this.plans().find((candidate) => candidate.id === planId);
 
     if (!selected) return;
 
@@ -157,5 +143,5 @@ export class TechleadPdisPageComponent implements OnChanges {
   };
 
   private readonly defaultOwnerId = () =>
-    this.users.find((user) => user.role === 'MEMBER')?.id ?? this.users[0]?.id ?? '';
+    this.users().find((user) => user.role === 'MEMBER')?.id ?? this.users()[0]?.id ?? '';
 }

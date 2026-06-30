@@ -8,15 +8,15 @@
     <dl>
       <div>
         <dt>Total plans</dt>
-        <dd>{{ plans.length }}</dd>
+        <dd>{{ plans().length }}</dd>
       </div>
       <div>
         <dt>Active</dt>
-        <dd>{{ plans.filter((item) => item.status === 'ACTIVE').length }}</dd>
+        <dd>{{ plans().filter((item) => item.status === 'ACTIVE').length }}</dd>
       </div>
       <div>
         <dt>Done</dt>
-        <dd>{{ plans.filter((item) => item.status === 'DONE').length }}</dd>
+        <dd>{{ plans().filter((item) => item.status === 'DONE').length }}</dd>
       </div>
     </dl>
   </header>
@@ -71,8 +71,8 @@
             <span class="status-pill" [class.is-active]="item.status === 'ACTIVE'" [class.is-done]="item.status === 'DONE'">
               {{ item.status }}
             </span>
-            <button class="danger" type="button" [disabled]="isDeletingPlan" (click)="handleDeletePlan(item.id, item.title)">
-              {{ isDeletingPlan && item.id === editingPlanId ? 'Removing...' : 'Remove' }}
+            <button class="danger" type="button" [disabled]="isDeletingPlan()" (click)="handleDeletePlan(item.id, item.title)">
+              {{ isDeletingPlan() && item.id === editingPlanId ? 'Removing...' : 'Remove' }}
             </button>
           </div>
         } @empty {
@@ -94,7 +94,7 @@
           Owner
           <select required [(ngModel)]="newPlan.ownerId" name="new-ownerId">
             <option value="">Select owner</option>
-            @for (user of users; track user.id) {
+            @for (user of users(); track user.id) {
               <option [value]="user.id">{{ user.name }}</option>
             }
           </select>
@@ -107,8 +107,8 @@
           Objective
           <textarea placeholder="Development objective" required [(ngModel)]="newPlan.objective" name="new-objective"></textarea>
         </label>
-        <button class="primary" [disabled]="isCreatingPlan" type="submit">
-          {{ isCreatingPlan ? 'Creating PDI...' : 'Create PDI' }}
+        <button class="primary" [disabled]="isCreatingPlan()" type="submit">
+          {{ isCreatingPlan() ? 'Creating PDI...' : 'Create PDI' }}
         </button>
       </form>
     </article>
@@ -124,7 +124,7 @@
           <label>
             Owner
             <select required [(ngModel)]="form.ownerId" name="edit-ownerId">
-              @for (user of users; track user.id) {
+              @for (user of users(); track user.id) {
                 <option [value]="user.id">{{ user.name }}</option>
               }
             </select>
@@ -145,8 +145,8 @@
             Objective
             <textarea placeholder="Development objective" required [(ngModel)]="form.objective" name="edit-objective"></textarea>
           </label>
-          <button class="primary" [disabled]="isUpdatingPlan" type="submit">
-            {{ isUpdatingPlan ? 'Saving changes...' : 'Save changes' }}
+          <button class="primary" [disabled]="isUpdatingPlan()" type="submit">
+            {{ isUpdatingPlan() ? 'Saving changes...' : 'Save changes' }}
           </button>
         </form>
       </article>
@@ -161,9 +161,9 @@
           Remove <strong>{{ targetPlan.title }}</strong> and its board content?
         </p>
         <div class="confirm-actions">
-          <button class="ghost" type="button" [disabled]="isDeletingPlan" (click)="closeDeleteModal()">Cancel</button>
-          <button class="danger" type="button" [disabled]="isDeletingPlan" (click)="confirmDeletePlan()">
-            {{ isDeletingPlan ? 'Removing...' : 'Delete PDI' }}
+          <button class="ghost" type="button" [disabled]="isDeletingPlan()" (click)="closeDeleteModal()">Cancel</button>
+          <button class="danger" type="button" [disabled]="isDeletingPlan()" (click)="confirmDeletePlan()">
+            {{ isDeletingPlan() ? 'Removing...' : 'Delete PDI' }}
           </button>
         </div>
       </article>

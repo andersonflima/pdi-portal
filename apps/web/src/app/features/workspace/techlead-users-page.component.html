@@ -8,15 +8,15 @@
     <dl>
       <div>
         <dt>Total users</dt>
-        <dd>{{ usersCount }}</dd>
+        <dd>{{ usersCount() }}</dd>
       </div>
       <div>
         <dt>Tech Leads</dt>
-        <dd>{{ users.filter((user) => user.role === 'ADMIN').length }}</dd>
+        <dd>{{ users().filter((user) => user.role === 'ADMIN').length }}</dd>
       </div>
       <div>
         <dt>Members</dt>
-        <dd>{{ users.filter((user) => user.role === 'MEMBER').length }}</dd>
+        <dd>{{ users().filter((user) => user.role === 'MEMBER').length }}</dd>
       </div>
     </dl>
   </header>
@@ -72,11 +72,11 @@
             <button
               class="delete-button"
               type="button"
-              [disabled]="isDeletingUser || !canDeleteUser(user)"
+              [disabled]="isDeletingUser() || !canDeleteUser(user)"
               (click)="handleDeleteUser(user)"
             >
               {{
-                isDeletingUser && deletingUserId === user.id
+                isDeletingUser() && deletingUserId === user.id
                   ? 'Removing...'
                   : canDeleteUser(user)
                     ? 'Delete'
@@ -121,8 +121,8 @@
             <option value="ADMIN">Tech Lead</option>
           </select>
         </label>
-        <button class="primary" [disabled]="isCreatingUser" type="submit">
-          {{ isCreatingUser ? 'Creating user...' : 'Create user' }}
+        <button class="primary" [disabled]="isCreatingUser()" type="submit">
+          {{ isCreatingUser() ? 'Creating user...' : 'Create user' }}
         </button>
       </form>
     </article>
@@ -136,9 +136,9 @@
           Delete <strong>{{ targetUser.name }}</strong> and all PDIs owned by this user?
         </p>
         <div class="confirm-actions">
-          <button class="ghost" type="button" [disabled]="isDeletingUser" (click)="closeDeleteModal()">Cancel</button>
-          <button class="danger" type="button" [disabled]="isDeletingUser" (click)="confirmDeleteUser()">
-            {{ isDeletingUser ? 'Removing...' : 'Delete user' }}
+          <button class="ghost" type="button" [disabled]="isDeletingUser()" (click)="closeDeleteModal()">Cancel</button>
+          <button class="danger" type="button" [disabled]="isDeletingUser()" (click)="confirmDeleteUser()">
+            {{ isDeletingUser() ? 'Removing...' : 'Delete user' }}
           </button>
         </div>
       </article>

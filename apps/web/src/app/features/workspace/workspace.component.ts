@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, HostListener, Input, OnChanges, SimpleChanges, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnChanges, SimpleChanges, inject, input, signal } from '@angular/core';
 import type { PdiPlan, User } from '@pdi/contracts';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../core/auth/auth.service';
@@ -27,10 +27,11 @@ type WorkspaceView = 'board' | 'pdis' | 'users' | 'report' | 'integrations';
   providers: [WorkspaceService],
   templateUrl: './workspace.component.html',
   styleUrl: './workspace.component.css',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '(window:keydown)': 'handleWindowKeydown($event)' }
 })
 export class WorkspaceComponent implements OnChanges {
-  @Input({ required: true }) user!: User;
+  readonly user = input.required<User>();
   protected activeView: WorkspaceView = 'board';
   protected readonly isCommandPaletteOpen = signal(false);
 
@@ -39,12 +40,12 @@ export class WorkspaceComponent implements OnChanges {
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['user']?.currentValue) {
-      void this.workspace.load(this.user);
+      void this.workspace.load(this.user());
       this.activeView = 'board';
     }
   }
 
-  protected readonly isTechLead = () => this.user.role === 'ADMIN';
+  protected readonly isTechLead = () => this.user().role === 'ADMIN';
   protected readonly roleLabel = () => (this.isTechLead() ? 'Tech Lead' : 'Member');
   protected readonly canAccessView = (view: WorkspaceView) =>
     view === 'board' || view === 'report' || (this.isTechLead() && (view === 'pdis' || view === 'users' || view === 'integrations'));
@@ -93,7 +94,6 @@ export class WorkspaceComponent implements OnChanges {
 
   readonly handleLogout = () => this.auth.logout();
 
-  @HostListener('window:keydown', ['$event'])
   protected readonly handleWindowKeydown = (event: KeyboardEvent) => {
     if (!event.metaKey && !event.ctrlKey) return;
     if (event.key.toLowerCase() !== 'k') return;

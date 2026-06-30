@@ -2,13 +2,12 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
-  HostListener,
-  Input,
   OnChanges,
   SimpleChanges,
-  ViewChild,
+  input,
   output,
-  signal
+  signal,
+  viewChild
 } from '@angular/core';
 
 export type CommandItem = {
@@ -30,35 +29,35 @@ export const filterCommands = (commands: readonly CommandItem[], query: string):
   standalone: true,
   templateUrl: './command-palette.component.html',
   styleUrl: './command-palette.component.css',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '(window:keydown)': 'handleWindowKeydown($event)' }
 })
 export class CommandPaletteComponent implements OnChanges {
-  @Input({ required: true }) isOpen = false;
-  @Input({ required: true }) commands: CommandItem[] = [];
+  readonly isOpen = input.required<boolean>();
+  readonly commands = input.required<CommandItem[]>();
 
   readonly closed = output<void>();
   readonly commandTriggered = output<string>();
 
-  @ViewChild('searchInput') private searchInput?: ElementRef<HTMLInputElement>;
-  @ViewChild('dialog') private dialog?: ElementRef<HTMLElement>;
+  private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
+  private readonly dialog = viewChild<ElementRef<HTMLElement>>('dialog');
 
   protected readonly query = signal('');
   protected readonly activeIndex = signal(0);
 
-  protected readonly filteredCommands = () => filterCommands(this.commands, this.query());
+  protected readonly filteredCommands = () => filterCommands(this.commands(), this.query());
 
   ngOnChanges(changes: SimpleChanges) {
-    if (changes['isOpen'] && this.isOpen) {
+    if (changes['isOpen'] && this.isOpen()) {
       this.query.set('');
       this.activeIndex.set(0);
       // Focus the search field once the dialog has rendered.
-      setTimeout(() => this.searchInput?.nativeElement.focus());
+      setTimeout(() => this.searchInput()?.nativeElement.focus());
     }
   }
 
-  @HostListener('window:keydown', ['$event'])
   protected readonly handleWindowKeydown = (event: KeyboardEvent) => {
-    if (!this.isOpen) return;
+    if (!this.isOpen()) return;
     if (event.key !== 'Escape') return;
 
     event.preventDefault();
@@ -109,14 +108,14 @@ export class CommandPaletteComponent implements OnChanges {
     const next = Math.min(length - 1, Math.max(0, this.activeIndex() + delta));
     this.activeIndex.set(next);
     setTimeout(() =>
-      this.dialog?.nativeElement
+      this.dialog()?.nativeElement
         .querySelector('.command-list button.is-active')
         ?.scrollIntoView({ block: 'nearest' })
     );
   };
 
   private readonly trapFocus = (event: KeyboardEvent) => {
-    const root = this.dialog?.nativeElement;
+    const root = this.dialog()?.nativeElement;
     if (!root) return;
 
     const focusable = Array.from(
