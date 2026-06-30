@@ -68,6 +68,7 @@ import {
 } from './canvas-board.layers';
 import { findAvailableNodePosition } from './canvas-board.placement';
 import { removeEdgePair, shouldRenderEdgeLabel as computeShouldRenderEdgeLabel } from './canvas-board.edges';
+import { buildHistoryBoardPayload } from './canvas-board.history';
 import { toMarqueeBoxStyle, toMinimapNodes, toMinimapViewport } from './canvas-board.view';
 import { injectSvgInteractivity, sanitizeExportedSvgMarkup, svgDataUrlToMarkup } from './canvas-board.svg-runtime';
 
@@ -1309,14 +1310,11 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   private readonly applyHistorySnapshot = (snapshot: string) => {
     const planId = this.currentPlanId() ?? this.plan.id;
     const parsed = JSON.parse(snapshot) as ReturnType<typeof toSaveBoard>;
-    const boardPayload = {
-      edges: parsed.edges,
-      id: this.lastPersistedPlanId ?? `local-history-${planId}`,
-      nodes: parsed.nodes,
-      pdiPlanId: planId,
-      title: parsed.title,
+    const boardPayload = buildHistoryBoardPayload(parsed, {
+      planId,
+      lastPersistedPlanId: this.lastPersistedPlanId,
       updatedAt: new Date().toISOString()
-    } as Parameters<typeof toCanvasNodes>[0];
+    });
 
     this.isRestoringHistory = true;
     this.boardTitle.set(parsed.title);
