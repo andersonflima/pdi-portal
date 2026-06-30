@@ -67,6 +67,7 @@ import {
   sortNodesForRender
 } from './canvas-board.layers';
 import { findAvailableNodePosition } from './canvas-board.placement';
+import { removeEdgePair, shouldRenderEdgeLabel as computeShouldRenderEdgeLabel } from './canvas-board.edges';
 import { toMarqueeBoxStyle, toMinimapNodes, toMinimapViewport } from './canvas-board.view';
 import { injectSvgInteractivity, sanitizeExportedSvgMarkup, svgDataUrlToMarkup } from './canvas-board.svg-runtime';
 
@@ -663,13 +664,7 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   };
 
   protected readonly isNodeSelected = (nodeId: string) => this.selectedNodeIdSet().has(nodeId);
-  protected readonly shouldRenderEdgeLabel = (edge: CanvasEdgeView) => {
-    const reverseEdge = this.edges().find((candidate) => candidate.source === edge.target && candidate.target === edge.source);
-
-    if (!reverseEdge) return true;
-
-    return edge.id < reverseEdge.id;
-  };
+  protected readonly shouldRenderEdgeLabel = (edge: CanvasEdgeView) => computeShouldRenderEdgeLabel(edge, this.edges());
   protected readonly edgeLabelPosition = (edge: CanvasEdgeView) => {
     const source = this.nodes().find((node) => node.id === edge.source);
     const target = this.nodes().find((node) => node.id === edge.target);
@@ -1409,15 +1404,7 @@ export class CanvasBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
     if (!selectedEdgeId) return false;
 
-    const selectedEdge = this.edges().find((edge) => edge.id === selectedEdgeId) ?? null;
-    const reverseEdgeId =
-      selectedEdge
-        ? this.edges().find((edge) => edge.source === selectedEdge.target && edge.target === selectedEdge.source)?.id
-        : undefined;
-
-    this.edges.update((edges) =>
-      edges.filter((edge) => edge.id !== selectedEdgeId && edge.id !== reverseEdgeId)
-    );
+    this.edges.update((edges) => removeEdgePair(edges, selectedEdgeId));
     this.canvasFacade.selectEdge(null);
 
     return true;
