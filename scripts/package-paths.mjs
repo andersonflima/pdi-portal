@@ -1,4 +1,4 @@
-export const packagePaths = ['packages/contracts', 'apps/api', 'apps/web'];
+export const packagePaths = ['packages/contracts', 'app/api', 'app/web'];
 
 // Library packages that emit a build artifact (dist/) consumed by other packages
 // through their `main`/`types` entry points. They must be built during bootstrap

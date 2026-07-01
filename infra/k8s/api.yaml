@@ -5,7 +5,7 @@ metadata:
   namespace: pdi
 type: Opaque
 stringData:
-  DATABASE_URL: file:/app/apps/api/data/pdi.db
+  DATABASE_URL: file:/app/app/api/data/pdi.db
   JWT_SECRET: change-this-secret-before-production
 ---
 apiVersion: v1
@@ -60,7 +60,7 @@ spec:
             - -c
             - npm run db:push && npm run db:seed && node dist/server.js
           volumeMounts:
-            - mountPath: /app/apps/api/data
+            - mountPath: /app/app/api/data
               name: api-data
           readinessProbe:
             httpGet:

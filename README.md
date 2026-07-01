@@ -20,7 +20,7 @@ O projeto entrega uma experiencia de PDI com login, administracao de usuarios, g
 ## Estrutura
 
 ```text
-apps/
+app/
   api/       API HTTP/WebSocket, autenticacao, usuarios, PDIs e boards
   web/       Interface web, login, area admin e canvas colaborativo
 packages/
@@ -190,7 +190,7 @@ O frontend suporta modo de engine configuravel por query string:
 - `?canvasEngine=dom` (padrao atual)
 - `?canvasEngine=hybrid` (modo de compatibilidade para rollout incremental)
 
-O `npm run build` gera o frontend Angular, compila a API e copia o resultado para `apps/api/public`, permitindo servir tudo por um unico processo Node.js.
+O `npm run build` gera o frontend Angular, compila a API e copia o resultado para `app/api/public`, permitindo servir tudo por um unico processo Node.js.
 
 ## Kubernetes
 

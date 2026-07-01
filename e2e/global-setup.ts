@@ -17,5 +17,5 @@ export default async function globalSetup() {
     WEB_ORIGIN: process.env['WEB_ORIGIN'] || 'http://localhost:5173'
   };
 
-  execFileSync('npm', ['--prefix', 'apps/api', 'run', 'db:seed'], { stdio: 'inherit', env });
+  execFileSync('npm', ['--prefix', 'app/api', 'run', 'db:seed'], { stdio: 'inherit', env });
 }

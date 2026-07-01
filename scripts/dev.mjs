@@ -7,12 +7,12 @@ const env = toLocalEnv();
 await runCommand('npm', ['run', 'db:setup'], { env });
 
 const processes = [
-  spawn('npm', ['run', 'dev', '--prefix', 'apps/api'], {
+  spawn('npm', ['run', 'dev', '--prefix', 'app/api'], {
     env,
     stdio: 'inherit',
     shell: process.platform === 'win32'
   }),
-  spawn('npm', ['run', 'dev', '--prefix', 'apps/web'], {
+  spawn('npm', ['run', 'dev', '--prefix', 'app/web'], {
     env,
     stdio: 'inherit',
     shell: process.platform === 'win32'

@@ -9,9 +9,9 @@ coverage
 *.db-journal
 *.tsbuildinfo
 .DS_Store
-apps/api/data
-apps/api/public
-apps/*/node_modules
+app/api/data
+app/api/public
+app/*/node_modules
 packages/*/node_modules
-apps/*/dist
+app/*/dist
 packages/*/dist
