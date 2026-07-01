@@ -1,8 +1,8 @@
 import { cpSync, existsSync, mkdirSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const webDist = resolve('apps/web/dist');
-const apiPublic = resolve('apps/api/public');
+const webDist = resolve('app/web/dist');
+const apiPublic = resolve('app/api/public');
 
 if (!existsSync(webDist)) {
   throw new Error('Web dist not found. Run the web build before copying static assets.');

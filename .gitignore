@@ -9,9 +9,9 @@ coverage
 *.log
 *.tsbuildinfo
 .DS_Store
-apps/api/prisma/dev.db
-apps/api/public/
-apps/api/data/
+app/api/prisma/dev.db
+app/api/public/
+app/api/data/
 *.db
 *.db-journal
 .tmp-test/

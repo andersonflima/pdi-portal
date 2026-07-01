@@ -12,7 +12,7 @@ Estabelecer baseline operacional de frontend/canvas antes de migracoes maiores, 
 As metricas aparecem no header do board em tempo real.
 
 ## Fluxos de Regressao Cobertos
-Suíte automatizada inicial em `apps/api/src/software-developer-roadmap-template.test.ts` valida:
+Suíte automatizada inicial em `app/api/src/software-developer-roadmap-template.test.ts` valida:
 - estabilidade do metadado principal do roadmap
 - densidade minima de nodes/edges do board seed
 - regra de parent/position relativa por frames (centro do node)
