@@ -4,15 +4,15 @@
   "version": "0.1.0",
   "packageManager": "npm@10.9.8",
   "scripts": {
-    "build": "node scripts/build-all.mjs",
-    "db:setup": "node scripts/setup-local-db.mjs",
-    "dev": "node scripts/dev.mjs",
+    "build": "node app/scripts/build-all.mjs",
+    "db:setup": "node app/scripts/setup-local-db.mjs",
+    "dev": "node app/scripts/dev.mjs",
     "e2e": "playwright test",
-    "install:all": "node scripts/install-all.mjs",
-    "lint": "node scripts/run-package-script.mjs lint",
-    "postinstall": "node scripts/install-all.mjs",
-    "typecheck": "node scripts/run-package-script.mjs typecheck",
-    "test": "node scripts/run-package-script.mjs test"
+    "install:all": "node app/scripts/install-all.mjs",
+    "lint": "node app/scripts/run-package-script.mjs lint",
+    "postinstall": "node app/scripts/install-all.mjs",
+    "typecheck": "node app/scripts/run-package-script.mjs typecheck",
+    "test": "node app/scripts/run-package-script.mjs test"
   },
   "devDependencies": {
     "@playwright/test": "^1.54.2"
