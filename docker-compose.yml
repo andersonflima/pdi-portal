@@ -1,15 +1,15 @@
 services:
   app:
     build:
-      context: .
-      dockerfile: app/Dockerfile
+      context: ./app
+      dockerfile: Dockerfile
     environment:
-      DATABASE_URL: file:/app/app/api/data/pdi.db
+      DATABASE_URL: file:/app/api/data/pdi.db
       JWT_SECRET: change-this-secret-before-production
       PORT: 3333
       WEB_ORIGIN: http://localhost:3333
     volumes:
-      - api-data:/app/app/api/data
+      - api-data:/app/api/data
     ports:
       - "3333:3333"
     command: sh -c "npm run db:push && npm run db:seed && node dist/server.js"

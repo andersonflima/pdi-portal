@@ -3,7 +3,7 @@
 ## Contexto Atual (Baseline Real)
 - Frontend em Angular 21 com componentes standalone, Signals e RxJS.
 - Canvas principal concentrado em [`app/web/src/app/features/canvas/canvas-board.component.ts`](../app/web/src/app/features/canvas/canvas-board.component.ts) com ~2669 linhas.
-- Regras e contratos de negócio já centralizados em `packages/contracts` (deve ser preservado como fonte de verdade).
+- Regras e contratos de negócio já centralizados em `app/packages/contracts` (deve ser preservado como fonte de verdade).
 - Colaboração realtime existente via WebSocket com autosave e histórico local no componente de canvas.
 - UI funcional, porém com acoplamento alto entre renderização, interação, estado, sincronização e apresentação.
 
@@ -257,7 +257,7 @@ Stack:
 ## 12) Estratégia de Escalabilidade
 Escala funcional e organizacional:
 - Bounded contexts independentes (`board`, `plans`, `users`, `comments`, `notifications`).
-- Contratos estritos no `packages/contracts`.
+- Contratos estritos no `app/packages/contracts`.
 - Feature flags para rollout incremental sem risco.
 - Observabilidade frontend: métricas de FPS, input latency, commit time, ws reconnect.
 
