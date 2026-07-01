@@ -21,12 +21,15 @@ O projeto entrega uma experiencia de PDI com login, administracao de usuarios, g
 
 ```text
 app/
-  api/       API HTTP/WebSocket, autenticacao, usuarios, PDIs e boards
-  web/       Interface web, login, area admin e canvas colaborativo
-packages/
-  contracts/ Schemas e tipos compartilhados entre frontend e backend
+  api/            API HTTP/WebSocket, autenticacao, usuarios, PDIs e boards
+  web/            Interface web, login, area admin e canvas colaborativo
+  packages/
+    contracts/    Schemas e tipos compartilhados entre frontend e backend
+  scripts/        Scripts de bootstrap, build e banco local do monorepo
+  tsconfig.base.json
+                  Configuracao TypeScript base compartilhada
 infra/
-  k8s/       Manifests base para namespace, API e Web
+  k8s/            Manifests base para namespace, API e Web
 ```
 
 ## Funcionalidades
