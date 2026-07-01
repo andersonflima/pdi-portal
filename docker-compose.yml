@@ -2,7 +2,7 @@ services:
   app:
     build:
       context: .
-      dockerfile: app/api/Dockerfile
+      dockerfile: app/Dockerfile
     environment:
       DATABASE_URL: file:/app/app/api/data/pdi.db
       JWT_SECRET: change-this-secret-before-production
